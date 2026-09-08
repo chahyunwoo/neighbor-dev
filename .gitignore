@@ -1,0 +1,40 @@
+# --- 내부 작업 문서 ---
+# 개인 도메인(비노출 확정 항목)이 언급되므로 공개 저장소에 올리지 않는다.
+docs/
+
+# --- 시크릿 ---
+# 이 저장소는 PUBLIC 이다. .env 계열은 예외 없이 제외한다.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- 의존성 / 빌드 산출물 ---
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# --- 테스트 / 커버리지 ---
+coverage/
+.nyc_output/
+
+# --- 로그 ---
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# --- 에디터 / OS ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- 로컬 전용 ---
+.turbo/
+*.local
