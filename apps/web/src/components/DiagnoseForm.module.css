@@ -1,0 +1,121 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 720px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.label {
+  font-size: 13px;
+  color: var(--fg-dim);
+  font-weight: 300;
+}
+.textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 14px 15px;
+  resize: vertical;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.75;
+  font-weight: 300;
+}
+.textarea:focus {
+  outline: none;
+  border-color: var(--amber-line);
+}
+.textarea::placeholder {
+  color: var(--fg-ghost);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-ghost);
+}
+.count[data-over="true"] {
+  color: var(--amber);
+}
+.submit {
+  padding: 11px 22px;
+  border: 1px solid var(--amber-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--amber);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.submit:hover:not(:disabled) {
+  background: var(--amber-wash);
+  border-color: var(--amber);
+}
+.submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.error {
+  padding: 13px 15px;
+  border: 1px solid rgba(232, 168, 124, 0.28);
+  border-radius: var(--radius);
+  background: rgba(38, 28, 22, 0.4);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--amber-text);
+  font-weight: 300;
+}
+.result {
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--amber-line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--fg-muted);
+  font-weight: 300;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.resultHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.resultTitle {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-ghost);
+  letter-spacing: 0.07em;
+}
+.copy {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.copy:hover {
+  border-color: var(--fg-ghost);
+  color: var(--fg);
+}

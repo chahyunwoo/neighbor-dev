@@ -1,17 +1,25 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "Node16",
+    // TS 7 에서 node10 이 사라진다. bundler 는 CommonJS 와 안 맞으므로 node16.
+    "moduleResolution": "node16",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": "./",
+    // baseUrl 은 TS 7 에서 사라진다. 상대경로만 쓰므로 애초에 필요 없다.
     "declaration": false,
     "sourceMap": true,
-    "incremental": true,
+    // 🔴 incremental 을 켜지 않는다. nest 의 deleteOutDir 이 dist 를 먼저 지우는데
+    //    tsbuildinfo 는 "이미 빌드됨" 이라 판단해 아무것도 안 만든다 —
+    //    **두 번째 빌드부터 exit 0 인데 산출물이 0개가 된다**(실측 2026-09-09:
+    //    1회차 7개 → 2회차 0개로 재현). 빌드는 초록인데 서비스는 안 뜬다.
     "strictPropertyInitialization": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  // ⚠️ `.spec.mjs` 는 이미 JS 라 컴파일할 것이 없는데, include 에 걸리면
+  //    nest build 가 **오류도 산출물도 없이 조용히 끝난다**(실측 2026-09-09:
+  //    exit 0 인데 dist 가 통째로 없었다). 명시적으로 뺀다.
+  "exclude": ["node_modules", "dist", "**/*.spec.mjs", "**/*.spec.ts"]
 }
