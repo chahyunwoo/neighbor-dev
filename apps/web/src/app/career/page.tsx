@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { PageShell } from '../../components/PageShell'
-import { getSummaryProjects } from '../../lib/projects'
+import { StackTags } from '../../components/StackTags'
+import { displayStack, getSummaryProjects } from '../../lib/projects'
 import styles from '../work/page.module.css'
 
 export const metadata: Metadata = {
@@ -33,11 +34,7 @@ export default function CareerPage() {
             <span className={styles.rowLabel}>{p.label}</span>
             <span className={styles.rowPeriod}>{p.period}</span>
             <div className={styles.rowStack}>
-              {p.stack.slice(0, 10).map((s) => (
-                <span key={s} className={styles.tag}>
-                  {s}
-                </span>
-              ))}
+              <StackTags names={displayStack(p.stack)} peek={3} label={p.label} />
             </div>
           </div>
         ))}

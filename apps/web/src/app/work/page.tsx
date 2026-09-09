@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PageShell } from '../../components/PageShell'
 import { RichText } from '../../components/RichText'
+import { StackTags } from '../../components/StackTags'
 import {
   type DetailProject,
+  displayStack,
   getDetailProjects,
   getSummaryProjects,
   type SummaryProject,
@@ -84,13 +86,11 @@ function DetailCard({ project }: { project: DetailProject }) {
           <RichText>{project.problem}</RichText>
         </p>
       ) : null}
-      <div className={styles.tags}>
-        {project.stack.slice(0, 5).map((s) => (
-          <span key={s} className={styles.tag}>
-            {s}
-          </span>
-        ))}
-      </div>
+      {/*
+       * 카드는 훑는 자리다 — 여기서 기술을 늘어놓으면 문제 서술이 안 읽힌다.
+       * 2개만 남기고 접는다(실측: peek 3 이면 카드 10장에 태그만 27개가 깔렸다).
+       */}
+      <StackTags names={displayStack(project.stack)} peek={2} label={project.label} />
       {decisionCount + metricCount > 0 ? (
         <div className={styles.counts}>
           {decisionCount > 0 ? <span>판단 {decisionCount}</span> : null}
@@ -107,11 +107,7 @@ function SummaryRow({ project }: { project: SummaryProject }) {
       <span className={styles.rowLabel}>{project.label}</span>
       <span className={styles.rowPeriod}>{project.period}</span>
       <div className={styles.rowStack}>
-        {project.stack.slice(0, 8).map((s) => (
-          <span key={s} className={styles.tag}>
-            {s}
-          </span>
-        ))}
+        <StackTags names={displayStack(project.stack)} peek={3} label={project.label} />
       </div>
     </div>
   )

@@ -113,6 +113,30 @@ export function getStackFrequency(): { name: string; count: number }[] {
 }
 
 /**
+ * 한 프로젝트의 스택을 **화면에 쓸 기술명 목록**으로 줄인다.
+ *
+ * 🔴 화면은 정본의 `stack` 을 **그대로 쓰지 않는다.** 정본은 작업 노트라
+ *    `PostgreSQL 16 (multi-schema)`, `Fastify 5 (@nestjs/platform-fastify)`
+ *    처럼 **개발자용 내부 표기**를 담고 있다(212종 중 90종이 20자 초과 —
+ *    2026-09-09 실측). 그게 카드 앞면에 깔리면 이 사이트를 보러 온
+ *    발주자가 읽을 것이 사라진다(이슈 #2).
+ *
+ * `/stack` 화면은 이미 `normalizeStackName()` 으로 이 정리를 하고 있었는데
+ * `/work`·`/career` 만 원시값을 쓰고 있었다 — 그래서 **같은 함수를 쓰게**
+ * 묶는다. 화면마다 다른 규칙으로 줄이면 표기가 갈린다.
+ *
+ * @returns 중복을 뗀 기술명 목록. 기술명으로 볼 수 없는 서술은 빠진다.
+ */
+export function displayStack(stack: string[]): string[] {
+  const out: string[] = []
+  for (const raw of stack) {
+    const name = normalizeStackName(raw)
+    if (name && !out.includes(name)) out.push(name)
+  }
+  return out
+}
+
+/**
  * 스택 이름을 기술명 하나로 줄인다.
  *
  * ⚠️ 정본의 `stack` 은 기술명이 아니라 **서술**을 담고 있다(실측 2026-09-09):
@@ -172,6 +196,8 @@ const CANONICAL = new Map<string, string>([
   // 프레임워크의 한 기능을 별도 종으로 세지 않는다.
   ['nextjsroutehandler', 'Next.js'],
   ['githubactionsci', 'GitHub Actions'],
+  // 같은 것을 한글/영문으로 나눠 적은 경우 (실측: 커머스 건에 둘 다 있었다).
+  ['바닐라javascript', 'Vanilla JavaScript'],
 ])
 
 /**

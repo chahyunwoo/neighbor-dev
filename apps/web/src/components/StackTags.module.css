@@ -1,0 +1,60 @@
+/*
+ * 쓴 기술 태그 — 접어 둔다. 근거는 `StackTags.tsx` 주석(이슈 #2).
+ */
+
+.wrap {
+  display: contents;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--fg-faint);
+}
+
+/*
+ * `display:contents` 로 두어 자식 태그가 `.tags` 의 flex 흐름에 그대로 놓이게 한다
+ * (래퍼가 한 칸을 차지하면 줄바꿈이 어긋난다).
+ *
+ * ⚠️ 아래 `.rest[hidden]` 은 **보험이다.** ProjectLens 의 `.panel` 은
+ *    `display:flex` 가 브라우저 기본값 `[hidden]{display:none}` 을 이겨서 이 규칙이
+ *    반드시 필요했는데, `display:contents` 는 그렇지 않다 —
+ *    **이 줄을 지우고 재빌드해도 computed display 는 `none` 이었다**(2026-09-09 실측,
+ *    되돌리기 검증으로 확인). 같은 형태라고 같은 이유일 거라 넘겨짚지 않는다.
+ *    지우지 않고 남기는 이유는 값이 바뀌었을 때(`contents` → `flex`) 조용히
+ *    새는 것을 막기 위해서다.
+ */
+.rest {
+  display: contents;
+}
+.rest[hidden] {
+  display: none;
+}
+
+.more {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--fg-ghost);
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+.more:hover {
+  color: var(--fg);
+  border-color: rgba(232, 168, 124, 0.28);
+}
