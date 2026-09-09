@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
+import { MotionRoot } from '../components/MotionRoot'
 import '../styles/tokens.css'
 
 export const metadata: Metadata = {
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <MotionRoot>{children}</MotionRoot>
+      </body>
     </html>
   )
 }

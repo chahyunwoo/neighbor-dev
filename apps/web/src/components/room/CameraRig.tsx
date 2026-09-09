@@ -60,21 +60,35 @@ export interface FocusTarget {
  * 🔴 이 연출이 **통째로 빠져 있었다.** 방이 그냥 딱 떠 있었다 —
  *    "들어와서 둘러보세요" 라고 써 놓고 정작 들어오는 순간이 없었다.
  *
- * 시안 실측값 그대로다:
- *   시작 위치 (-1.30, 1.60, -1.55) — 현관문(x≈-2.9) 안쪽
- *   시작 시선 ( 0.40, 1.10,  1.30) — 방 안쪽을 본다
- *   3초에 걸쳐 처음 구도로 물러난다
+ * 🔴 **문 밖에서 시작한다.** 시안은 문 안쪽(-1.30)에서 출발했는데, 그러면
+ *    이미 방에 있는 상태라 "들어왔다" 가 안 보이고 그냥 뒤로 줄어드는 것처럼
+ *    보인다(사용자 지적). 현관문은 x = -2.89 에 있으므로 그보다 **바깥**인
+ *    x = -4.6 에서 시작해 문틀을 지나 들어온다.
  *
- * ⚠️ `prefers-reduced-motion` 이면 생략한다(시안도 같다). 움직임을 원치
- *    않는 사람에게 3초짜리 카메라 비행은 그 자체가 장벽이다.
+ *   시작 위치 (-4.70, 1.35, -1.60) — 현관문 정면 바깥, **사람 눈높이**
+ *   시작 시선 (-1.00, 1.15, -0.20) — 문틀 너머 방 안을 본다
+ *   3.2초에 걸쳐 처음 구도로 물러난다
+ *
+ * ⚠️ 높이를 낮게(1.35) 잡는 것이 핵심이다. 처음에 1.55 로 뒀더니 **왼쪽 벽
+ *    (높이 3.0, x=-3.1)을 넘겨다봐서** 문 밖인데도 방이 통째로 보였다 —
+ *    "들어왔다" 가 안 보이고 그냥 줌아웃처럼 읽혔다(실측 스크린샷).
+ *    문(높이 2.1, z=-2.12~-1.08) 중앙을 통과하는 눈높이라야 문틀이 프레임이
+ *    되어 "밖에서 안을 들여다본다" 가 성립한다.
+ *
+ * ⚠️ 문이 **먼저** 열리고 그다음 들어간다. 닫히는 것은 다 들어온 뒤다 —
+ *    닫힌 문을 통과하면 벽을 뚫는 것처럼 보인다.
+ *
+ * ⚠️ `prefers-reduced-motion` 이면 생략한다. 움직임을 원치 않는 사람에게
+ *    3초짜리 카메라 비행은 그 자체가 장벽이다.
  */
 export const INTRO = {
-  from: [-1.3, 1.6, -1.55] as [number, number, number],
-  lookAt: [0.4, 1.1, 1.3] as [number, number, number],
-  ms: 3000,
-  /** 문이 열리고 닫히는 시각(ms). 들어온 티가 나게. */
-  doorOpenAt: 50,
-  doorCloseAt: 1900,
+  from: [-4.7, 1.35, -1.6] as [number, number, number],
+  lookAt: [-1.0, 1.15, -0.2] as [number, number, number],
+  ms: 3200,
+  /** 문이 열리는 시각(ms). 들어가기 전에 열려 있어야 한다. */
+  doorOpenAt: 0,
+  /** 문이 닫히는 시각(ms). 다 들어온 뒤다. */
+  doorCloseAt: 2600,
 } as const
 
 /** 시안 easeInOutCubic. */
@@ -113,17 +127,27 @@ export function CameraRig({
     start: number
     ms: number
   } | null>(null)
-  /** 입장 연출을 이미 했는가. 두 번 하지 않는다. */
-  const entered = useRef(false)
+  /** 입장 연출을 시작했는가. 두 번 하지 않는다. */
+  const started = useRef(false)
+  /**
+   * 입장 비행이 **끝났는가**.
+   *
+   * 🔴 "시작했다" 와 "끝났다" 를 갈라야 한다. 하나로 두면 입장 도중
+   *    리렌더(문이 열리며 상태가 바뀐다)가 일어날 때 초점 effect 가
+   *    "이미 입장했다" 로 읽고 카메라를 홈으로 덮어써서 **연출이 통째로
+   *    사라진다** — 실측 2026-09-09: 250ms 시점에 이미 최종 구도였다.
+   */
+  const landed = useRef(false)
 
   // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
   useEffect(() => {
     const ctl = controls.current
-    if (!ctl || entered.current) return
-    entered.current = true
+    if (!ctl || started.current) return
+    started.current = true
 
     // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      landed.current = true
       onEntered()
       return
     }
@@ -156,10 +180,10 @@ export function CameraRig({
 
   useEffect(() => {
     const ctl = controls.current
-    // 입장 중에는 초점 비행을 걸지 않는다 — 두 비행이 겹치면 튄다.
-    if (!ctl || !entered.current) return
-    // 입장 비행이 아직 도는 중이면 그대로 둔다(focus 는 처음엔 null 이다).
-    if (fly.current && fly.current.ms === INTRO.ms && focus === null) return
+    // 🔴 **입장이 끝나기 전에는 아무것도 하지 않는다.** 입장 중 리렌더가
+    //    이 effect 를 돌리는데(문이 열리며 상태가 바뀐다), 여기서 카메라를
+    //    건드리면 연출이 그 자리에서 지워진다.
+    if (!ctl || !landed.current) return
 
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
@@ -250,7 +274,11 @@ export function CameraRig({
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
-    if (t >= 1) fly.current = null
+    if (t >= 1) {
+      // 입장 비행이 끝나야 초점 비행이 열린다.
+      if (f.ms === INTRO.ms) landed.current = true
+      fly.current = null
+    }
   })
 
   return null
