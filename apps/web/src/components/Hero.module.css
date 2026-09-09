@@ -1,7 +1,24 @@
 .stage {
   position: relative;
   flex: 1;
-  min-height: 640px;
+  /*
+   * 히어로는 화면 높이를 채운다. nav(~78px)와 footer(~74px)를 뺀 값이
+   * 최소값이고, 그보다 화면이 크면 flex 로 늘어난다.
+   * ⚠️ `dvh` 를 쓴다 — iOS 주소창이 접힐 때 `vh` 는 값이 튄다(프로토타입 실측).
+   */
+  min-height: min(760px, calc(100dvh - 152px));
+}
+
+/*
+ * 🔴 3D 는 화면 끝까지 간다. 부모(main)의 좌우 패딩만큼 되밀어 낸다 —
+ *    패딩 안에 갇히면 캔버스가 1440x900 화면에서 1328x640 으로 줄어들고,
+ *    방이 작게 보인다(실측 2026-09-09: 캔버스 실제 크기를 재서 발견했다).
+ *    카피는 패딩 안에 그대로 둔다 — 글이 화면 끝에 붙으면 안 읽힌다.
+ */
+.stage > :global(div):first-child {
+  margin-left: calc(var(--pad-x) * -1);
+  margin-right: calc(var(--pad-x) * -1);
+  width: auto;
 }
 
 /* 3D 가 뜨면 목록을 접고 카피만 남긴다. */

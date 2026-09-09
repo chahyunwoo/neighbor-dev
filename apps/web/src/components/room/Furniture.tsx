@@ -3,7 +3,7 @@
 import { useGLTF } from '@react-three/drei'
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
+import { DEFAULTS, METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
 
 const DEG = Math.PI / 180
 
@@ -31,18 +31,17 @@ export function Furniture({ placement }: { placement: Placement }) {
       const src = child.material
       const materials = Array.isArray(src) ? src : [src]
       child.material = materials.map((m) => {
-        const name = m.name
+        // ⚠️ glTF 로더가 같은 머티리얼을 여러 번 쓰면 `wood.001` 처럼 접미사를
+        //    붙인다. 점 앞만 쓴다 — 안 자르면 조용히 기본값으로 떨어진다.
+        const name = (m.name || '').split('.')[0]
         const next = m.clone() as THREE.MeshStandardMaterial
-        // 실측(2026-09-09): 45개 슬롯 중 43개가 이름으로 잡힌다.
-        // 남는 `_defaultMat` 2개도 팔레트에 있으므로 전부 리컬러된다.
-        const color = PALETTE[name]
-        if (color !== undefined) next.color = new THREE.Color(color)
-        next.metalness = METALNESS[name] ?? 0
-        next.roughness = ROUGHNESS[name] ?? 0.9
+        next.color = new THREE.Color(PALETTE[name] ?? DEFAULTS.color)
+        next.metalness = METALNESS[name] ?? DEFAULTS.metalness
+        next.roughness = ROUGHNESS[name] ?? DEFAULTS.roughness
         // 램프는 스스로 빛난다 — 포스트프로세싱의 bloom 이 이 값을 집는다.
         if (name === 'lamp') {
           next.emissive = new THREE.Color(PALETTE.lamp)
-          next.emissiveIntensity = 1.4
+          next.emissiveIntensity = 0.7
         }
         return next
       })

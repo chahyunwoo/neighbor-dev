@@ -110,14 +110,20 @@ export const METALNESS: Record<string, number> = {
   metalMedium: 0.68,
 }
 
-/** 머티리얼별 roughness. 없으면 0.9. */
+/**
+ * 머티리얼별 roughness. **프로토타입 실측값 그대로.**
+ *
+ * ⚠️ 눈대중으로 올리지 않는다. 기본값을 0.9 로 두고 wood 를 0.82 로 뒀더니
+ *    빛을 거의 반사하지 않아 방이 통째로 어두웠다(실측 2026-09-09:
+ *    프로토타입 대비 화면 평균 밝기가 절반이었다).
+ */
 export const ROUGHNESS: Record<string, number> = {
-  metal: 0.42,
-  metalLight: 0.38,
+  metal: 0.38,
+  metalLight: 0.3,
   metalDark: 0.55,
-  metalMedium: 0.46,
-  wood: 0.82,
-  woodDark: 0.86,
+  glass: 0.1,
+  wood: 0.72,
+  woodDark: 0.78,
   carpet: 0.96,
   carpetWhite: 0.95,
   carpetBlue: 0.94,
@@ -126,6 +132,9 @@ export const ROUGHNESS: Record<string, number> = {
   fur: 0.88,
   lamp: 0.4,
 }
+
+/** 팔레트·거칠기·금속도에 없는 이름의 기본값. 프로토타입과 같다. */
+export const DEFAULTS = { color: 0x1b1a21, roughness: 0.6, metalness: 0.05 } as const
 
 /** 카메라 제한 — 프로토타입 실측값. */
 export const CAMERA_LIMITS = {

@@ -12,8 +12,10 @@ import {
   Whiteboard,
 } from './Fixtures'
 import { Furniture } from './Furniture'
+import { Lights } from './Lights'
 import { CAMERA_LIMITS, LAYOUT, ROOM_CENTER } from './layout'
 import styles from './Scene.module.css'
+import { ROOM_BG, Shell } from './Shell'
 
 // 배치에 쓰는 모델을 미리 받아 둔다 — 하나씩 늦게 뜨면 방이 조립되는 것이 보인다.
 for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
@@ -47,20 +49,8 @@ export function Scene() {
 
   return (
     <>
-      {/*
-       * 방의 빛 — 기획서 4-A 의 대비를 조명으로도 만든다.
-       * 램프만 따뜻하고 나머지는 차갑다.
-       *
-       * ⚠️ 실측(2026-09-09): 램프를 9로 두니 가구가 전부 갈색으로 보여
-       *    다크 리컬러가 실패한 것처럼 읽혔다. 리컬러는 정상이었고(45개 슬롯 중
-       *    43개 이름 매칭) 조명이 덮은 것이었다. 램프를 줄이고 차가운 쪽을 올린다.
-       */}
-      <ambientLight intensity={0.55} color="#7d879c" />
-      <directionalLight position={[4, 8, 4]} intensity={0.85} color="#a8b8d4" castShadow />
-      <pointLight position={[-2.65, 1.6, 2.62]} intensity={3.2} distance={4.5} color="#f0c08a" />
-      <pointLight position={[-2.85, 1.3, 0.75]} intensity={2.0} distance={3.5} color="#f0c08a" />
-      {/* 창에서 드는 찬 빛 — 따뜻한 램프와 갈라 놓는다. */}
-      <pointLight position={[1.3, 2.2, 3.0]} intensity={2.4} distance={8} color="#5f7fb8" />
+      <color attach="background" args={[ROOM_BG]} />
+      <Lights />
 
       {/*
        * key 는 좌표로 만든다 — 같은 모델(chairRounded 4개)이 여러 번 오므로
@@ -75,11 +65,8 @@ export function Scene() {
       <Monitor position={MONITOR_POSITION} />
       <Whiteboard position={WHITEBOARD_POSITION} rotationY={WHITEBOARD_ROTATION_Y} />
 
-      {/* 바닥 — 모델에 없어서 직접 깐다. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 1]} receiveShadow>
-        <planeGeometry args={[9, 9]} />
-        <meshStandardMaterial color="#1b1a1f" roughness={0.98} />
-      </mesh>
+      {/* 방 껍데기 — 벽이 빛을 되돌려 방을 밝힌다. 장식이 아니다. */}
+      <Shell />
 
       {hotspots.map(({ at, meta }) => (
         <Html

@@ -3,6 +3,7 @@
 import { Canvas } from '@react-three/fiber'
 import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useState } from 'react'
+import * as THREE from 'three'
 import { CAMERA_FOV, CAMERA_POSITION, ROOM_CENTER } from './layout'
 import styles from './Room.module.css'
 
@@ -63,7 +64,16 @@ export function Room({ onActive }: { onActive?: (active: boolean) => void }) {
         camera={{ position: CAMERA_POSITION, fov: CAMERA_FOV }}
         shadows
         dpr={[1, 2]}
-        gl={{ antialias: true }}
+        /*
+         * 🔴 톤매핑이 조명의 절반이다. 프로토타입과 같은 조명값을 넣어도
+         *    이 설정이 없으면 전혀 다르게 나온다 — 가구가 갈색으로 뭉개진다
+         *    (실측 2026-09-09, 프로토타입 스크린샷과 대조해 발견).
+         */
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 0.88,
+        }}
         onCreated={({ camera }) => camera.lookAt(...ROOM_CENTER)}
       >
         <Suspense fallback={null}>
