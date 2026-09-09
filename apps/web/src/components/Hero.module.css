@@ -50,7 +50,13 @@
  *      누르는 것이 아니므로 `none` 인 채로 두어 클릭이 3D 로 통과하게 한다.
  */
 .copyLayer :global(a),
-.copyLayer :global(button) {
+.copyLayer :global(button),
+.copyLayer :global(input),
+.copyLayer :global(textarea),
+.copyLayer :global(select),
+.copyLayer :global(label),
+.copyLayer :global(summary),
+.copyLayer :global([tabindex]) {
   pointer-events: auto;
 }
 

@@ -4,7 +4,6 @@ import { Preload } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import styles from './CanvasShell.module.css'
 import { r3f } from './tunnel'
 
 /**
@@ -88,8 +87,66 @@ export function CanvasShell() {
     }
   }, [])
 
+  /*
+   * 🔴 **R3F 의 래퍼 div 가 `pointer-events:auto` 를 인라인으로 박는다.**
+   *
+   *    라이브러리 소스에 그 이유가 적혀 있다
+   *    (`@react-three/fiber@9.7.0/dist/react-three-fiber.esm.js:124`):
+   *
+   *        // When the event source is not this div, we need to set
+   *        // pointer-events to none. Or else the canvas will block
+   *        // events from reaching the event source
+   *        const pointerEvents = eventSource ? 'none' : 'auto'
+   *
+   *    즉 `eventSource` 를 넘기면 R3F 가 알아서 `'none'` 을 쓴다. 그런데
+   *    **우리는 그걸 못 쓴다** — 홈에서는 캔버스가 마커 클릭을 직접 받아야
+   *    하는데(`eventSource` 를 주면 이벤트가 그 DOM 으로 넘어간다), 페이지에서는
+   *    반대로 안 받아야 한다. 한 캔버스가 두 모드를 오가므로 **모드에 따라
+   *    바뀌는 값**이 필요하고, `eventSource` 는 마운트 시 고정이다.
+   *
+   *    껍데기에 `none` 을 줘도 그 자식이 인라인으로 `auto` 를 들고 있어
+   *    **인라인이 이긴다** — CSS 규칙으로는 절대 못 이긴다(실측 2026-09-09:
+   *    `.canvas-shell *{pointer-events:inherit}` 를 넣어도 계산값이 auto 였고,
+   *    래퍼의 style 속성에 `pointer-events: auto` 가 그대로 있었다).
+   *
+   *    그 결과 **페이지에서 캔버스가 본문 클릭을 가로챘다** — `/work` 사례
+   *    카드 링크 4개, `/work/<id>` 토글 버튼 2개, `/team` 링크 1개가 안 눌렸다.
+   *    빌드도 `pnpm verify` 도 초록이었다. 실제로 눌러봐야 보인다.
+   *
+   *    → 껍데기의 계산값을 읽어 자식들의 **인라인 스타일을 직접 맞춘다.**
+   */
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const sync = () => {
+      const want = getComputedStyle(root).pointerEvents
+      for (const el of root.querySelectorAll<HTMLElement>('*')) {
+        if (el.style.pointerEvents !== want) el.style.pointerEvents = want
+      }
+    }
+    sync()
+    // 모드가 바뀌면(라우트 전환) 다시 맞춘다.
+    const mo = new MutationObserver(sync)
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-canvas-mode'],
+    })
+    // R3F 가 래퍼를 다시 그릴 때도 맞춘다.
+    const inner = new MutationObserver(sync)
+    inner.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style'],
+    })
+    return () => {
+      mo.disconnect()
+      inner.disconnect()
+    }
+  }, [])
+
   return (
-    <div ref={ref} className={styles.root} aria-hidden="true">
+    <div ref={ref} className="canvas-shell" aria-hidden="true">
       <Canvas
         shadows
         dpr={[1, 2]}

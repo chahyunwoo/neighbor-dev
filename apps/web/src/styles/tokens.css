@@ -189,6 +189,62 @@ html[data-canvas-mode="off"] {
   --cv-pe: none;
 }
 
+/*
+ * 캔버스 껍데기의 자리.
+ *
+ * 🔴 **CSS Module 이 아니라 여기(전역)에 둔다.** `CanvasShell` 은
+ *    `dynamic(ssr:false)` 로 불러서, 그 모듈의 CSS 가 **라우트 스타일시트가
+ *    아니라 lazy 청크**에 들어간다. 실측 2026-09-09: `/work` 의 <link> 에
+ *    그 청크가 아예 없었고, 그래서 `pointer-events` 가 안 먹어
+ *    **캔버스가 본문 링크·버튼 클릭을 가로챘다**(사례 카드 4개, 토글 2개).
+ *    빌드도 검사기도 초록이었다.
+ *
+ * 🔴 `pointer-events` 는 **자손까지 강제한다.** R3F 가 껍데기와 canvas 사이에
+ *    자기 래퍼 <div> 를 끼우고 거기에 auto 를 주므로, 껍데기에만 걸면
+ *    canvas 가 그 래퍼에서 auto 를 물려받아 그대로 클릭을 먹는다.
+ */
+.canvas-shell {
+  position: fixed;
+  top: var(--cv-top, 0px);
+  right: var(--cv-right, 0px);
+  bottom: var(--cv-bottom, 0px);
+  left: var(--cv-left, 0px);
+  z-index: 0;
+  opacity: var(--cv-opacity, 0);
+  pointer-events: var(--cv-pe, none);
+  /* 패널이 열리면 오른쪽이 좁아진다. 시안 실측 .44s. */
+  transition:
+    right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    opacity 0.4s ease-out,
+    top 0.3s ease-out;
+}
+
+.canvas-shell * {
+  pointer-events: inherit;
+}
+
+/*
+ * 페이지에서는 본문 쪽(왼쪽)을 지운다 — 글 뒤에 3D 가 깔리면 안 읽힌다.
+ * ⚠️ mask 를 변수로 넣지 않는다. `none` 초기값 처리가 브라우저마다 달라
+ *    조용히 어긋난다 — 모드별로 통째로 선언한다.
+ */
+html[data-canvas-mode="object"] .canvas-shell {
+  mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
+}
+
+/* 3D 를 안 쓰는 화면에서는 보이지도 않고 클릭도 안 받는다. */
+html[data-canvas-mode="off"] .canvas-shell {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-shell {
+    transition: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-bg);

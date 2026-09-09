@@ -61,7 +61,15 @@ export function Room({
     }
   }, [open])
 
-  if (!active) return null
+  /*
+   * ⚠️ 3D 를 못 쓰는 상황에서도 **모드는 선언한다.** `PageShell`·`ObjectStage`
+   *    와 같은 규칙이다 — 캔버스가 라우트를 넘어 살아 있으므로 아무도
+   *    말하지 않으면 이전 화면의 3D 가 남는다.
+   *
+   *    지금은 직전 화면의 cleanup 이 이미 'off' 로 돌려놔서 사고가 안 나지만,
+   *    그건 **남의 cleanup 에 기대어 우연히 맞는** 상태다. 여기서 직접 말한다.
+   */
+  if (!active) return <CanvasMode mode="off" />
 
   return (
     <>

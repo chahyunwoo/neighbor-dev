@@ -21,7 +21,11 @@
 
 /* 누를 수 있는 것만 클릭을 받는다. */
 .nav a,
-.nav button {
+.nav button,
+.nav input,
+.nav label,
+.nav summary,
+.nav [tabindex] {
   pointer-events: auto;
 }
 

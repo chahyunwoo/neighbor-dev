@@ -68,7 +68,10 @@
 .main button,
 .main input,
 .main textarea,
-.main select {
+.main select,
+.main label,
+.main summary,
+.main [tabindex] {
   pointer-events: auto;
 }
 
