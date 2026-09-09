@@ -50,6 +50,9 @@ function readManifests() {
     join(ROOT, 'apps', 'web', 'package.json'),
     join(ROOT, 'apps', 'api', 'package.json'),
   ]
+  // 게이트 검증(verify-gates.py)이 실제 앱 파일 대신 탐침을 넘길 때 쓴다.
+  const probe = process.env.PDF_MANIFEST_EXTRA
+  if (probe) files.push(probe)
   return files
     .filter((f) => existsSync(f))
     .map((f) => readFileSync(f, 'utf8'))

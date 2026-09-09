@@ -33,15 +33,18 @@ for _f in FILES:
 shutil.copy(os.path.join(ROOT,'data','generated','projects.json'), os.path.join(BK,'projects.json'))
 atexit.register(lambda: shutil.rmtree(BK, ignore_errors=True))
 
+# PDF 의존성 뮤테이션용 탐침 매니페스트. 실제 앱 파일을 건드리지 않는다.
+PKG_PROBE=os.path.join(BK,'pdf-probe.package.json')
+
 def restore():
     for f in FILES: shutil.copy(os.path.join(BK,f), os.path.join(ROOT,'scripts',f))
     shutil.copy(os.path.join(BK,'projects.json'), os.path.join(ROOT,'data','generated','projects.json'))
-    # 임시 package.json 정리
-    tmp=os.path.join(ROOT,'apps','web','package.json')
-    if os.path.exists(tmp): os.remove(tmp)
+    if os.path.exists(PKG_PROBE): os.remove(PKG_PROBE)
 
 def run(cmd):
-    r=subprocess.run(cmd,shell=True,cwd=ROOT,capture_output=True,text=True)
+    env=dict(os.environ)
+    if os.path.exists(PKG_PROBE): env['PDF_MANIFEST_EXTRA']=PKG_PROBE
+    r=subprocess.run(cmd,shell=True,cwd=ROOT,capture_output=True,text=True,env=env)
     return r.returncode, r.stdout+r.stderr
 
 # (이름, 종류, 상세)  종류: 'src' = 소스 치환, 'file' = 파일 생성
@@ -76,9 +79,11 @@ for m in MUTS:
     name,kind=m[0],m[1]
     restore()
     if kind=='pkg':
-        os.makedirs(os.path.join(ROOT,'apps','web'),exist_ok=True)
-        io.open(os.path.join(ROOT,'apps','web','package.json'),'w').write(
-          json.dumps({"name":"@neighbor/web","dependencies":{"@react-pdf/renderer":"^4.0.0"}},indent=2))
+        # ⚠️ 실제 apps/web/package.json 을 덮어쓰지 않는다 — 실측(2026-09-09)에서
+        #    정리 단계가 그 파일을 지워 워킹트리에 삭제로 남았다.
+        #    전용 임시 파일을 만들고 verify 에 PDF_MANIFEST_EXTRA 로 넘긴다.
+        io.open(PKG_PROBE,'w').write(
+          json.dumps({"name":"probe","dependencies":{"@react-pdf/renderer":"^4.0.0"}},indent=2))
         expect=m[5]
     elif kind=='src2':
         p=os.path.join(ROOT,m[2]); s=io.open(p,encoding='utf-8').read()
