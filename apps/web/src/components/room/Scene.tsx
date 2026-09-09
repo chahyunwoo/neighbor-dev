@@ -16,7 +16,7 @@ import {
 } from './Fixtures'
 import { Furniture } from './Furniture'
 import { Lights } from './Lights'
-import { CAMERA_FOV, CAMERA_LIMITS, LAYOUT, ROOM_CENTER } from './layout'
+import { CAMERA_FOV, CAMERA_LIMITS, FOCUS_PULL, LAYOUT, ROOM_CENTER } from './layout'
 import styles from './Scene.module.css'
 import { ROOM_BG, Shell } from './Shell'
 
@@ -117,7 +117,24 @@ export function Scene({
     const h = hotspots.find((x) => x.meta.id === openId)
     if (!h) return null
     // 마커는 물건 **위**에 있으므로, 초점은 그만큼 내려 물건 몸통을 본다.
-    return { center: [h.at[0], h.at[1] - h.radius * 0.6, h.at[2]], radius: h.radius }
+    const y = h.at[1] - h.radius * 0.6
+
+    /*
+     * 🔴 벽에 붙은 물건은 초점을 방 안쪽으로 당긴다 (이슈 #17).
+     *    안 그러면 카메라가 그 물건과 방 중심을 잇는 선 위, 즉 **벽 쪽**에
+     *    서서 물건이 화면을 덮고 방이 안 보인다. 근거는 `layout.ts` 의
+     *    `FOCUS_PULL` 주석.
+     */
+    const pull = FOCUS_PULL[h.meta.id] ?? 0
+    if (pull === 0) return { center: [h.at[0], y, h.at[2]], radius: h.radius }
+
+    const dx = ROOM_CENTER[0] - h.at[0]
+    const dz = ROOM_CENTER[2] - h.at[2]
+    const len = Math.hypot(dx, dz) || 1
+    return {
+      center: [h.at[0] + (dx / len) * pull, y, h.at[2] + (dz / len) * pull],
+      radius: h.radius,
+    }
   })()
 
   return (
