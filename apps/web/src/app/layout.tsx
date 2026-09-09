@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
+import { CanvasRoot } from '../components/canvas/CanvasRoot'
 import { MotionRoot } from '../components/MotionRoot'
 import '../styles/tokens.css'
 
@@ -38,6 +39,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <MotionRoot>{children}</MotionRoot>
+        {/*
+         * 지속 캔버스 — 앱 전체에 하나. 라우트가 바뀌어도 살아 있다.
+         *
+         * 🔴 **`{children}` 밖에 둔다.** 안에 두면 `template.tsx` 의 전환
+         *    `transform` 이 `position:fixed` 의 기준을 바꿔, 라우트 전환
+         *    동안 캔버스가 같이 흔들린다.
+         *
+         * 🔴 **`children` 뒤에 둔다** — 히어로 텍스트가 먼저 파싱되어야 한다
+         *    (LCP 요소를 3D 로 만들지 않는다).
+         *
+         * 🔴 `MotionRoot` 밖이다. `MotionConfig` 는 DOM 모션 설정이고
+         *    R3F 의 `useFrame` 루프는 별개다.
+         */}
+        <CanvasRoot />
       </body>
     </html>
   )
