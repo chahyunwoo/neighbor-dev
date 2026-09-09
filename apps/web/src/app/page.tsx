@@ -1,5 +1,5 @@
+import { Hero } from '../components/Hero'
 import { Nav } from '../components/Nav'
-import { RoomList } from '../components/RoomList'
 import { getCounts } from '../lib/projects'
 import { ROOM_OBJECTS } from '../lib/room'
 import styles from './page.module.css'
@@ -20,25 +20,22 @@ export default function HomePage() {
       <Nav />
 
       <main className={styles.main}>
-        <p className={styles.caption}>
-          [ fig. 1 · 작업실 · 클릭할 수 있는 것 {ROOM_OBJECTS.length} ]
-        </p>
-
-        <div className={styles.copy}>
-          <h1 className={styles.title}>
-            들어와서
-            <br />
-            <strong>둘러보세요.</strong>
-          </h1>
-          <p className={styles.lede}>
-            이 방의 물건은 전부 열립니다. 모니터를 켜면 프로젝트가 어떻게 굴러갔는지 보이고,
-            화이트보드엔 그동안 만든 것들이 붙어 있어요.
+        <Hero>
+          <p className={styles.caption}>
+            [ fig. 1 · 작업실 · 클릭할 수 있는 것 {ROOM_OBJECTS.length} ]
           </p>
-        </div>
-
-        <div className={styles.room}>
-          <RoomList />
-        </div>
+          <div className={styles.copy}>
+            <h1 className={styles.title}>
+              들어와서
+              <br />
+              <strong>둘러보세요.</strong>
+            </h1>
+            <p className={styles.lede}>
+              이 방의 물건은 전부 열립니다. 모니터를 켜면 프로젝트가 어떻게 굴러갔는지 보이고,
+              화이트보드엔 그동안 만든 것들이 붙어 있어요.
+            </p>
+          </div>
+        </Hero>
       </main>
 
       <footer className={styles.foot}>

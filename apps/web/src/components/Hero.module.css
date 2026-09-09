@@ -1,0 +1,33 @@
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 640px;
+}
+
+/* 3D 가 뜨면 목록을 접고 카피만 남긴다. */
+.copyLayer {
+  position: relative;
+  z-index: 2;
+  padding-top: 26px;
+  pointer-events: none;
+}
+.copyLayer > * {
+  pointer-events: auto;
+}
+
+.room[data-mode="list"] {
+  position: relative;
+  z-index: 1;
+  padding: 34px 0 48px;
+  max-width: 620px;
+}
+.room[data-mode="3d"] {
+  /* 3D 가 뜨면 목록을 숨기되 DOM 에는 남긴다 — 스크린리더와 키보드는 계속 쓴다.
+     display:none 으로 지우면 3D 를 못 쓰는 보조기술 사용자가 갈 곳을 잃는다. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

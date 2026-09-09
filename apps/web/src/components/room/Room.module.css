@@ -1,0 +1,32 @@
+.canvas {
+  position: absolute;
+  inset: 0;
+  /* 카피가 3D 위에 얹히므로 캔버스는 맨 아래. */
+  z-index: 0;
+}
+
+.hint {
+  position: absolute;
+  left: var(--pad-x);
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-faint);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-ghost);
+  z-index: 1;
+}

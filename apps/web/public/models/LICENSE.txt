@@ -1,0 +1,12 @@
+Kenney Furniture Kit
+https://kenney.nl/assets/furniture-kit
+
+License: CC0 1.0 Universal (Public Domain Dedication)
+
+  "This content is free to use in personal, educational and commercial projects."
+  "Support us by crediting Kenney (this is not mandatory)"
+
+출처 표기는 의무가 아니지만 남긴다. 상업 사용·웹 번들 재배포에 제한이 없다.
+
+이 디렉터리의 glb 는 원본 그대로이고, 색은 런타임에 바꾼다
+(apps/web/src/components/room/Furniture.tsx — 머티리얼 이름 기준 리컬러).
