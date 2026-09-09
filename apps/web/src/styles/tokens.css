@@ -1,0 +1,88 @@
+/*
+ * 디자인 토큰 — 시안(아트보드 5종)에서 뽑았다.
+ *
+ * 아트디렉션은 기획서 4-A 절: **말은 따뜻하게, 화면은 차갑게.**
+ * 이 파일은 "화면" 쪽이라 전부 차가운 값이다. 카피의 온기는 문장이 진다.
+ * 앰버(--amber)만 예외 — 램프 빛이자 주 동선 표시다.
+ */
+
+:root {
+  /* 바탕 — 방의 어둠 */
+  --bg: #0b0a0c;
+  --bg-panel: rgba(14, 17, 24, 0.5);
+  --line: rgba(255, 255, 255, 0.075);
+  --line-soft: rgba(255, 255, 255, 0.055);
+
+  /* 글자 */
+  --fg: #e7e9ee;
+  --fg-strong: #f2f4f8;
+  --fg-muted: #a8aeba;
+  --fg-dim: #8891a0;
+  --fg-faint: #6c7480;
+  --fg-ghost: #5d6470;
+
+  /* 앰버 — 램프, 주 동선(모니터·현관문) */
+  --amber: #e8a87c;
+  --amber-bright: #f5c9a8;
+  --amber-text: #f7e4d4;
+  --amber-dim: #a38b7c;
+  --amber-line: rgba(232, 168, 124, 0.32);
+  --amber-wash: rgba(232, 168, 124, 0.1);
+
+  /* 블루 — 부 동선(화이트보드·책장·서랍·노트북) */
+  --blue: #6ba3e8;
+  --blue-line: rgba(107, 163, 232, 0.22);
+  --blue-wash: rgba(107, 163, 232, 0.07);
+
+  /* 타이포 */
+  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* 여백 — 데스크톱 56px / 모바일 22px (시안 실측) */
+  --pad-x: 56px;
+  --radius: 3px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --pad-x: 22px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--amber);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--amber-bright);
+}
+
+/* 움직임을 원하지 않는 사용자에게는 전부 멈춘다 (기획서 4절 폴백). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

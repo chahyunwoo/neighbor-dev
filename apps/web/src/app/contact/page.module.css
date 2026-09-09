@@ -1,0 +1,52 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-width: 620px;
+}
+.prose {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--fg-muted);
+  font-weight: 300;
+  text-wrap: pretty;
+}
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.point {
+  display: flex;
+  gap: 12px;
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+.pointNo {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--amber);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.pointText {
+  font-size: 13.5px;
+  line-height: 1.72;
+  color: var(--fg-dim);
+  font-weight: 300;
+}
+.pending {
+  padding: 16px 18px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.85;
+  color: var(--fg-faint);
+}

@@ -1,0 +1,172 @@
+.section {
+  padding-top: 8px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 26px 0 14px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--fg-strong);
+  letter-spacing: -0.015em;
+}
+
+.sectionNote {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-ghost);
+}
+
+/* 사례 상세 — 카드가 크고, 안에 판단·수치가 들어간다. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 20px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--fg);
+  transition: border-color 0.18s ease;
+}
+
+.card:hover {
+  border-color: rgba(232, 168, 124, 0.28);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.period {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-ghost);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.012em;
+  color: var(--fg-strong);
+  text-wrap: pretty;
+}
+
+.cardProblem {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+  font-weight: 300;
+  /* 카드에서는 3줄까지. 전문은 상세 화면에서 읽는다. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--fg-faint);
+}
+
+.counts {
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--amber-dim);
+  padding-top: 2px;
+}
+
+/* 경력 요약 — 한 줄짜리 행. 상세 필드가 없으므로 형태부터 다르다. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 20px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-panel);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+.rowPeriod {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-ghost);
+  white-space: nowrap;
+}
+
+.rowStack {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.note {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.9;
+  color: var(--fg-ghost);
+}
+
+@media (max-width: 768px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    grid-template-columns: 1fr;
+  }
+  .rowPeriod {
+    justify-self: start;
+  }
+}

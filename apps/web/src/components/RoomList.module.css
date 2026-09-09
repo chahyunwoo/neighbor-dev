@@ -1,0 +1,104 @@
+/*
+ * 방을 목록으로 — 시안 Mobile.dc.html.
+ *
+ * 이것은 "모바일 전용 대체물"이 아니라 **세 경로의 바닥**이다.
+ * 크롤러와 JS 비활성 브라우저가 받는 것도 이 HTML 이고,
+ * 데스크톱에서는 이 위에 3D 가 얹힌다.
+ *
+ * 실측 근거(프로토타입): 목록을 가로 칩으로 만들면 화면 밖 684px 까지 뻗는다.
+ * 세로 카드로 간다.
+ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 19px 18px;
+  min-height: 76px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--fg);
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.item:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* 주 동선(모니터·현관문)은 앰버로 갈라 놓는다 — 시안의 배지 1·6. */
+.item[data-accent="amber"] {
+  border-color: rgba(232, 168, 124, 0.28);
+  background: linear-gradient(150deg, rgba(38, 28, 22, 0.55) 0%, rgba(14, 11, 10, 0.4) 100%);
+}
+
+.item[data-accent="amber"]:hover {
+  border-color: var(--amber-line);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 2px;
+  background: var(--blue-wash);
+  border: 1px solid var(--blue-line);
+  color: var(--blue);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.item[data-accent="amber"] .icon {
+  background: rgba(232, 168, 124, 0.08);
+  border-color: rgba(232, 168, 124, 0.26);
+  color: var(--amber);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15.5px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+
+.item[data-accent="amber"] .name {
+  color: var(--amber-text);
+}
+
+.opens {
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  font-weight: 300;
+}
+
+.item[data-accent="amber"] .opens {
+  color: var(--amber-dim);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--fg-ghost);
+}
+
+.item[data-accent="amber"] .chevron {
+  color: var(--amber);
+}

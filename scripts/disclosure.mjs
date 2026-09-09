@@ -134,12 +134,21 @@ const CHECKS = [
   // 개인 사이트 도메인 — CLAUDE.md 가 이 파일에 도메인 자체를 쓰지 말라 하므로
   // 조각으로 조립해 문자열 상수로 남기지 않는다.
   ['개인도메인', (t) => (t.includes(['hyunwoo', 'dev'].join('.')) ? ['<개인 도메인>'] : [])],
+  // 개인 스코프 패키지명 — 도메인이 아니라 npm 스코프로 새어나온다.
+  // ⚠️ 실측(2026-09-09): `@hyunwoo/ui` 가 스택 태그에 실려 화면에 나갔는데
+  //    도메인 검사(`hyunwoo.dev`)로는 안 걸렸다. 눈으로 보고서야 잡혔다.
+  ['개인스코프', (t) => [...t.matchAll(/@hyunwoo\/[\w-]+/g)].map((m) => m[0])],
+  // 플랫폼·서비스 실명 (기획서 11절이 익명 표기를 정한 건).
+  ['플랫폼실명', (t) => ['카페24', 'Cafe24', 'CAFE24'].filter((w) => t.includes(w))],
   [
     '호스트명·포트',
     (t) => [...t.matchAll(/\b[\w-]+\.(local|internal|lan|home)\b(:\d+)?/gi)].map((m) => m[0]),
   ],
   ['이슈키', findIssueKeys],
-  ['트래커경로', (t) => [...t.matchAll(/\/(browse|jira|issues)\/[A-Z]{2,5}-\d+/g)].map((m) => m[0])],
+  [
+    '트래커경로',
+    (t) => [...t.matchAll(/\/(browse|jira|issues)\/[A-Z]{2,5}-\d+/g)].map((m) => m[0]),
+  ],
   ['상태전이표', (t) => TRANSITION_TABLE_MARKERS.filter((w) => t.includes(w))],
   // 회사 표기: 사명을 익명화했는지. 원본 `client` 필드 값이 그대로 새어나오면 걸린다.
   // (호출부가 원본 사명 목록을 넘긴다 — 이 파일에 사명을 적지 않는다.)

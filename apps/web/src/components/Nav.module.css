@@ -1,0 +1,63 @@
+.nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px var(--pad-x);
+  border-bottom: 1px solid var(--line-soft);
+  /* 시안 실측: scrim 이 같은 z-index 로 nav 를 덮어 로고가 안 읽혔다.
+     nav 를 위로 올려 그 상황을 구조적으로 막는다. */
+  z-index: 5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--fg);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-size: 13.5px;
+  color: var(--fg-dim);
+}
+
+.links a:hover {
+  color: var(--fg);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 17px;
+  border: 1px solid var(--amber-line);
+  border-radius: 2px;
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.cta:hover {
+  border-color: var(--amber);
+  background: var(--amber-wash);
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 19px var(--pad-x);
+  }
+  /* 좁은 화면에서는 링크를 접고 CTA 만 남긴다 — 시안 Mobile 과 같은 취지. */
+  .links a:not(.cta) {
+    display: none;
+  }
+  .links {
+    gap: 0;
+  }
+}

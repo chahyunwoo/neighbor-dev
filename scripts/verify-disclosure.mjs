@@ -5,7 +5,7 @@
  * 한 건이라도 걸리면 종료코드 1 — CI·훅에서 그대로 게이트로 쓴다.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

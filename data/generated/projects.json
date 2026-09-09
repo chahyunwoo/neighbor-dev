@@ -140,7 +140,7 @@
         "launchd 에이전트 (macOS 자동 기동)",
         "GitHub Actions CI",
         "git pre-commit 훅",
-        "로컬 전용 바인딩 전용 바인딩 (외부 노출 없음)"
+        "로컬 전용 바인딩 (외부 노출 없음)"
       ],
       "role": "1인 개발. (1) 데이터 수집 — `claude agents --json`을 ProcessBuilder로 실행해 살아있는 세션 목록을 얻고, 세션 기록 JSONL을 역순으로 읽어 제목·마지막 발화·컨텍스트 사용량을 붙이는 수집 계층, (2) 상태 판별 — 레코드 타입이 아니라 `message.content`의 블록(tool_use / tool_result)까지 봐서 '답변 대기 / 작업 중 / 멈춤 의심'을 가르는 순수 도메인 로직, (3) 성능 — 대용량 기록을 통째로 파싱하지 않고 NIO `RandomAccessFile`로 파일 끝에서부터 필요한 레코드까지만 읽는 역순 리더와 상한 튜닝, (4) API — `@Scheduled` 주기 수집 + `SseEmitter` 실시간 스트림, record DTO, (5) 프론트 — Vue 3 + Vite + Tailwind로 프로젝트별 그룹 화면과 SSE 구독 훅, (6) macOS 메뉴바 앱 — SwiftUI로 답변 대기 수를 메뉴바에 띄우고 SSE를 구독, 백엔드가 죽으면 되살리는 클라이언트, (7) 배포 — 빌드 스크립트와 launchd 에이전트, (8) CI — 빌드·테스트에 더해 '바인딩이 로컬 전용 바인딩인가', '배포 산출물에 세션 데이터가 섞이지 않았는가'를 검사하는 게이트.",
       "problem": "여러 프로젝트에서 Claude Code 세션을 동시에 띄워두고, 컨텍스트가 차면 새 세션을 여는 방식으로 쓰다 보니 세션이 계속 쌓였다. `claude agents --json`은 살아있는 세션 목록은 주지만 **무슨 작업 중인지·어느 브랜치인지·내 답을 기다리는지는 알려주지 않는다.** 그 정보는 세션 기록 파일에 따로 있다. 이 둘을 이어서 '지금 내 답을 기다리는 세션'과 '멈춰 있는 세션', '컨텍스트가 얼마나 찼는지'를 한 화면에 놓는 것이 목표였다. 기획 시점 실측으로 살아있는 세션 10개 중 7개가 답변 대기 상태였고, 한 세션은 27일째 떠 있었다. 만들고 끝낸 도구가 아니라 2026-09-04 확인 기준 매일 사용 중이며, 쓰면서 나온 불편을 계속 반영하고 있다.",
@@ -342,13 +342,13 @@
         "Zustand",
         "ky",
         "Tailwind CSS 4",
-        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "shadcn/ui (Radix Primitives)",
         "date-fns",
         "lucide-react",
         "Vercel",
         "Turborepo/pnpm workspace의 한 앱으로 빌드"
       ],
-      "role": "1인 개발. (1) TanStack Router 파일 기반 라우팅으로 로그인·포스트·포트폴리오 관리 화면 12개 라우트 구성, (2) TanStack Query 기반 서버 상태 관리와 entities 단위 쿼리 옵션/훅 캡슐화, (3) TOTP 2단계 인증의 **프런트 플로우**(코드 입력 폼, 실패 처리, 세션 수립)와 남은 세션 시간을 표시·연장하는 세션 타이머 훅 구현 — 서버 측 TOTP 검증은 별도 저장소의 API 서버에 있고 그쪽 항목에서 다룬다, (4) Monaco 에디터를 붙인 글·작업물 작성 폼(react-hook-form + Zod 검증), (5) Recharts 기반 애널리틱스 대시보드(유입 경로 파이 차트 등), (6) 어드민에 남아 있던 Mantine을 걷어내고 shadcn/Radix 기반 `@hyunwoo/ui` 공용 컴포넌트로 통일, (7) FSD 레이어(app → pages → features → entities → shared)로 소스 구조 정리.",
+      "role": "1인 개발. (1) TanStack Router 파일 기반 라우팅으로 로그인·포스트·포트폴리오 관리 화면 12개 라우트 구성, (2) TanStack Query 기반 서버 상태 관리와 entities 단위 쿼리 옵션/훅 캡슐화, (3) TOTP 2단계 인증의 **프런트 플로우**(코드 입력 폼, 실패 처리, 세션 수립)와 남은 세션 시간을 표시·연장하는 세션 타이머 훅 구현 — 서버 측 TOTP 검증은 별도 저장소의 API 서버에 있고 그쪽 항목에서 다룬다, (4) Monaco 에디터를 붙인 글·작업물 작성 폼(react-hook-form + Zod 검증), (5) Recharts 기반 애널리틱스 대시보드(유입 경로 파이 차트 등), (6) 어드민에 남아 있던 Mantine을 걷어내고 shadcn/Radix 기반 `자체 공통 패키지` 공용 컴포넌트로 통일, (7) FSD 레이어(app → pages → features → entities → shared)로 소스 구조 정리.",
       "problem": "블로그 콘텐츠를 저장소 밖 API로 옮기고 나니 글을 쓰고 고칠 도구가 필요해졌다. 동시에 어드민은 로그인 뒤에서만 도는 화면이라 SEO나 초기 렌더 비용보다 '편집 중 상태를 얼마나 잘 붙들고 있느냐'가 중요했고, 블로그·포트폴리오가 이미 쓰던 shadcn과 어드민의 Mantine이 갈라져 같은 폼을 두 번 만들고 있었다.",
       "decisions": [
         {
@@ -417,7 +417,7 @@
         "Next.js 16 (App Router, RSC)",
         "React 19 + React Compiler",
         "Tailwind CSS 4",
-        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "shadcn/ui (Radix Primitives)",
         "next-mdx-remote v6",
         "rehype-pretty-code (Shiki)",
         "rehype-slug / rehype-autolink-headings",
@@ -624,7 +624,7 @@
         "@react-pdf/renderer",
         "next-mdx-remote v6 + rehype-pretty-code(Shiki)",
         "Tailwind CSS 4 + @tailwindcss/typography",
-        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "shadcn/ui (Radix Primitives)",
         "react-hook-form + Zod",
         "Zustand",
         "Next.js Route Handler — `/api/revalidate` (시크릿 검증 후 revalidateTag/revalidatePath)",
@@ -1060,11 +1060,11 @@
     {
       "id": "cafe24-playbook",
       "tier": "summary",
-      "label": "Cafe24 Playbook — 카페24 외주 지식 베이스와 개인통관고유부호(PCCC) 실시간 검증 시스템",
+      "label": "커머스 플랫폼 주문 검증 시스템 — 주문 데이터 실시간 검증",
       "period": "2026.05 ~ 2026.05 (운영 중)",
       "domain": [
         "커머스",
-        "카페24",
+        "커머스 플랫폼",
         "쇼핑몰 구축",
         "외주 지식베이스",
         "공공 API 연동",
@@ -1074,9 +1074,9 @@
       "stack": [
         "Vanilla JavaScript (ES5 호환, 의존성 없음)",
         "Fetch API + AbortController",
-        "카페24 스마트디자인 스킨 템플릿 (Smarty 기반 {$var}, <!--@section-->)",
-        "CSS (카페24 전역 리셋 오버라이드 포함)",
-        "바닐라 JavaScript (카페24 주문서 스킨에 직접 삽입, 프레임워크·빌드 도구 없음)",
+        "커머스 플랫폼 스마트디자인 스킨 템플릿 (Smarty 기반 {$var}, <!--@section-->)",
+        "CSS (커머스 플랫폼 전역 리셋 오버라이드 포함)",
+        "바닐라 JavaScript (커머스 플랫폼 주문서 스킨에 직접 삽입, 프레임워크·빌드 도구 없음)",
         "Python 3.11+",
         "FastAPI",
         "httpx (async)",
@@ -1094,7 +1094,7 @@
         "Docker Compose",
         "Cloudflare Tunnel + Cloudflare DNS",
         "전용 VPS",
-        "카페24 파일 업로더 CDN (쿼리 파라미터 기반 캐시 버저닝)",
+        "커머스 플랫폼 파일 업로더 CDN (쿼리 파라미터 기반 캐시 버저닝)",
         "Docker (멀티스테이지, python:3.12-slim)",
         "docker compose",
         "Vultr (운영 배포처)"

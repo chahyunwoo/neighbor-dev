@@ -8,7 +8,7 @@
  * 🔴 허용목록 방식이라, 원본에 새 필드가 생겨도 조용히 새어나가지 않는다.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

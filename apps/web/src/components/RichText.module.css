@@ -1,0 +1,16 @@
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line-soft);
+  color: var(--fg-dim);
+  /* 긴 명령이 줄바꿈 없이 화면 밖으로 뻗지 않게. */
+  word-break: break-word;
+}
+
+.strong {
+  font-weight: 500;
+  color: var(--fg);
+}
