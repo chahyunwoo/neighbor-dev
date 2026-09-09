@@ -1,6 +1,8 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { DIAGNOSIS_KEY } from './ContactForm'
 import styles from './DiagnoseForm.module.css'
 
 const MIN = 20
@@ -17,6 +19,7 @@ const MAX = 4000
  *    JS 없이도 페이지의 뜻은 읽힌다.
  */
 export function DiagnoseForm() {
+  const router = useRouter()
   const [text, setText] = useState('')
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +55,22 @@ export function DiagnoseForm() {
     } finally {
       setPending(false)
     }
+  }
+
+  /**
+   * 결과를 문의로 넘긴다 (기획서 5절 "이 결과를 문의에 붙여넣기").
+   *
+   * 🔴 서버에 저장하지 않는다. sessionStorage 에 잠깐 두고 문의 화면이
+   *    집어간다 — 탭을 닫으면 사라진다.
+   */
+  function sendToContact() {
+    if (!result) return
+    try {
+      sessionStorage.setItem(DIAGNOSIS_KEY, result)
+    } catch {
+      // 저장소가 막혔으면 그냥 문의 화면으로 간다. 결과는 복사로 옮기면 된다.
+    }
+    router.push('/contact')
   }
 
   async function copy() {
@@ -100,9 +119,14 @@ export function DiagnoseForm() {
         <div>
           <div className={styles.resultHead}>
             <span className={styles.resultTitle}>[ 자가진단 결과 · 저장하지 않습니다 ]</span>
-            <button className={styles.copy} type="button" onClick={copy}>
-              {copied ? '복사됨' : '문의에 붙여넣기용 복사'}
-            </button>
+            <span className={styles.actions}>
+              <button className={styles.copy} type="button" onClick={copy}>
+                {copied ? '복사됨' : '복사'}
+              </button>
+              <button className={styles.send} type="button" onClick={sendToContact}>
+                이 결과로 문의하기 →
+              </button>
+            </span>
           </div>
           <div className={styles.result}>{result}</div>
         </div>

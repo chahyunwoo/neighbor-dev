@@ -107,6 +107,12 @@ web `3200` · api `3100` · DB `5433`. 2026-09-09 실측 점유를 피한 값이
 → `apps/api` 는 Biome 대상에서 뺐다(근거: `apps/api/왜-biome-을-안-쓰나.md`).
 → **api·web 을 고친 뒤에는 실제로 띄워서 확인한다.** 빌드 통과는 증거가 아니다.
 
+⚠️ `grep "^import type" apps/api/src/` 를 게이트로 쓰지 않는다. **`import type`
+자체는 문제가 아니다** — DI 대상(생성자 주입)과 `ValidationPipe` 가 보는 DTO 에만
+해로우며, 순수 타입 참조에는 정당하다(실측: `contact.service.ts` 가 그 경우인데
+게이트가 위반으로 잡아 잘못된 결론을 냈다). 판정은 **띄워서 `/…/status` 가
+응답하는가**로 한다.
+
 ```bash
 pnpm verify                      # lint · typecheck · test · 방 검사 · 데이터 검사
 pnpm --filter @neighbor/api build && node apps/api/dist/main.js &

@@ -8,10 +8,14 @@ import { test } from 'node:test'
 import { nextMidnightKst, QuotaService } from '../../dist/diagnose/quota.service.js'
 
 /** ConfigService 흉내 — 값을 주입해 경계를 정확히 친다. */
-function svc(dailyCap, perIpHourly) {
-  return new QuotaService({
-    get: (k) => (k === 'AI_DAILY_TOTAL_CAP' ? dailyCap : perIpHourly),
-  })
+function svc(dailyCap, perIpHourly, contactDaily = 999, contactPerIp = 999) {
+  const table = {
+    AI_DAILY_TOTAL_CAP: dailyCap,
+    AI_RATE_LIMIT_PER_IP_HOUR: perIpHourly,
+    CONTACT_DAILY_CAP: contactDaily,
+    CONTACT_RATE_LIMIT_PER_IP_HOUR: contactPerIp,
+  }
+  return new QuotaService({ get: (k) => table[k] })
 }
 
 test('일일 캡에 닿으면 막힌다 — 다른 IP 여도 막힌다', () => {
@@ -66,4 +70,29 @@ test('자정(KST) 리셋 시각을 정확히 계산한다', () => {
   // 자정 직전(23:59 KST)에도 그날의 자정이 아니라 다음 자정을 준다.
   const almost = Date.UTC(2026, 8, 9, 14, 59, 0)
   assert.equal(nextMidnightKst(almost), Date.UTC(2026, 8, 9, 15, 0, 0))
+})
+
+test('용도가 서로의 예산을 깎지 않는다', () => {
+  // 🔴 이것이 용도를 나눈 이유다 — 진단을 많이 쓴 날에 문의가 막히면 안 된다.
+  const q = svc(2, 99, 5, 99)
+  q.consume('1.1.1.1', 'diagnose')
+  q.consume('1.1.1.1', 'diagnose')
+  assert.equal(q.check('1.1.1.1', 'diagnose').allowed, false, '진단은 캡에 닿았다')
+  assert.equal(q.check('1.1.1.1', 'contact').allowed, true, '문의는 그대로 열려 있어야 한다')
+})
+
+test('용도별 IP 제한도 따로 센다', () => {
+  const q = svc(999, 1, 999, 1)
+  q.consume('1.1.1.1', 'diagnose')
+  assert.equal(q.check('1.1.1.1', 'diagnose').allowed, false)
+  assert.equal(q.check('1.1.1.1', 'contact').allowed, true, '같은 IP 라도 용도가 다르면 별개')
+})
+
+test('snapshot 이 용도별로 답한다', () => {
+  const q = svc(10, 99, 20, 99)
+  q.consume('1.1.1.1', 'contact')
+  assert.equal(q.snapshot('diagnose').dailyCap, 10)
+  assert.equal(q.snapshot('diagnose').dailyUsed, 0)
+  assert.equal(q.snapshot('contact').dailyCap, 20)
+  assert.equal(q.snapshot('contact').dailyUsed, 1)
 })

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ContactForm } from '../../components/ContactForm'
 import { PageShell } from '../../components/PageShell'
 import styles from './page.module.css'
 
@@ -7,13 +8,31 @@ export const metadata: Metadata = {
   description: '무엇을 만들지 정해지지 않아도 괜찮습니다. 범위를 같이 정리하는 것부터 합니다.',
 }
 
+/** api 상태는 서버에서 본다. 브라우저에는 api 주소를 내보내지 않는다. */
+const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3100'
+
+/** 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
+export const dynamic = 'force-dynamic'
+
+async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
+  try {
+    const res = await fetch(`${API_BASE}/contact/status`, { cache: 'no-store' })
+    return res.ok ? await res.json() : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * 현관문 — 문의.
  *
- * ⚠️ 문의 접수 수단은 아직 정하지 않았다(기획서 8절 재판단 사항).
- *    정해지지 않은 것을 정해진 것처럼 그리지 않는다 — 지금은 그 사실을 적는다.
+ * 🔴 폼이 안 뜨는 상태에서도 **무엇을 어떻게 하는지는 서버 렌더로 읽힌다.**
+ *    JS 가 없거나 접수가 닫혔을 때 빈 화면이 되지 않게.
  */
-export default function ContactPage() {
+export default async function ContactPage() {
+  const status = await fetchStatus()
+  const usable = status?.available === true && (status?.dailyRemaining ?? 0) > 0
+
   return (
     <PageShell
       fig="[ fig. 6 · 현관문 ]"
@@ -44,11 +63,17 @@ export default function ContactPage() {
             <span className={styles.pointText}>못 하는 것은 못 한다고 먼저 말씀드립니다.</span>
           </li>
         </ul>
-        <div className={styles.pending}>
-          문의 접수 수단은 준비 중입니다.
-          <br />
-          정해지면 이 자리에 붙습니다.
-        </div>
+        {usable ? (
+          <ContactForm />
+        ) : (
+          <div className={styles.pending}>
+            {status === null
+              ? '지금은 접수 창구에 연결할 수 없습니다. 잠시 후 다시 열어주세요.'
+              : status.available === false
+                ? '접수 창구를 준비하고 있습니다. 곧 열립니다.'
+                : '오늘 받을 수 있는 문의를 다 받았습니다. 내일 다시 열립니다.'}
+          </div>
+        )}
       </div>
     </PageShell>
   )

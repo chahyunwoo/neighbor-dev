@@ -113,7 +113,17 @@ function findIssueKeys(text) {
 /** 검사 12항목. 각각 (이름, 찾는 함수). */
 const CHECKS = [
   ['사설IP', findPrivateIps],
-  ['이메일', (t) => [...t.matchAll(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g)].map((m) => m[0])],
+  // 이메일. ⚠️ RFC 2606 이 문서용으로 못박은 도메인은 뺀다 — placeholder 의
+  //    `you@example.com` 이 유출로 잡혔다(실측 2026-09-09). 그 도메인들은
+  //    누구에게도 도달하지 않으므로 연락처가 아니다.
+  //    **example 이 붙은 것만** 뺀다. 다른 실제 도메인은 그대로 잡는다.
+  [
+    '이메일',
+    (t) =>
+      [...t.matchAll(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g)]
+        .map((m) => m[0])
+        .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a)),
+  ],
   [
     '내부URL',
     (t) =>
