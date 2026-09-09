@@ -11,11 +11,19 @@
  * 가져가게 한다(아래 `.main` 의 `flex: 1` + `min-height: 0`).
  */
 .page {
-  height: 100dvh;
+  /*
+   * 🔴 **기본은 스크롤된다.** 한 화면에 못박는 것은 3D 가 설 때뿐이다(아래).
+   *
+   *    이전에는 여기서 바로 `height:100dvh` + `overflow:hidden` 이었는데,
+   *    그 규칙이 **3D 가 꺼진 목록 폴백에도 그대로 걸렸다.** 목록은 1140px
+   *    인데 뷰포트가 844px 이라 **296px 이 잘려 서랍·노트북·테이블·현관문을
+   *    아예 못 눌렀다**(실측 2026-09-09, 900px 이하 전 해상도).
+   *    3D 가 없는 화면에서 그 목록은 **유일한 이동 수단**이다.
+   */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
   /*
    * 🔴 빈 곳의 클릭은 3D 로 통과시킨다 (2026-09-09 지속 캔버스 전환).
    *    캔버스가 이 요소 밖(`app/layout.tsx`)으로 나가면서, 이 래퍼가
@@ -23,6 +31,17 @@
    *    각자 누를 수 있는 것만 `auto` 로 되살린다.
    */
   pointer-events: none;
+}
+
+/*
+ * 🔴 3D 가 실제로 설 때만 한 화면에 못박는다.
+ *    `CanvasMode` 가 세우는 `data-canvas-mode` 를 그대로 쓴다 — 3D 가부
+ *    판정은 `lib/can-3d.ts` 한 곳이고, 여기서 브레이크포인트를 또 쓰면
+ *    두 값이 어긋난다(실제로 900 과 768 로 어긋나 있었다).
+ */
+html[data-canvas-mode="room"] .page {
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* 램프 빛 — 책상에서 번지는 따뜻한 원. 기획서 4-A 의 유일한 온기다. */
@@ -145,7 +164,9 @@
   color: var(--fg-ghost);
 }
 
-@media (max-width: 768px) {
+/* ⚠️ `lib/can-3d.ts` 의 `NARROW_QUERY`(900px)와 **같은 값이어야 한다.**
+   768 로 두었더니 769~900 구간이 3D 도 없고 모바일 레이아웃도 아니었다. */
+@media (max-width: 900px) {
   .title {
     font-size: 32px;
     letter-spacing: -0.032em;
