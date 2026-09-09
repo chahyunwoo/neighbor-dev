@@ -278,26 +278,20 @@ function useEdgeClamp() {
       if (!w || !h) return
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
-      const read = (el: HTMLElement) => {
-        const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform)
-        return m ? { x: Number(m[1]), y: Number(m[2]) } : null
-      }
-
-      /*
-       * 🔴 **안 접힌 마커의 자리도 미리 넣어 둔다.**
-       *    접힌 것이 제자리에 있는 마커 위에 내려앉으면 그 마커를 덮어
-       *    영영 못 누르게 된다 — 실측 2026-09-09: 책장(799,144, 안 접힘)에
-       *    현관문(801,169, 접힘)이 25px 옆에 내려앉아 책장이 안 열렸다.
+      /**
+       * 화면에서 실제로 보이는 자리 — **직접 잰다.**
+       *
+       * ⚠️ 래퍼의 `translate3d` 값으로 계산하려 했으나 맞지 않았다.
+       *    `tx/scale` 도 `tx*scale` 도 실제 화면 좌표와 안 맞는다(실측으로
+       *    확인). 드리의 변환에 더해 우리 `--edge-dx` 보정이 **버튼**에
+       *    걸려 있어서, 최종 자리는 계산이 아니라 측정으로만 안다.
+       *    `getBoundingClientRect` 는 그 전부가 반영된 값을 준다.
        */
-      const parked: { x: number; y: number }[] = []
-      for (const el of wraps) {
-        const p = read(el)
-        if (!p) continue
-        const w2 = canvas.clientWidth
-        const h2 = canvas.clientHeight
-        const l2 = Math.min(UI_LEFT, w2 * 0.5) + EDGE_PAD
-        const inside = p.x >= l2 && p.x <= w2 - EDGE_PAD && p.y >= EDGE_PAD && p.y <= h2 - EDGE_PAD
-        if (inside) parked.push(p)
+      const onScreen = (el: HTMLElement) => {
+        const btn = el.querySelector('button')
+        if (!btn) return null
+        const r = btn.getBoundingClientRect()
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
       }
 
       for (const el of wraps) {
@@ -338,32 +332,62 @@ function useEdgeClamp() {
          *    보정량만 변수로 넘기고, 적용은 **자식 요소**가 한다.
          *    그래야 드리의 transform 과 우리 보정이 서로를 안 건드린다.
          */
-        /*
-         * 🔴 접힌 것끼리 **같은 자리에 포개진다.** 그러면 위의 것만 눌리고
-         *    아래 것은 영영 못 누른다 — 실측 2026-09-09: `elementsFromPoint`
-         *    에 dot 이 2개 겹쳐 나왔고, 책장이 그래서 안 열렸다.
-         *
-         * ⚠️ 밀어내는 순서가 프레임마다 달라지면 마커가 떨려서 더 못 누른다
-         *    (한 번 그렇게 만들어 7/7 → 5/7 로 떨어뜨렸다). 그래서
-         *    **DOM 순서대로** 훑으며 **아래로만** 밀고, 밀린 자리는 그 프레임
-         *    안에서만 쓴다 — 같은 입력이면 늘 같은 결과가 나온다.
-         */
-        let py = cy
-        if (clamped) {
-          while (
-            parked.some((q) => Math.abs(q.x - cx) < EDGE_GAP && Math.abs(q.y - py) < EDGE_GAP)
-          ) {
-            py += EDGE_GAP
-            if (py > h - EDGE_PAD) break
-          }
-          parked.push({ x: cx, y: py })
-        }
-
         el.style.setProperty('--edge-dx', `${cx - x}px`)
-        el.style.setProperty('--edge-dy', `${py - y}px`)
+        el.style.setProperty('--edge-dy', `${cy - y}px`)
         if ((el.dataset.edge === 'true') !== clamped) {
           el.dataset.edge = clamped ? 'true' : 'false'
         }
+      }
+
+      /*
+       * 🔴 **2차 — 접힌 것이 남의 마커를 덮었으면 비켜준다** (이슈 #6).
+       *
+       *    접기는 각자 따로 하므로 서로를 모른다. 그래서 가장자리로 온 마커가
+       *    제자리에 있던 마커 위에 내려앉는다 — 실측: 현관문(접힘)이
+       *    책장(안 접힘) 위 25px 안에 앉아 `elementsFromPoint` 에 dot 이 2개
+       *    겹쳐 나왔고, **책장이 영영 안 열렸다.**
+       *
+       * 🔴 **비키는 쪽은 접힌 마커다.** 안 접힌 것은 물건 위의 제자리이므로
+       *    그걸 옮기면 "물건을 가리킨다" 가 깨진다. 접힌 것은 이미 제자리를
+       *    떠난 안내 표시라 조금 더 움직여도 뜻이 안 변한다.
+       *
+       * ⚠️ **계산이 아니라 측정으로 판정한다.** 래퍼 좌표로 재려다 틀렸다 —
+       *    드리가 거리에 따라 `scale()` 을 같이 걸어서 좌표 거리와 화면
+       *    거리가 다르다(책장↔현관문이 좌표로 117px, 화면으로 25px).
+       *
+       * ⚠️ DOM 순서대로 훑고 **아래로만** 민다. 순서가 프레임마다 바뀌면
+       *    마커가 떨려서 오히려 더 안 눌린다(한 번 그렇게 만들어 7/7 → 5/7).
+       */
+      const canvasBox = canvas.getBoundingClientRect()
+      const taken: { x: number; y: number }[] = []
+      for (const el of wraps) {
+        if (el.dataset.edge !== 'true') {
+          // 제자리에 있는 것은 자리를 **먼저** 차지한다. 접힌 것이 피해 간다.
+          const at = onScreen(el)
+          if (at) taken.push(at)
+        }
+      }
+      for (const el of wraps) {
+        if (el.dataset.edge !== 'true') continue
+        const at = onScreen(el)
+        if (!at) continue
+
+        let shift = 0
+        const dy = Number.parseFloat(el.style.getPropertyValue('--edge-dy')) || 0
+        while (
+          taken.some(
+            (q) => Math.abs(q.x - at.x) < EDGE_GAP && Math.abs(q.y - (at.y + shift)) < EDGE_GAP,
+          )
+        ) {
+          shift += EDGE_GAP
+          // 아래로 넘치면 포기한다 — 화면 밖으로 내보내면 더 나쁘다.
+          if (at.y + shift > canvasBox.bottom - EDGE_PAD) {
+            shift = 0
+            break
+          }
+        }
+        if (shift) el.style.setProperty('--edge-dy', `${dy + shift}px`)
+        taken.push({ x: at.x, y: at.y + shift })
       }
     }
     raf = requestAnimationFrame(tick)
