@@ -69,6 +69,36 @@ ps aux | grep -i '[c]loudflared'
 터널 0개. **이 포트를 피하고, 남의 프로세스·터널을 끄지 않는다.**
 무료 퀵터널은 URL 이 매번 바뀌므로 재시작 시 웹훅 등록을 갱신해야 한다.
 
+## 🔴 게이트는 훅으로 강제하고, 그 훅이 잡는지 검사한다
+
+공개 검사는 `.githooks/pre-commit` 이 강제한다. 설치:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+**"훅이 있다"와 "훅이 잡는다"는 다르다.** 실측 2026-09-09: `git diff --cached
+--name-only` 가 한글 파일명을 `"docs/\352\270\260..."` 로 내놓아 `docs/*` 패턴이
+안 맞았고, **`docs/기획.md` 가 그대로 커밋됐다**(원격 반영 전 발견해 되돌렸다).
+`-z | tr '\0' '\n'` 로 원문 경로를 받아 고쳤다.
+
+→ 훅·검사기를 만들거나 고치면 **실제로 위반을 만들어 막히는지 확인한다.**
+
+```bash
+node scripts/build-data.mjs && node scripts/verify-disclosure.mjs   # 데이터 검사
+python3 scripts/verify-gates.py                                     # 검사기가 잡는지
+```
+
+`verify-gates.py` 는 방어를 하나씩 무력화해 검사기가 빨개지는지 본다.
+이 검증이 실제로 구멍 둘을 드러냈다 — 층 배정(`checkTierAssignment`)과
+게재 컷(`checkPeriodCutoff`). **M1 이 "못 잡음" 으로 나오는 것은 정상이다**
+(개인 도메인 방어가 이중이라 하나만 죽이면 다른 하나가 막는다).
+
+## 포트
+
+web `3200` · api `3100` · DB `5433`. 2026-09-09 실측 점유를 피한 값이다.
+`pgrep -x cloudflared` 를 쓴다 — `ps aux | grep` 은 자기 명령줄을 세어 오답을 낸다.
+
 ## 커밋
 
 - 형식: `한글 요약` (이 저장소는 이슈 트래커 미정 — 정해지면 `[KEY] 요약` 으로 전환)
