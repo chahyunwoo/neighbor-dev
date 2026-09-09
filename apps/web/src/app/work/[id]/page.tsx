@@ -3,7 +3,13 @@ import { notFound } from 'next/navigation'
 import { PageShell } from '../../../components/PageShell'
 import { ProjectLens } from '../../../components/ProjectLens'
 import { RichText } from '../../../components/RichText'
-import { type DetailProject, getDetailProjects, getProject } from '../../../lib/projects'
+import { StackTags } from '../../../components/StackTags'
+import {
+  type DetailProject,
+  displayStack,
+  getDetailProjects,
+  getProject,
+} from '../../../lib/projects'
 import styles from './page.module.css'
 
 interface Params {
@@ -153,19 +159,21 @@ function Metrics({ project }: { project: DetailProject }) {
   )
 }
 
+/**
+ * 쓴 기술 — 정본의 원시 표기가 아니라 기술명으로, 그리고 **접어서** 싣는다.
+ * 근거는 `StackTags.tsx` 주석(이슈 #2). 여기는 이미 상세 화면이라
+ * 카드보다는 넉넉히 보인다.
+ */
 function Stack({ project }: { project: DetailProject }) {
-  if (project.stack.length === 0) return null
+  const names = displayStack(project.stack)
+  if (names.length === 0) return null
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
         <h2 className={styles.blockTitle}>쓴 기술</h2>
       </div>
       <div className={styles.stack}>
-        {project.stack.map((s) => (
-          <span key={s} className={styles.tag}>
-            {s}
-          </span>
-        ))}
+        <StackTags names={names} peek={6} label={project.label} />
       </div>
     </section>
   )
