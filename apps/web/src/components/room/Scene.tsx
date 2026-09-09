@@ -36,8 +36,16 @@ export function Scene() {
     ...LAYOUT.flatMap((p) =>
       p.hotspot ? [{ id: p.hotspot, at: p.position as [number, number, number] }] : [],
     ),
-    { id: 'monitor', at: MONITOR_POSITION },
-    { id: 'whiteboard', at: WHITEBOARD_POSITION },
+    // ⚠️ 마커는 물건 **옆**에 둔다. 바로 위에 두면 화면 내용을 가린다
+    //    (실측 2026-09-09: 모니터 마커가 파이프라인을, 노트북 마커가 보드를 덮었다).
+    {
+      id: 'monitor',
+      at: [MONITOR_POSITION[0] + 0.72, MONITOR_POSITION[1] + 0.35, MONITOR_POSITION[2]],
+    },
+    {
+      id: 'whiteboard',
+      at: [WHITEBOARD_POSITION[0] + 1.25, WHITEBOARD_POSITION[1], WHITEBOARD_POSITION[2]],
+    },
   ]
 
   const hotspots = anchors.flatMap((a) => {
@@ -71,7 +79,7 @@ export function Scene() {
       {hotspots.map(({ at, meta }) => (
         <Html
           key={meta.id}
-          position={[at[0], at[1] + 1.0, at[2]]}
+          position={[at[0], at[1] + 0.85, at[2]]}
           center
           distanceFactor={8}
           zIndexRange={[10, 0]}

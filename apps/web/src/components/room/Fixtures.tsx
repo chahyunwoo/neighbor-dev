@@ -1,7 +1,11 @@
 'use client'
 
+import { useThree } from '@react-three/fiber'
+import { useMemo } from 'react'
 import * as THREE from 'three'
+import { getDetailProjects } from '../../lib/projects'
 import { DESK_TOP } from './layout'
+import { makeBoardTexture, makeScreenTexture } from './textures'
 
 /**
  * Kenney 팩에 없거나 못 쓰는 것을 직접 만든다.
@@ -14,10 +18,11 @@ import { DESK_TOP } from './layout'
  * 둘 다 **주 동선(배지 1·2)** 이라 빠지면 안 된다.
  */
 
-const SCREEN_GLOW = '#4a7cc4'
-
 /** 모니터 — 책상 위, 뒷벽을 등지고 앞을 본다. */
 export function Monitor({ position }: { position: [number, number, number] }) {
+  const maxAnisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy())
+  const screen = useMemo(() => makeScreenTexture(maxAnisotropy), [maxAnisotropy])
+
   return (
     <group position={position} rotation={[0, Math.PI, 0]}>
       {/* 받침 */}
@@ -35,14 +40,16 @@ export function Monitor({ position }: { position: [number, number, number] }) {
         <boxGeometry args={[0.92, 0.56, 0.04]} />
         <meshStandardMaterial color="#16151d" roughness={0.6} metalness={0.4} />
       </mesh>
-      {/* 화면 — 스스로 빛난다. bloom 이 이 값을 집는다. */}
+      {/* 화면 — 실제 내용이 켜져 있다. bloom 이 발광을 집는다. */}
       <mesh position={[0, 0.52, 0.023]}>
         <planeGeometry args={[0.86, 0.5]} />
         <meshStandardMaterial
-          color={SCREEN_GLOW}
-          emissive={new THREE.Color(SCREEN_GLOW)}
-          emissiveIntensity={1.1}
-          roughness={0.3}
+          map={screen}
+          emissiveMap={screen}
+          emissive={new THREE.Color('#ffffff')}
+          emissiveIntensity={0.62}
+          roughness={0.34}
+          toneMapped={false}
         />
       </mesh>
     </group>
@@ -57,6 +64,18 @@ export function Whiteboard({
   position: [number, number, number]
   rotationY?: number
 }) {
+  const maxAnisotropy = useThree((s) => s.gl.capabilities.getMaxAnisotropy())
+  const board = useMemo(() => {
+    // 🔴 실제 데이터다. 지어낸 카드를 붙이지 않는다 — 화이트보드가 여는 것과
+    //    같은 목록에서 앞의 여섯 건을 가져온다.
+    const projects = getDetailProjects()
+    return makeBoardTexture(
+      maxAnisotropy,
+      projects.map((p) => ({ label: p.label, period: p.period })),
+      projects.length,
+    )
+  }, [maxAnisotropy])
+
   return (
     <group position={position} rotation={[0, (rotationY * Math.PI) / 180, 0]}>
       {/* 테두리 — 프로토타입 실측 크기(BW=2.10, BH=1.28). */}
@@ -64,31 +83,25 @@ export function Whiteboard({
         <boxGeometry args={[2.1, 1.28, 0.06]} />
         <meshStandardMaterial color="#2b2f38" roughness={0.55} metalness={0.5} />
       </mesh>
-      {/* 판 — 약하게 빛난다. 붙어 있는 것이 있다는 신호다. */}
-      <mesh position={[0, 0, 0.034]}>
+      {/*
+       * 판 — 실제 실적이 카드로 붙어 있다.
+       *
+       * 🔴 **방 쪽(-z)을 향한다.** 뒷벽에 걸린 보드이므로 카메라(z 음수)에서
+       *    보이려면 판이 -z 로 나오고 Y축으로 180° 돌아야 한다. 안 돌리면
+       *    뒷면을 보게 되어 빈 판만 보인다(실측 2026-09-09).
+       *    프로토타입 주석도 같다 — "캔버스가 방을 향하게".
+       */}
+      <mesh position={[0, 0, -0.034]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[1.98, 1.16]} />
         <meshStandardMaterial
-          color="#25303e"
-          emissive={new THREE.Color('#25303e')}
-          emissiveIntensity={0.45}
-          roughness={0.75}
+          map={board}
+          emissiveMap={board}
+          emissive={new THREE.Color('#ffffff')}
+          emissiveIntensity={0.34}
+          roughness={0.72}
+          toneMapped={false}
         />
       </mesh>
-      {/* 붙어 있는 카드 — 실적이 붙어 있다는 것을 형태로 보여준다. */}
-      {[
-        [-0.6, 0.34, 0.6, 0.26],
-        [0.08, 0.34, 0.64, 0.26],
-        [0.72, 0.34, 0.44, 0.26],
-        [-0.54, -0.02, 0.7, 0.26],
-        [0.28, -0.02, 0.56, 0.26],
-        [-0.42, -0.4, 0.5, 0.22],
-        [0.24, -0.4, 0.62, 0.22],
-      ].map(([x, y, w, h]) => (
-        <mesh key={`${x},${y}`} position={[x as number, y as number, 0.038]}>
-          <planeGeometry args={[w as number, h as number]} />
-          <meshStandardMaterial color="#38465a" roughness={0.85} />
-        </mesh>
-      ))}
     </group>
   )
 }
