@@ -132,6 +132,38 @@ node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 화면에서 전부 틀렸다(카메라 z 부호, 화이트보드 벽 위치 — 2026-09-09).
 값을 바꾸기 전에 `apps/web/src/components/room/layout.ts` 의 주석을 읽는다.
 
+## ⚠️ 모니터 토글 — 기획서 원안에서 축이 바뀌었다 (2026-09-09)
+
+기획서 4절은 **"진행 흐름 ↔ 구조 흐름"** 이었다. 그 데이터가 정본에 없다:
+
+```bash
+cd ~/Documents/portfolio-source && python3 -c "
+import json,glob
+n=sum('diagramSeeds' in json.load(open(f)) for f in glob.glob('projects/*.json'))
+print('diagramSeeds 보유:', n, '건 (그나마 제목+참고위치뿐)')
+d=json.load(open('projects/claude-board.json'))
+print('decisions 키:', list(d['decisions'][0].keys()))"
+# → 단계 구분도 노드 연결도 없다
+```
+
+지어내면 CLAUDE.md 위반이므로 **있는 데이터로 축을 바꿨다**:
+
+| 축 | 데이터 | 주 독자 |
+|---|---|---|
+| 어떻게 판단했나 | `decisions[]` (선택·대안·이유·대가) | 발주자 |
+| 무엇이 나왔나 | `metrics[]` (재현 명령 포함) | 개발자·CTO |
+
+"한쪽만 두면 다른 쪽 방문자가 읽을 게 없다" 는 기획 의도는 그대로다.
+원안으로 되돌리려면 **정본에 단계별 판단과 노드 연결을 먼저 넣어야 한다.**
+
+🔴 두 축을 **모두 DOM 에 둔다.** 안 보이는 쪽은 `hidden` 으로 감출 뿐이다 —
+한쪽만 렌더하면 서버가 내보내는 HTML 에도 한쪽만 들어가 크롤러가 수치를 놓친다.
+`.panel[hidden]{display:none}` 이 필요하다(`display:flex` 가 기본값을 이긴다).
+
+```bash
+curl -s http://localhost:3200/work/claude-board | grep -c '어떻게 판단했나\|무엇이 나왔나'
+```
+
 ## 커밋
 
 - 형식: `한글 요약` (이 저장소는 이슈 트래커 미정 — 정해지면 `[KEY] 요약` 으로 전환)

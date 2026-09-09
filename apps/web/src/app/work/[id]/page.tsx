@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PageShell } from '../../../components/PageShell'
+import { ProjectLens } from '../../../components/ProjectLens'
 import { RichText } from '../../../components/RichText'
 import { type DetailProject, getDetailProjects, getProject } from '../../../lib/projects'
 import styles from './page.module.css'
@@ -48,8 +49,16 @@ export default async function ProjectPage({ params }: Params) {
       <div className={styles.body}>
         <Problem project={project} />
         <Role project={project} />
-        <Decisions project={project} />
-        <Metrics project={project} />
+        {/*
+         * 기획서 4절의 토글. 두 축을 한 화면에 쌓지 않고 전환한다 —
+         * 전환 자체가 인터랙션이고, 발주자와 개발자가 볼 것이 갈린다.
+         */}
+        <ProjectLens
+          decisionCount={project.decisions?.length ?? 0}
+          metricCount={project.metrics?.length ?? 0}
+          decisions={<Decisions project={project} />}
+          metrics={<Metrics project={project} />}
+        />
         <Stack project={project} />
       </div>
     </PageShell>
@@ -90,10 +99,8 @@ function Decisions({ project }: { project: DetailProject }) {
   if (decisions.length === 0) return null
   return (
     <section className={styles.block}>
-      <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>그때 내린 판단</h2>
-        <span className={styles.blockNote}>{decisions.length}건 · 트레이드오프까지</span>
-      </div>
+      {/* 제목은 토글 탭이 준다. 여기서 다시 붙이면 두 번 읽힌다. */}
+      <p className={styles.blockNote}>선택한 것과 버린 것, 그리고 그 대가</p>
       <div className={styles.list}>
         {decisions.map((d) => (
           <article key={d.선택} className={styles.decision}>
@@ -126,11 +133,8 @@ function Metrics({ project }: { project: DetailProject }) {
   if (metrics.length === 0) return null
   return (
     <section className={styles.block}>
-      <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>수치</h2>
-        {/* 재현 명령이 붙지 않은 수치는 빌드 단계에서 이미 빠졌다. */}
-        <span className={styles.blockNote}>전부 지금 다시 돌려볼 수 있는 것</span>
-      </div>
+      {/* 재현 명령이 붙지 않은 수치는 빌드 단계에서 이미 빠졌다. */}
+      <p className={styles.blockNote}>전부 지금 다시 돌려볼 수 있는 것</p>
       <div className={styles.list}>
         {metrics.map((m) => (
           <div key={m.항목} className={styles.metric}>
