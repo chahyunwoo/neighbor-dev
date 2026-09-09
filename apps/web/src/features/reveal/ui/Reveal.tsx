@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
-import { inView, rise, stagger } from '../lib/motion'
+import { inView, rise, stagger } from '@/features/reveal/lib/motion'
 
 /**
  * 스크롤로 들어올 때 나타난다.

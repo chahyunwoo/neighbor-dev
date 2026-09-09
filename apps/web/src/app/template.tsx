@@ -1,7 +1,7 @@
 'use client'
 
 import * as motion from 'motion/react-client'
-import { pageIn } from '../lib/motion'
+import { pageIn } from '@/features/reveal'
 
 /**
  * 화면 전환 — Next 의 `template.tsx` 는 경로가 바뀔 때마다 **다시 마운트**된다.

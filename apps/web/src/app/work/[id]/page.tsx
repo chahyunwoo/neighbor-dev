@@ -1,15 +1,16 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { PageShell } from '../../../components/PageShell'
-import { ProjectLens } from '../../../components/ProjectLens'
-import { RichText } from '../../../components/RichText'
-import { StackTags } from '../../../components/StackTags'
 import {
   type DetailProject,
   displayStack,
   getDetailProjects,
   getProject,
-} from '../../../lib/projects'
+  ProjectLens,
+  StackTags,
+} from '@/entities/project'
+import { RichText } from '@/shared'
+import { Nav } from '@/widgets/nav'
+import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
 
 interface Params {
@@ -46,29 +47,32 @@ export default async function ProjectPage({ params }: Params) {
   if (project?.tier !== 'detail') notFound()
 
   return (
-    <PageShell
-      from="monitor"
-      fig="[ fig. 2-1 · 모니터 · 사례 ]"
-      crumb="모니터"
-      title={project.label}
-      lede={project.period}
-    >
-      <div className={styles.body}>
-        <Problem project={project} />
-        <Role project={project} />
-        {/*
-         * 기획서 4절의 토글. 두 축을 한 화면에 쌓지 않고 전환한다 —
-         * 전환 자체가 인터랙션이고, 발주자와 개발자가 볼 것이 갈린다.
-         */}
-        <ProjectLens
-          decisionCount={project.decisions?.length ?? 0}
-          metricCount={project.metrics?.length ?? 0}
-          decisions={<Decisions project={project} />}
-          metrics={<Metrics project={project} />}
-        />
-        <Stack project={project} />
-      </div>
-    </PageShell>
+    <>
+      <Nav />
+      <PageShell
+        from="monitor"
+        fig="[ fig. 2-1 · 모니터 · 사례 ]"
+        crumb="모니터"
+        title={project.label}
+        lede={project.period}
+      >
+        <div className={styles.body}>
+          <Problem project={project} />
+          <Role project={project} />
+          {/*
+           * 기획서 4절의 토글. 두 축을 한 화면에 쌓지 않고 전환한다 —
+           * 전환 자체가 인터랙션이고, 발주자와 개발자가 볼 것이 갈린다.
+           */}
+          <ProjectLens
+            decisionCount={project.decisions?.length ?? 0}
+            metricCount={project.metrics?.length ?? 0}
+            decisions={<Decisions project={project} />}
+            metrics={<Metrics project={project} />}
+          />
+          <Stack project={project} />
+        </div>
+      </PageShell>
+    </>
   )
 }
 

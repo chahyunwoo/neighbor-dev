@@ -14,7 +14,8 @@
     "data": "node scripts/build-data.mjs",
     "data:verify": "node scripts/verify-disclosure.mjs",
     "test": "pnpm --filter @neighbor/api test && pnpm --filter @neighbor/web test",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm room:verify && pnpm data && pnpm data:verify",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm fsd:verify && pnpm room:verify && pnpm data && pnpm data:verify",
+    "fsd:verify": "node scripts/verify-fsd.mjs",
     "room:verify": "node scripts/verify-room.mjs"
   },
   "devDependencies": {

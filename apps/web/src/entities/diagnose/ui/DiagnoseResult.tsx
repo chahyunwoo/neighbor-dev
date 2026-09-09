@@ -10,13 +10,13 @@ import {
   parseScopeLine,
   type RiskLevel,
   splitSections,
-} from '../lib/diagnose-parse'
+} from '@/entities/diagnose/lib/diagnose-parse'
 
 // 화면이 쓰던 이름을 그대로 다시 내보낸다 — 부르는 쪽을 고치지 않게.
-export { buildCopyText, type Section, splitSections } from '../lib/diagnose-parse'
+export { buildCopyText, type Section, splitSections } from '@/entities/diagnose/lib/diagnose-parse'
 
+import { RichText } from '@/shared'
 import styles from './DiagnoseResult.module.css'
-import { RichText } from './RichText'
 
 /**
  * 자가진단 결과를 섹션 카드로 쪼갠다.

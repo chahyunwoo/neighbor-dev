@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense, useEffect } from 'react'
-import { CanvasMode } from '../canvas/CanvasMode'
-import { r3f } from '../canvas/tunnel'
+import { CanvasMode } from '@/features/room-3d/canvas/CanvasMode'
+import { r3f } from '@/features/room-3d/canvas/tunnel'
 
 // 🔴 3D 청크를 초기 번들에 넣지 않는다 (기획서 4절 성능 예산).
 //    모바일·크롤러는 이 청크를 아예 받지 않는다.

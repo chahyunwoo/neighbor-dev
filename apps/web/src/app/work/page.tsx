@@ -1,16 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { PageShell } from '../../components/PageShell'
-import { RichText } from '../../components/RichText'
-import { StackTags } from '../../components/StackTags'
 import {
   type DetailProject,
   displayStack,
   getDetailProjects,
   getSummaryProjects,
+  StackTags,
   type SummaryProject,
-} from '../../lib/projects'
-import styles from './page.module.css'
+} from '@/entities/project'
+import { RichText } from '@/shared'
+import styles from '@/shared/ui/styles/list-page.module.css'
+import { Nav } from '@/widgets/nav'
+import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = {
   title: '만든 것',
@@ -31,44 +32,49 @@ export default function WorkPage() {
   const summary = getSummaryProjects()
 
   return (
-    <PageShell
-      from="whiteboard"
-      wide
-      fig={`[ fig. 2 · 화이트보드 · ${detail.length + summary.length}건 ]`}
-      crumb="화이트보드"
-      title="그동안 만든 것"
-      lede="클라이언트사명은 전부 익명으로 씁니다. 수치는 지금도 다시 돌려볼 수 있는 것만 실었습니다."
-    >
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>사례</h2>
-          <span className={styles.sectionNote}>{detail.length}건 · 문제와 그때 내린 판단까지</span>
-        </div>
-        <div className={styles.cards}>
-          {detail.map((p) => (
-            <DetailCard key={p.id} project={p} />
-          ))}
-        </div>
-      </section>
+    <>
+      <Nav />
+      <PageShell
+        from="whiteboard"
+        wide
+        fig={`[ fig. 2 · 화이트보드 · ${detail.length + summary.length}건 ]`}
+        crumb="화이트보드"
+        title="그동안 만든 것"
+        lede="클라이언트사명은 전부 익명으로 씁니다. 수치는 지금도 다시 돌려볼 수 있는 것만 실었습니다."
+      >
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>사례</h2>
+            <span className={styles.sectionNote}>
+              {detail.length}건 · 문제와 그때 내린 판단까지
+            </span>
+          </div>
+          <div className={styles.cards}>
+            {detail.map((p) => (
+              <DetailCard key={p.id} project={p} />
+            ))}
+          </div>
+        </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>경력</h2>
-          <span className={styles.sectionNote}>{summary.length}건 · 도메인과 기술만</span>
-        </div>
-        <div className={styles.rows}>
-          {summary.map((p) => (
-            // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
-            <SummaryRow key={`${p.label}${p.period}`} project={p} />
-          ))}
-        </div>
-        <p className={styles.note}>
-          위 {summary.length}건은 계약상 화면과 세부 판단을 공개할 수 없습니다.
-          <br />
-          도메인과 쓴 기술까지만 적었습니다 — 없는 일을 지어내지 않기 위해 남겨둡니다.
-        </p>
-      </section>
-    </PageShell>
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>경력</h2>
+            <span className={styles.sectionNote}>{summary.length}건 · 도메인과 기술만</span>
+          </div>
+          <div className={styles.rows}>
+            {summary.map((p) => (
+              // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
+              <SummaryRow key={`${p.label}${p.period}`} project={p} />
+            ))}
+          </div>
+          <p className={styles.note}>
+            위 {summary.length}건은 계약상 화면과 세부 판단을 공개할 수 없습니다.
+            <br />
+            도메인과 쓴 기술까지만 적었습니다 — 없는 일을 지어내지 않기 위해 남겨둡니다.
+          </p>
+        </section>
+      </PageShell>
+    </>
   )
 }
 

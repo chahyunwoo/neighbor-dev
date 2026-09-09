@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
-import { CanvasRoot } from '../components/canvas/CanvasRoot'
-import { MotionRoot } from '../components/MotionRoot'
-import '../styles/tokens.css'
+import { MotionRoot } from '@/features/reveal'
+import { CanvasRoot } from '@/features/room-3d'
+import '@/shared/styles/tokens.css'
 
 export const metadata: Metadata = {
   title: {

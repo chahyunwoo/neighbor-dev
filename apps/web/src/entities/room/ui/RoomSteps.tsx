@@ -1,6 +1,6 @@
 'use client'
 
-import { ROOM_OBJECTS } from '../lib/room'
+import { ROOM_OBJECTS } from '@/entities/room/model/room'
 
 /**
  * 왼쪽 번호 목록 — 시안(Main.dc.html `.steps`)의 동선 안내.

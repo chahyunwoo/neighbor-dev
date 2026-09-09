@@ -1,12 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useCanRender3D } from '../lib/can-3d'
+import { RoomList, RoomSteps } from '@/entities/room'
+import { Room, RoomPanel } from '@/features/room-3d'
+import { useCanRender3D } from '@/shared'
 import styles from './Hero.module.css'
-import { RoomList } from './RoomList'
-import { RoomSteps } from './RoomSteps'
-import { Room } from './room/Room'
-import { RoomPanel } from './room/RoomPanel'
 
 /**
  * 히어로 — 3D 와 목록의 전환 지점.
