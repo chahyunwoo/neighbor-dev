@@ -91,6 +91,16 @@ export const INTRO = {
   doorCloseAt: 2600,
 } as const
 
+/**
+ * 이 세션에서 입장 연출을 이미 봤는가.
+ *
+ * ⚠️ 모듈 스코프에 둔다 — 컴포넌트가 라우트마다 다시 마운트되므로 `useRef`
+ *    로는 기억하지 못한다. 새로고침하면 초기화되는 것이 맞다(그때는 방에
+ *    처음 들어오는 것이다).
+ */
+const seenIntro = new Set<string>()
+const SEEN_KEY = 'room'
+
 /** 시안 easeInOutCubic. */
 function ease(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
@@ -126,6 +136,12 @@ export function CameraRig({
     t1: THREE.Vector3
     start: number
     ms: number
+    /**
+     * 입장 연출인가(문 여닫기·`onEntered` 가 달려 있다).
+     * ⚠️ 이전에는 `f.ms === INTRO.ms` 로 판별했는데, 다른 비행이 우연히 같은
+     *    길이가 되면 조용히 어긋난다. 종류를 값으로 들고 있는다.
+     */
+    intro: boolean
   } | null>(null)
   /** 입장 연출을 시작했는가. 두 번 하지 않는다. */
   const started = useRef(false)
@@ -154,6 +170,22 @@ export function CameraRig({
       return
     }
 
+    /*
+     * 🔴 **전체 연출은 세션당 한 번이다.**
+     *
+     *    캔버스가 라우트를 넘어 살아남게 되면서, 홈을 나갔다 돌아오면
+     *    tunnel 의 In 이 다시 마운트되어 **입장 연출이 통째로 재생된다**
+     *    (실측 2026-09-09: 복귀 후 마커가 x=81 → 949 로 2.8초 걸쳐 이동하고
+     *    카피는 3.6초 뒤에야 떴다). 방을 나갔다 오는 사람에게 3.2초짜리
+     *    "걸어 들어오기" 를 매번 다시 보이는 것은 연출이 아니라 대기다.
+     *
+     *    → 처음 한 번만 문 밖에서 걸어 들어오고, 그다음부터는 짧게 자리를
+     *      잡는다. "돌아왔다" 는 보이되 기다리지는 않는다.
+     */
+    const first = !seenIntro.has(SEEN_KEY)
+    seenIntro.add(SEEN_KEY)
+    const introMs = first ? INTRO.ms : INTRO.ms * 0.28
+
     const from = new THREE.Vector3(...INTRO.from)
     const look = new THREE.Vector3(...INTRO.lookAt)
     camera.position.copy(from)
@@ -167,7 +199,8 @@ export function CameraRig({
       t1: new THREE.Vector3(...ROOM_CENTER),
       // 0 = 아직 시작 안 함. 첫 프레임이 시계를 켠다(위 useFrame 주석 참고).
       start: 0,
-      ms: INTRO.ms,
+      ms: introMs,
+      intro: true,
     }
 
     /*
@@ -221,6 +254,7 @@ export function CameraRig({
       t1: target,
       start: performance.now(),
       ms: DUR,
+      intro: false,
     }
 
     /*
@@ -292,7 +326,7 @@ export function CameraRig({
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
-    if (f.ms === INTRO.ms) {
+    if (f.intro) {
       const closeAt = INTRO.doorCloseAt / INTRO.ms
       if (t >= closeAt && !doorClosed.current) {
         doorClosed.current = true
@@ -302,7 +336,7 @@ export function CameraRig({
 
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
-      if (f.ms === INTRO.ms) {
+      if (f.intro) {
         landed.current = true
         onEntered()
       }
