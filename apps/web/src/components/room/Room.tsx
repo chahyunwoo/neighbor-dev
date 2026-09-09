@@ -53,6 +53,7 @@ export function Room({
   openId,
   seen,
   onOpen,
+  onEntered,
 }: {
   onActive?: (active: boolean) => void
   /**
@@ -62,6 +63,7 @@ export function Room({
   openId: string | null
   seen: ReadonlySet<string>
   onOpen: (id: string) => void
+  onEntered: () => void
 }) {
   const can = useCanRender3D()
 
@@ -91,7 +93,7 @@ export function Room({
         onCreated={({ camera }) => camera.lookAt(...ROOM_CENTER)}
       >
         <Suspense fallback={null}>
-          <Scene openId={openId} seen={seen} onOpen={onOpen} />
+          <Scene openId={openId} seen={seen} onOpen={onOpen} onEntered={onEntered} />
         </Suspense>
       </Canvas>
       <p className={styles.hint} data-hidden={openId !== null}>

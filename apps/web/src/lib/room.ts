@@ -144,3 +144,26 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     note: '문의 내용을 저장하지 않습니다. 읽고 답하는 데 필요하지 않으니까요.',
   },
 ] as const
+
+/**
+ * 물건 → 그 화면 배경에 세울 3D 모델.
+ *
+ * 🔴 방에서 물건을 누르면 그 물건이 **화면으로 이어진다**(기획서 4절).
+ *    이전에는 페이지로 오는 순간 3D 가 사라져 평범한 문서가 됐다.
+ *
+ * ⚠️ 모니터·화이트보드는 Kenney 팩에 없어 직접 만든 것이라(`Fixtures.tsx`)
+ *    배경으로 세울 glb 가 없다. 대신 **책상**을 세운다 — 그 둘이 놓인 자리다.
+ *    억지로 비슷한 모델을 끌어오지 않는다.
+ *
+ * `rotationY`·`scale` 은 배경에서 잘 보이는 각도·크기다. 방의 배치값과
+ * 다른 것이 맞다 — 방에서는 벽에 붙어 있고 여기서는 혼자 서 있다.
+ */
+export const OBJECT_MODEL: Record<string, { model: string; rotationY: number; scale: number }> = {
+  monitor: { model: 'desk', rotationY: -28, scale: 1.15 },
+  whiteboard: { model: 'desk', rotationY: -28, scale: 1.15 },
+  bookshelf: { model: 'bookcaseOpen', rotationY: -24, scale: 1.5 },
+  drawer: { model: 'sideTableDrawers', rotationY: -30, scale: 1.7 },
+  laptop: { model: 'laptop', rotationY: -35, scale: 4.2 },
+  team: { model: 'table', rotationY: -22, scale: 1.3 },
+  door: { model: 'doorway', rotationY: -20, scale: 1.25 },
+}

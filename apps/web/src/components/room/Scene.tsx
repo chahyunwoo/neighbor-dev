@@ -33,14 +33,19 @@ export function Scene({
   openId,
   seen,
   onOpen,
+  onEntered,
 }: {
   /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
   openId: string | null
   /** 이미 열어본 것 — 흐려져서 "남은 것" 이 눈에 띈다(시안 .mk.seen). */
   seen: ReadonlySet<string>
   onOpen: (id: string) => void
+  /** 입장 연출이 끝났다 — 부모가 UI 를 올린다. */
+  onEntered: () => void
 }) {
   const controls = useRef<OrbitControlsLike>(null)
+  /** 입장 연출이 문을 여는 동안만 true. 열린 물건과는 별개다. */
+  const [introDoor, setIntroDoor] = useState(false)
 
   /*
    * 마커 위치 — 물건의 **실제 꼭대기**에서 낸다(`anchors.ts` 참고).
@@ -110,7 +115,7 @@ export function Scene({
         <Furniture
           key={`${p.model}@${p.position.join(',')}`}
           placement={p}
-          openId={openId}
+          openId={introDoor && p.hotspot === 'door' ? 'door' : openId}
           onAnchor={report}
         />
       ))}
@@ -161,7 +166,12 @@ export function Scene({
         </Html>
       ))}
 
-      <CameraRig focus={focus} controls={controls} />
+      <CameraRig
+        focus={focus}
+        controls={controls}
+        onIntroDoor={setIntroDoor}
+        onEntered={onEntered}
+      />
 
       <OrbitControls
         ref={controls}

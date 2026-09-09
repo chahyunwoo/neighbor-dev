@@ -20,6 +20,7 @@ export default function CareerPage() {
 
   return (
     <PageShell
+      from="drawer"
       fig={`[ fig. 4 · 서랍 · ${summary.length}건 ]`}
       crumb="서랍"
       title="이름 못 밝히는 일들"

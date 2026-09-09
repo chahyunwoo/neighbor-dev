@@ -46,13 +46,36 @@ export type OrbitControlsLike = NonNullable<React.ComponentRef<typeof DreiOrbitC
  *       3D 를 유지한 이유가 사라진다. 대상이 눈에 띄되 방이 보이는 선을 잡았다.
  */
 const FILL = 0.2
-/** 비행 시간(ms). 시안 DUR. */
+/** 물건 사이를 옮길 때의 비행 시간(ms). 시안 DUR. */
 const DUR = 900
 
 export interface FocusTarget {
   center: [number, number, number]
   radius: number
 }
+
+/**
+ * 입장 연출 — 현관문 안쪽에서 방으로 걸어 들어온다 (시안 `introFly`).
+ *
+ * 🔴 이 연출이 **통째로 빠져 있었다.** 방이 그냥 딱 떠 있었다 —
+ *    "들어와서 둘러보세요" 라고 써 놓고 정작 들어오는 순간이 없었다.
+ *
+ * 시안 실측값 그대로다:
+ *   시작 위치 (-1.30, 1.60, -1.55) — 현관문(x≈-2.9) 안쪽
+ *   시작 시선 ( 0.40, 1.10,  1.30) — 방 안쪽을 본다
+ *   3초에 걸쳐 처음 구도로 물러난다
+ *
+ * ⚠️ `prefers-reduced-motion` 이면 생략한다(시안도 같다). 움직임을 원치
+ *    않는 사람에게 3초짜리 카메라 비행은 그 자체가 장벽이다.
+ */
+export const INTRO = {
+  from: [-1.3, 1.6, -1.55] as [number, number, number],
+  lookAt: [0.4, 1.1, 1.3] as [number, number, number],
+  ms: 3000,
+  /** 문이 열리고 닫히는 시각(ms). 들어온 티가 나게. */
+  doorOpenAt: 50,
+  doorCloseAt: 1900,
+} as const
 
 /** 시안 easeInOutCubic. */
 function ease(t: number): number {
@@ -70,10 +93,16 @@ const PANEL_WIDTH = 480
 export function CameraRig({
   focus,
   controls,
+  onIntroDoor,
+  onEntered,
 }: {
   /** 열린 물건의 초점. `null` 이면 처음 구도로 돌아간다. */
   focus: FocusTarget | null
   controls: React.RefObject<OrbitControlsLike | null>
+  /** 입장 연출 중 문을 여닫는다. */
+  onIntroDoor: (open: boolean) => void
+  /** 입장이 끝났다 — 부모가 UI 를 올린다. */
+  onEntered: () => void
 }) {
   const { camera, size } = useThree()
   const fly = useRef<{
@@ -82,11 +111,55 @@ export function CameraRig({
     p1: THREE.Vector3
     t1: THREE.Vector3
     start: number
+    ms: number
   } | null>(null)
+  /** 입장 연출을 이미 했는가. 두 번 하지 않는다. */
+  const entered = useRef(false)
+
+  // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
+  useEffect(() => {
+    const ctl = controls.current
+    if (!ctl || entered.current) return
+    entered.current = true
+
+    // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onEntered()
+      return
+    }
+
+    const from = new THREE.Vector3(...INTRO.from)
+    const look = new THREE.Vector3(...INTRO.lookAt)
+    camera.position.copy(from)
+    ctl.target.copy(look)
+    ctl.update()
+
+    fly.current = {
+      p0: from.clone(),
+      t0: look.clone(),
+      p1: new THREE.Vector3(...CAMERA_POSITION),
+      t1: new THREE.Vector3(...ROOM_CENTER),
+      start: performance.now(),
+      ms: INTRO.ms,
+    }
+
+    // 문이 열렸다 닫힌다 — 들어온 티가 나게(시안 그대로).
+    const t1 = setTimeout(() => onIntroDoor(true), INTRO.doorOpenAt)
+    const t2 = setTimeout(() => onIntroDoor(false), INTRO.doorCloseAt)
+    const t3 = setTimeout(() => onEntered(), INTRO.doorCloseAt + 100)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [camera, controls, onEntered, onIntroDoor])
 
   useEffect(() => {
     const ctl = controls.current
-    if (!ctl) return
+    // 입장 중에는 초점 비행을 걸지 않는다 — 두 비행이 겹치면 튄다.
+    if (!ctl || !entered.current) return
+    // 입장 비행이 아직 도는 중이면 그대로 둔다(focus 는 처음엔 null 이다).
+    if (fly.current && fly.current.ms === INTRO.ms && focus === null) return
 
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
@@ -120,6 +193,7 @@ export function CameraRig({
       p1: position,
       t1: target,
       start: performance.now(),
+      ms: DUR,
     }
 
     /*
@@ -171,7 +245,7 @@ export function CameraRig({
     const ctl = controls.current
     if (!f || !ctl) return
 
-    const t = Math.min(1, (performance.now() - f.start) / DUR)
+    const t = Math.min(1, (performance.now() - f.start) / f.ms)
     const e = ease(t)
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)

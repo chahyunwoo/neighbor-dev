@@ -44,6 +44,7 @@ export default async function DiagnosePage() {
 
   return (
     <PageShell
+      from="laptop"
       fig={usable ? '[ fig. 5 · 노트북 ]' : '[ fig. 5 · 노트북 · 준비 중 ]'}
       crumb="노트북"
       title="내 프로젝트 미리 진단해보기"

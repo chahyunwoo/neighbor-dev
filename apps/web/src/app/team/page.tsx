@@ -28,6 +28,7 @@ export default function TeamPage() {
 
   return (
     <PageShell
+      from="team"
       fig="[ fig. 6 · 테이블 · 4인 ]"
       crumb="테이블"
       title="같이 일하는 사람들"

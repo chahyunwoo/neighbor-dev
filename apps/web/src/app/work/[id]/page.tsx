@@ -41,6 +41,7 @@ export default async function ProjectPage({ params }: Params) {
 
   return (
     <PageShell
+      from="monitor"
       fig="[ fig. 2-1 · 모니터 · 사례 ]"
       crumb="모니터"
       title={project.label}

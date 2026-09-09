@@ -35,6 +35,7 @@ export default async function ContactPage() {
 
   return (
     <PageShell
+      from="door"
       fig="[ fig. 6 · 현관문 ]"
       crumb="현관문"
       title="일 맡기기"

@@ -24,6 +24,16 @@ export function Hero({ children }: { children: React.ReactNode }) {
   const [is3D, setIs3D] = useState(false)
   const onActive = useCallback((active: boolean) => setIs3D(active), [])
 
+  /**
+   * 입장 연출이 끝났는가.
+   *
+   * 🔴 UI 를 **연출 뒤에** 올린다(시안 `body.lit`). 방으로 걸어 들어오는
+   *    3초 동안 카피와 목록이 이미 떠 있으면 "들어왔다" 가 아니라
+   *    "화면이 로딩됐다" 로 읽힌다 — 연출이 있으나 마나가 된다.
+   */
+  const [lit, setLit] = useState(false)
+  const onEntered = useCallback(() => setLit(true), [])
+
   const [openId, setOpenId] = useState<string | null>(null)
   const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set())
 
@@ -35,7 +45,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.stage}>
-      <Room onActive={onActive} openId={openId} seen={seen} onOpen={open} />
+      <Room onActive={onActive} openId={openId} seen={seen} onOpen={open} onEntered={onEntered} />
 
       {/*
        * 좌측 어둠막 — 시안 `.scrim`.
@@ -43,9 +53,13 @@ export function Hero({ children }: { children: React.ReactNode }) {
        *    (실측 2026-09-09: 시안과 대조해 발견). 3D 를 어둡게 만드는 게
        *    아니라 **글자 뒤만** 어둡게 해서 대비를 만든다.
        */}
-      {is3D ? <div className={styles.scrim} aria-hidden="true" /> : null}
+      {is3D ? <div className={styles.scrim} data-lit={lit} aria-hidden="true" /> : null}
 
-      <div className={styles.copyLayer}>
+      {/*
+       * `data-lit` 가 false 인 동안 카피는 아래에서 올라올 준비만 하고 있다.
+       * 3D 가 아닐 때(모바일·JS 없음)는 연출 자체가 없으므로 바로 보인다.
+       */}
+      <div className={styles.copyLayer} data-lit={!is3D || lit}>
         {children}
         {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
         {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
