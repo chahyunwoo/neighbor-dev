@@ -4,9 +4,26 @@
   flex-direction: column;
 }
 
+/*
+ * 🔴 3D 가 배경으로 서는 화면에서는 본문이 **캔버스 앞에서 끝난다** (이슈 #8).
+ *    `--content-max` 는 `tokens.css` 가 `data-canvas-mode="object"` 일 때만
+ *    준다 — 3D 가 없는 화면(모바일·reduced-motion·크롤러)에서는 본문이
+ *    좁아질 이유가 없으므로 그때는 이 값이 없고 폭 제한도 안 걸린다.
+ */
 .main {
   flex: 1;
   padding: 0 var(--pad-x) 64px;
+  max-width: var(--content-max, none);
+}
+
+/*
+ * 목록·카드 그리드 화면 — 본문이 거의 다 쓴다(이슈 #8).
+ * 3D 는 더 얇게 물러난다. 같은 폭을 주면 3열이 1열로 무너진다.
+ * 판정은 `<html data-content="wide">` 가 한다 — 캔버스 변수와 같은 곳에서
+ * 갈려야 둘이 안 어긋난다.
+ */
+html[data-content="wide"] .main {
+  max-width: var(--content-max-wide, none);
 }
 
 .head {

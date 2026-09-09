@@ -25,6 +25,7 @@ export default function StackPage() {
   return (
     <PageShell
       from="bookshelf"
+      wide
       fig={`[ fig. 3 · 책장 · ${freq.length}종 ]`}
       crumb="책장"
       title="쓰는 기술"
