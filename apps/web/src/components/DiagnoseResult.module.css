@@ -105,3 +105,191 @@
     opacity: 0;
   }
 }
+
+/* ─── 범위 절 — 눌러서 1차에서 뺀다 ───────────────────────────
+ *
+ * 색은 기존 두 축 안에서만 쓴다(토큰 파일 참고): 앰버가 주 동선, 블루가 보조.
+ * 등급용으로 빨강·노랑을 새로 들이면 4-A 절의 아트디렉션이 깨진다.
+ */
+.hint {
+  margin: 0 0 2px;
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  font-weight: 300;
+}
+
+.scopeList,
+.riskList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.scopeNote {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--fg-dim);
+  padding: 2px 0;
+}
+
+.scopeItem {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--fg-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.14s,
+    border-color 0.14s,
+    opacity 0.14s;
+}
+.scopeItem:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--line-soft);
+}
+.scopeItem:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 1px;
+}
+
+/* 1차는 앰버(주 동선), 2차는 블루(보조). */
+.scopeMark {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  transform: translateY(-2px);
+}
+.scopeItem[data-phase="first"] .scopeMark {
+  background: var(--amber);
+}
+.scopeItem[data-phase="later"] .scopeMark {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+
+.scopePhase {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--fg-ghost);
+}
+.scopeItem[data-phase="first"] .scopePhase {
+  color: var(--amber-dim);
+}
+
+.scopeText {
+  flex: 1;
+}
+
+/* 뺀 항목 — 지우지 않고 눌러놓은 상태로 남긴다. */
+.scopeItem[data-off="true"] {
+  opacity: 0.42;
+}
+.scopeItem[data-off="true"] .scopeText {
+  text-decoration: line-through;
+  text-decoration-color: var(--fg-ghost);
+}
+.scopeItem[data-off="true"] .scopeMark {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--fg-ghost);
+}
+
+/* ─── 위험 절 — 등급 배지 ───────────────────────────────── */
+.riskItem {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.riskBadge {
+  flex: none;
+  min-width: 34px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-align: center;
+  border: 1px solid;
+}
+/* 높음은 앰버로 세운다 — 주목이 필요한 자리다. */
+.riskItem[data-level="높음"] .riskBadge {
+  color: var(--amber-text);
+  background: var(--amber-wash);
+  border-color: var(--amber-line);
+}
+.riskItem[data-level="중간"] .riskBadge {
+  color: var(--blue);
+  background: var(--blue-wash);
+  border-color: var(--blue-line);
+}
+.riskItem[data-level="낮음"] .riskBadge {
+  color: var(--fg-faint);
+  background: none;
+  border-color: var(--line);
+}
+
+.riskText {
+  font-size: 13.5px;
+  line-height: 1.82;
+  color: var(--fg-muted);
+  font-weight: 300;
+  text-wrap: pretty;
+}
+.riskItem[data-level="높음"] .riskText {
+  color: var(--fg);
+}
+
+/* ─── 기간 절 — 단일 값이 아니라 범위 ─────────────────────── */
+.period {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+.periodTypical {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--amber-text);
+}
+.periodNum {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.periodUnit {
+  font-size: 13px;
+  color: var(--amber-dim);
+}
+.periodRange {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-faint);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 768px) {
+  .periodNum {
+    font-size: 26px;
+  }
+  .scopeItem {
+    padding: 7px 8px;
+  }
+}

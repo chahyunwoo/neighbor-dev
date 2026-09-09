@@ -1,9 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import styles from './DiagnoseForm.module.css'
-import { DiagnoseResult } from './DiagnoseResult'
+import { buildCopyText, DiagnoseResult } from './DiagnoseResult'
 
 const MIN = 20
 const MAX = 4000
@@ -26,6 +26,23 @@ export function DiagnoseForm() {
   const [pending, setPending] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [copied, setCopied] = useState(false)
+  /**
+   * 방문자가 1차에서 뺀 범위 항목.
+   *
+   * 🔴 화면 상태로만 산다. 서버로 보내지 않고 저장하지도 않는다 —
+   *    기획서 5절의 "아무것도 저장하지 않는다" 가 그대로 유효하다.
+   *    복사할 때만 복사본에 반영된다.
+   */
+  const [dropped, setDropped] = useState<ReadonlySet<string>>(() => new Set())
+
+  const toggleScope = useCallback((item: string) => {
+    setDropped((prev) => {
+      const next = new Set(prev)
+      if (next.has(item)) next.delete(item)
+      else next.add(item)
+      return next
+    })
+  }, [])
 
   const tooShort = text.trim().length < MIN
   const tooLong = text.length > MAX
@@ -37,6 +54,8 @@ export function DiagnoseForm() {
     setStreaming(true)
     setError(null)
     setResult('')
+    // 앞 진단에서 뺀 항목이 새 결과에 남으면 엉뚱한 것이 꺼진 채로 보인다.
+    setDropped(new Set())
     try {
       const res = await fetch('/api/diagnose/stream', {
         method: 'POST',
@@ -104,7 +123,7 @@ export function DiagnoseForm() {
   async function goToContact() {
     if (result) {
       try {
-        await navigator.clipboard.writeText(result)
+        await navigator.clipboard.writeText(buildCopyText(result, dropped))
       } catch {
         // 클립보드가 막힌 환경이 있다. 그래도 문의 화면으로는 간다.
       }
@@ -115,7 +134,8 @@ export function DiagnoseForm() {
   async function copy() {
     if (!result) return
     try {
-      await navigator.clipboard.writeText(result)
+      // 🔴 방문자가 뺀 항목이 복사본에 반영된다 — 그 선택 자체가 상담 입력이다.
+      await navigator.clipboard.writeText(buildCopyText(result, dropped))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -171,7 +191,12 @@ export function DiagnoseForm() {
               </span>
             ) : null}
           </div>
-          <DiagnoseResult text={result} streaming={streaming} />
+          <DiagnoseResult
+            text={result}
+            streaming={streaming}
+            dropped={dropped}
+            onToggleScope={toggleScope}
+          />
         </div>
       ) : null}
     </div>

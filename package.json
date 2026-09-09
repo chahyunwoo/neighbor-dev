@@ -13,7 +13,7 @@
     "typecheck": "turbo run typecheck",
     "data": "node scripts/build-data.mjs",
     "data:verify": "node scripts/verify-disclosure.mjs",
-    "test": "pnpm --filter @neighbor/api test",
+    "test": "pnpm --filter @neighbor/api test && pnpm --filter @neighbor/web test",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm room:verify && pnpm data && pnpm data:verify",
     "room:verify": "node scripts/verify-room.mjs"
   },

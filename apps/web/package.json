@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack --port 3200",
     "build": "next build",
     "start": "next start --port 3200",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test 'src/**/*.spec.mjs'"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
