@@ -54,5 +54,12 @@
         }
       }
     }
-  ]
+  ],
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "allowWrongLineComments": false,
+      "tailwindDirectives": true
+    }
+  }
 }

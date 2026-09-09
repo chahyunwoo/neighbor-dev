@@ -2,7 +2,6 @@
 
 import { Html, OrbitControls, useGLTF } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useRouter } from 'next/navigation'
 import { ROOM_OBJECTS } from '../../lib/room'
 import {
   MONITOR_POSITION,
@@ -27,9 +26,17 @@ for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
  *    쥐고 있고, 목록 폴백·서버 렌더 HTML 이 같은 데이터를 쓴다(기획서 4절).
  *    여기서 링크를 새로 만들지 않는다 — 만들면 세 경로가 어긋난다.
  */
-export function Scene() {
-  const router = useRouter()
-
+export function Scene({
+  openId,
+  seen,
+  onOpen,
+}: {
+  /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
+  openId: string | null
+  /** 이미 열어본 것 — 흐려져서 "남은 것" 이 눈에 띈다(시안 .mk.seen). */
+  seen: ReadonlySet<string>
+  onOpen: (id: string) => void
+}) {
   // 배치 중 클릭 지점이 있는 것만 골라, lib/room.ts 의 정의와 맞춘다.
   // 배치에서 오는 것 + 직접 만든 고정물. 좌표만 다르고 뜻은 같다.
   const anchors: { id: string; at: [number, number, number] }[] = [
@@ -84,15 +91,26 @@ export function Scene() {
           distanceFactor={8}
           zIndexRange={[10, 0]}
         >
+          {/*
+           * 시안의 마커: **점 + 퍼지는 링**, 라벨은 hover·열림에만.
+           * 이전 구현은 라벨을 항상 띄워 6개가 방을 덮었다(실측 스크린샷).
+           * 시안 주석도 같은 실패를 적어놨다 — "상시 문구·큰 링은 시끄러웠다".
+           */}
           <button
             type="button"
             className={styles.marker}
             data-accent={meta.accent}
-            onClick={() => router.push(meta.href)}
+            data-open={meta.id === openId}
+            data-seen={seen.has(meta.id) && meta.id !== openId}
+            onClick={() => onOpen(meta.id)}
             aria-label={`${meta.name} — ${meta.opens}`}
+            aria-expanded={meta.id === openId}
           >
-            <span className={styles.markerNo}>{meta.no}</span>
-            <span className={styles.markerName}>{meta.name}</span>
+            <span className={styles.dot} aria-hidden="true" />
+            <span className={styles.markerName}>
+              <b>{meta.no}</b>
+              {meta.name}
+            </span>
           </button>
         </Html>
       ))}

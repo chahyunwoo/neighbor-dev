@@ -1,44 +1,109 @@
+@import "tailwindcss";
+
+/*
+ * 🔴 스캔 범위를 명시한다.
+ *
+ * Tailwind 4 는 이 CSS 파일 위치를 기준으로 소스를 자동 탐색하는데, 이 파일이
+ * `src/styles/` 안에 있어 `src/app`·`src/components` 를 놓쳤다 —
+ * **변수(@theme)는 나오는데 유틸리티 규칙이 0개**인 상태가 된다(실측 2026-09-09:
+ * `.p-4` 0건, `.text-amber` 0건, `--color-amber` 는 1건).
+ *
+ * ⚠️ 이 실패는 조용하다. 클래스를 붙여도 아무 일이 안 일어날 뿐 에러가 없다.
+ */
+@source "../";
+
 /*
  * 디자인 토큰 — 시안(아트보드 5종)에서 뽑았다.
  *
  * 아트디렉션은 기획서 4-A 절: **말은 따뜻하게, 화면은 차갑게.**
  * 이 파일은 "화면" 쪽이라 전부 차가운 값이다. 카피의 온기는 문장이 진다.
  * 앰버(--amber)만 예외 — 램프 빛이자 주 동선 표시다.
+ *
+ * 🔴 Tailwind 4 는 CSS 우선 설정이다. `@theme` 안의 이름이 곧 유틸리티가 된다
+ *    (--color-amber → bg-amber/text-amber). 별도 tailwind.config.js 를 두지 않는다.
+ *
+ * ⚠️ 값은 시안 실측이다. 감으로 바꾸지 않는다(기획서 4-A · CLAUDE.md).
  */
 
-:root {
+@theme {
   /* 바탕 — 방의 어둠 */
-  --bg: #0b0a0c;
-  --bg-panel: rgba(14, 17, 24, 0.5);
-  --line: rgba(255, 255, 255, 0.075);
-  --line-soft: rgba(255, 255, 255, 0.055);
+  --color-bg: #0b0a0c;
+  --color-panel: rgba(14, 17, 24, 0.5);
+  --color-line: rgba(255, 255, 255, 0.075);
+  --color-line-soft: rgba(255, 255, 255, 0.055);
 
   /* 글자 */
-  --fg: #e7e9ee;
-  --fg-strong: #f2f4f8;
-  --fg-muted: #a8aeba;
-  --fg-dim: #8891a0;
-  --fg-faint: #6c7480;
-  --fg-ghost: #5d6470;
+  --color-fg: #e7e9ee;
+  --color-fg-strong: #f2f4f8;
+  --color-fg-muted: #a8aeba;
+  --color-fg-dim: #8891a0;
+  --color-fg-faint: #6c7480;
+  --color-fg-ghost: #5d6470;
 
   /* 앰버 — 램프, 주 동선(모니터·현관문) */
-  --amber: #e8a87c;
-  --amber-bright: #f5c9a8;
-  --amber-text: #f7e4d4;
-  --amber-dim: #a38b7c;
-  --amber-line: rgba(232, 168, 124, 0.32);
-  --amber-wash: rgba(232, 168, 124, 0.1);
+  --color-amber: #e8a87c;
+  --color-amber-bright: #f5c9a8;
+  --color-amber-text: #f7e4d4;
+  --color-amber-dim: #a38b7c;
+  --color-amber-line: rgba(232, 168, 124, 0.32);
+  --color-amber-wash: rgba(232, 168, 124, 0.1);
 
   /* 블루 — 부 동선(화이트보드·책장·서랍·노트북) */
-  --blue: #6ba3e8;
-  --blue-line: rgba(107, 163, 232, 0.22);
-  --blue-wash: rgba(107, 163, 232, 0.07);
+  --color-blue: #6ba3e8;
+  --color-blue-line: rgba(107, 163, 232, 0.22);
+  --color-blue-wash: rgba(107, 163, 232, 0.07);
 
   /* 타이포 */
   --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 
+  /*
+   * 글자 크기 — 2026-09-09 상향.
+   *
+   * 실측: 본문이 13~14.5px 이고 10~12px 이 23개였다. 1440px 화면에서 10px 은
+   * 거의 안 읽힌다. 웹 표준 기본값이 16px 이고, 이 사이트를 읽는 발주자가
+   * 눈이 좋다는 보장이 없다.
+   *
+   * 🔴 아래 값을 다시 내리지 않는다. "정밀한 느낌" 은 크기가 아니라
+   *    모노 서체·자간·색 대비로 낸다(4-A 절).
+   */
+  --text-micro: 12px; /* 라벨·캡션. 이전 10~10.5px */
+  --text-small: 13.5px; /* 부가 설명. 이전 11~12px */
+  --text-base: 16px; /* 본문. 이전 13.5~14.5px */
+  --text-lead: 17.5px; /* 리드 문단 */
+  --text-h3: 19px;
+  --text-h2: 26px;
+  --text-h1: 46px;
+
   /* 여백 — 데스크톱 56px / 모바일 22px (시안 실측) */
+  --spacing-pad: 56px;
+  --radius-box: 3px;
+}
+
+:root {
+  /* 기존 이름을 유지한다 — 아직 남은 .module.css 가 이 이름으로 읽는다.
+     전환이 끝나면 이 블록을 지운다. */
+  --bg: var(--color-bg);
+  --bg-panel: var(--color-panel);
+  --line: var(--color-line);
+  --line-soft: var(--color-line-soft);
+  --fg: var(--color-fg);
+  --fg-strong: var(--color-fg-strong);
+  --fg-muted: var(--color-fg-muted);
+  --fg-dim: var(--color-fg-dim);
+  --fg-faint: var(--color-fg-faint);
+  --fg-ghost: var(--color-fg-ghost);
+  --amber: var(--color-amber);
+  --amber-bright: var(--color-amber-bright);
+  --amber-text: var(--color-amber-text);
+  --amber-dim: var(--color-amber-dim);
+  --amber-line: var(--color-amber-line);
+  --amber-wash: var(--color-amber-wash);
+  --blue: var(--color-blue);
+  --blue-line: var(--color-blue-line);
+  --blue-wash: var(--color-blue-wash);
+  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --pad-x: 56px;
   --radius: 3px;
 }
@@ -61,19 +126,19 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--color-bg);
+  color: var(--color-fg);
   font-family: var(--font-sans);
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: var(--amber);
+  color: var(--color-amber);
   text-decoration: none;
 }
 a:hover {
-  color: var(--amber-bright);
+  color: var(--color-amber-bright);
 }
 
 /* 움직임을 원하지 않는 사용자에게는 전부 멈춘다 (기획서 4절 폴백). */

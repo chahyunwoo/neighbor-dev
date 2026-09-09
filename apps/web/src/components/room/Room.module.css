@@ -3,6 +3,18 @@
   inset: 0;
   /* 카피가 3D 위에 얹히므로 캔버스는 맨 아래. */
   z-index: 0;
+  transition: right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1);
+}
+
+/*
+ * 🔴 패널이 열리면 방을 왼쪽으로 좁힌다.
+ *
+ * 실측 2026-09-09: 패널을 그냥 얹었더니 **마커 2개(서랍·현관문)가 패널 뒤로
+ * 숨었다.** 열린 물건 옆의 다른 물건을 못 누르면 "방을 돌아다닌다" 가 깨진다.
+ * 방을 좁히면 마커가 전부 남는 영역 안으로 들어온다.
+ */
+.canvas[data-narrow="true"] {
+  right: 480px;
 }
 
 .hint {
@@ -13,10 +25,16 @@
   align-items: center;
   gap: 9px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--fg-faint);
   z-index: 2;
   pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+/* 패널이 열리면 조작 안내는 물러난다 — 이미 열어봤으니 안내가 끝났다. */
+.hint[data-hidden="true"] {
+  opacity: 0;
 }
 
 .loading {
@@ -26,7 +44,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--fg-ghost);
   z-index: 1;
 }

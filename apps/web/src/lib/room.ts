@@ -22,6 +22,18 @@ export interface RoomObject {
   href: string
   /** 앰버는 주 동선(모니터·현관문), 블루는 나머지. */
   accent: Accent
+  /**
+   * 패널 한 줄 설명 — 마커를 눌렀을 때 방을 떠나지 않고 먼저 보이는 것.
+   * 시안(HOT[].sub)에서 왔다.
+   */
+  sub: string
+  /** 패널 안 요약 행. `[왼쪽, 오른쪽]`. 시안(HOT[].rows). */
+  rows: readonly (readonly [string, string])[]
+  /**
+   * 한 줄 소신. 시안(HOT[].note).
+   * 🔴 여기서 "말" 이 따뜻해진다 — 화면은 차갑게 두고 이 문장이 온기를 진다(기획서 4-A).
+   */
+  note: string
 }
 
 export const ROOM_OBJECTS: readonly RoomObject[] = [
@@ -32,6 +44,13 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '프로젝트가 어떻게 굴러갔나',
     href: '/work',
     accent: 'amber',
+    sub: '프로젝트가 수주부터 배포까지 어떻게 굴러갔는지, 각 단계에서 무슨 판단을 했는지 보실 수 있습니다.',
+    rows: [
+      ['어떻게 판단했나', '선택 · 대안 · 이유 · 대가'],
+      ['무엇이 나왔나', '재현 명령이 있는 수치만'],
+      ['전환', '토글 하나로'],
+    ],
+    note: '발주자는 판단을, 개발자는 수치를 봅니다. 둘 다 뒀습니다.',
   },
   {
     no: 2,
@@ -40,6 +59,13 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '그동안 만든 것',
     href: '/work',
     accent: 'blue',
+    sub: '2025년 4월 이후 17건. 클라이언트사명은 전부 익명으로 씁니다.',
+    rows: [
+      ['사례 상세', '10건'],
+      ['경력 요약', '6건'],
+      ['표기', '도메인 · 기간 · 기술'],
+    ],
+    note: '계약이 끝나도 남의 이름을 팔지 않는 게 맞다고 생각합니다.',
   },
   {
     no: 3,
@@ -48,6 +74,13 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '쓰는 기술',
     href: '/stack',
     accent: 'blue',
+    sub: '실제로 납품한 프로젝트에서 쓴 것만 적습니다.',
+    rows: [
+      ['백엔드', 'NestJS · Spring Boot · FastAPI'],
+      ['프론트', 'Next.js · React · TanStack'],
+      ['인프라', 'Docker · GitHub Actions · PostgreSQL'],
+    ],
+    note: '써본 적 없는 기술은 목록에 넣지 않습니다.',
   },
   {
     no: 4,
@@ -56,6 +89,13 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '이름 못 밝히는 일들',
     href: '/career',
     accent: 'blue',
+    sub: '클라이언트의 지적 자산이 담긴 건들입니다. 도메인 · 기간 · 기술까지만 적습니다.',
+    rows: [
+      ['대기업 백오피스 디자인 시스템', '2025.08—12'],
+      ['커머스 플랫폼 주문 검증', '2026.05'],
+      ['데스크톱 수집 앱', '2026.07'],
+    ],
+    note: '심사 기준·수수료 계산식 같은 업무 규칙은 클라이언트의 경쟁력입니다. 그래서 옮기지 않습니다. 다음 클라이언트의 것도 같은 기준으로 지킵니다.',
   },
   {
     no: 5,
@@ -64,13 +104,43 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '내 프로젝트 미리 진단해보기',
     href: '/diagnose',
     accent: 'blue',
+    sub: '요구사항을 적으시면 기술 스택 · 대략 기간 · 리스크를 정리해 드립니다.',
+    rows: [
+      ['범위 정리', '눌러서 1차에서 뺄 수 있습니다'],
+      ['대략 기간', '단일 값이 아니라 범위로'],
+      ['리스크', '등급을 붙여서'],
+    ],
+    note: '견적 금액은 말하지 않습니다. 그 숫자가 협상 기준선이 되어버리니까요.',
   },
   {
     no: 6,
+    id: 'team',
+    name: '테이블',
+    opens: '같이 일하는 사람들',
+    href: '/team',
+    accent: 'blue',
+    sub: '2026년 1월에 출범했습니다. 넷이서 기획부터 배포까지 함께 합니다.',
+    rows: [
+      ['풀스택 · PM', '기획 · 설계 · 프론트 · 백엔드'],
+      ['프론트엔드', '1명'],
+      ['백엔드', '1명'],
+      ['디자이너', '1명'],
+    ],
+    note: 'PM 이 전 영역을 직접 봅니다. 넘길 곳이 없어서가 아니라, 넘긴 뒤에도 책임이 남아서입니다.',
+  },
+  {
+    no: 7,
     id: 'door',
     name: '현관문',
     opens: '일 맡기기',
     href: '/contact',
     accent: 'amber',
+    sub: '무엇을 만들지 아직 안 정해졌어도 괜찮습니다. 정리부터 같이 합니다.',
+    rows: [
+      ['받는 것', '연락처와 하시려는 일'],
+      ['저장', '하지 않습니다 — 메일로만 넘깁니다'],
+      ['답', '영업일 기준 하루 안에'],
+    ],
+    note: '문의 내용을 저장하지 않습니다. 읽고 답하는 데 필요하지 않으니까요.',
   },
 ] as const

@@ -66,7 +66,7 @@ export const LAYOUT: readonly Placement[] = [
   { model: 'trashcan', position: [0.57, 0, 2.75], rotationY: 0, scale: S * 0.85 },
 
   // ===== 회의 구역 — 방 오른쪽 앞 =====
-  { model: 'table', position: [0.33, 0, 0.21], rotationY: 0, scale: S },
+  { model: 'table', position: [0.33, 0, 0.21], rotationY: 0, scale: S, hotspot: 'team' },
   { model: 'rugRound', position: [0.21, 0.004, 0.74], rotationY: 0, scale: S * 1.05 },
   { model: 'chairRounded', position: [0.98, 0, 0.37], rotationY: 180, scale: S },
   { model: 'chairRounded', position: [1.82, 0, 0.37], rotationY: 180, scale: S },

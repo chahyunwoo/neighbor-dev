@@ -9,7 +9,6 @@ import {
   parseRiskLine,
   parseScopeLine,
   type RiskLevel,
-  type Section,
   splitSections,
 } from '../lib/diagnose-parse'
 

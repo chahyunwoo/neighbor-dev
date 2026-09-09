@@ -16,14 +16,14 @@
 }
 .groupTitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--fg-strong);
   letter-spacing: 0.02em;
 }
 .groupNote {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--fg-ghost);
 }
 .items {
@@ -39,12 +39,12 @@
   border: 1px solid var(--line);
   border-radius: 2px;
   background: var(--bg-panel);
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--fg);
 }
 .count {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--fg-ghost);
 }
 /* 많이 쓴 것일수록 밝게 — 빈도가 눈으로 읽히게 한다. */
@@ -66,7 +66,7 @@
   padding-top: 14px;
   border-top: 1px solid var(--line-soft);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.9;
   color: var(--fg-ghost);
 }

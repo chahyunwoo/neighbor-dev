@@ -48,7 +48,21 @@ function useCanRender3D(): boolean | null {
  * @param onActive 3D 가 실제로 뜨는지 부모에게 알린다 — 부모는 그때 목록을
  *   접고 카피를 3D 위로 올린다. 판단을 두 곳에서 하지 않기 위해서다.
  */
-export function Room({ onActive }: { onActive?: (active: boolean) => void }) {
+export function Room({
+  onActive,
+  openId,
+  seen,
+  onOpen,
+}: {
+  onActive?: (active: boolean) => void
+  /**
+   * 🔴 상태는 **부모(Hero)가 쥔다.** 왼쪽 번호 목록과 3D 마커가 같은 상태를
+   *    봐야 하기 때문이다 — 여기서 들고 있으면 목록이 "지금 어디인지" 를 모른다.
+   */
+  openId: string | null
+  seen: ReadonlySet<string>
+  onOpen: (id: string) => void
+}) {
   const can = useCanRender3D()
 
   useEffect(() => {
@@ -58,7 +72,7 @@ export function Room({ onActive }: { onActive?: (active: boolean) => void }) {
   if (can !== true) return null
 
   return (
-    <div className={styles.canvas}>
+    <div className={styles.canvas} data-narrow={openId !== null}>
       <Canvas
         // 프로토타입 실측 구도. 값을 바꾸려면 layout.ts 의 주석을 먼저 읽는다.
         camera={{ position: CAMERA_POSITION, fov: CAMERA_FOV }}
@@ -77,10 +91,12 @@ export function Room({ onActive }: { onActive?: (active: boolean) => void }) {
         onCreated={({ camera }) => camera.lookAt(...ROOM_CENTER)}
       >
         <Suspense fallback={null}>
-          <Scene />
+          <Scene openId={openId} seen={seen} onOpen={onOpen} />
         </Suspense>
       </Canvas>
-      <p className={styles.hint}>드래그해서 둘러보기 · 눌러서 열기</p>
+      <p className={styles.hint} data-hidden={openId !== null}>
+        드래그해서 둘러보기 · 눌러서 열기
+      </p>
     </div>
   )
 }

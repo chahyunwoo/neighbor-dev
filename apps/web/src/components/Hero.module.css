@@ -48,3 +48,29 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/*
+ * 좌측 어둠막 — 시안 `.scrim`.
+ *
+ * 🔴 이게 없으면 흰 글자가 밝은 3D 위에 그대로 얹혀 안 읽힌다
+ *    (실측 2026-09-09: 시안 스크린샷과 대조해 발견).
+ *    3D 전체를 어둡게 하는 것이 아니라 **글자 뒤만** 덮어 대비를 만든다 —
+ *    그래서 오른쪽 방은 밝기를 그대로 유지한다.
+ *
+ * 폭 520px 은 시안 실측값이다. 카피(372px) + 좌우 여백을 덮는다.
+ */
+.scrim {
+  position: absolute;
+  left: calc(var(--pad-x) * -1);
+  top: 0;
+  bottom: 0;
+  width: 520px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(9, 8, 11, 0.94) 0%,
+    rgba(9, 8, 11, 0.86) 42%,
+    rgba(9, 8, 11, 0) 100%
+  );
+}

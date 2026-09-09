@@ -32,7 +32,7 @@
 
 .caption {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: var(--text-micro);
   color: var(--fg-ghost);
   letter-spacing: 0.07em;
   padding-top: 26px;
@@ -62,7 +62,7 @@
 
 .lede {
   margin: 0;
-  font-size: 15.5px;
+  font-size: var(--text-lead);
   line-height: 1.78;
   color: var(--fg-muted);
   font-weight: 300;
@@ -87,7 +87,7 @@
 }
 
 .footCopy {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg-faint);
   font-weight: 300;
 }
@@ -96,7 +96,7 @@
   display: flex;
   gap: 26px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--fg-ghost);
 }
 
@@ -106,7 +106,7 @@
     letter-spacing: -0.032em;
   }
   .lede {
-    font-size: 14.5px;
+    font-size: 16px;
   }
   .lamp {
     top: 90px;

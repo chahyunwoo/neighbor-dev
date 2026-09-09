@@ -19,7 +19,7 @@
 
 .blockTitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--fg-strong);
   letter-spacing: 0.02em;
@@ -27,13 +27,13 @@
 
 .blockNote {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--fg-ghost);
 }
 
 .prose {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.85;
   color: var(--fg-muted);
   font-weight: 300;
@@ -54,7 +54,7 @@
 
 .decisionChoice {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.72;
   color: var(--fg);
   font-weight: 400;
@@ -70,13 +70,13 @@
 
 .decisionKey {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--fg-ghost);
   padding-top: 3px;
 }
 
 .decisionVal {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.75;
   color: var(--fg-dim);
   font-weight: 300;
@@ -102,14 +102,14 @@
 }
 
 .metricName {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg-dim);
   font-weight: 300;
 }
 
 .metricValue {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--amber);
   font-weight: 500;
 }
@@ -121,7 +121,7 @@
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--line-soft);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--fg-faint);
   white-space: pre-wrap;
@@ -138,7 +138,7 @@
 
 .tag {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   padding: 4px 9px;
   border: 1px solid var(--line);
   border-radius: 2px;

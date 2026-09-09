@@ -6,7 +6,7 @@
 }
 .prose {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.85;
   color: var(--fg-muted);
   font-weight: 300;
@@ -30,13 +30,13 @@
 }
 .pointNo {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--amber);
   flex-shrink: 0;
   padding-top: 2px;
 }
 .pointText {
-  font-size: 13.5px;
+  font-size: 16px;
   line-height: 1.72;
   color: var(--fg-dim);
   font-weight: 300;
@@ -46,7 +46,7 @@
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.85;
   color: var(--fg-faint);
 }

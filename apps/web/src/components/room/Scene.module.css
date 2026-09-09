@@ -1,51 +1,149 @@
-.marker {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 11px 5px 6px;
-  border: 1px solid var(--blue-line);
-  border-radius: 999px;
-  background: rgba(11, 10, 12, 0.82);
-  backdrop-filter: blur(6px);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease;
-}
-.marker:hover {
-  border-color: var(--blue);
-  background: rgba(20, 26, 38, 0.9);
-}
-.marker[data-accent="amber"] {
-  border-color: var(--amber-line);
-}
-.marker[data-accent="amber"]:hover {
-  border-color: var(--amber);
-  background: rgba(38, 28, 22, 0.9);
-}
+/*
+ * 3D 마커 — 시안(Main.dc.html `.mk`)의 형태를 그대로 옮겼다.
+ *
+ * 🔴 **라벨을 상시로 띄우지 않는다.** 이전 구현은 이름표 6개가 항상 떠서
+ *    방을 덮었다(실측 스크린샷 2026-09-09). 시안 주석도 같은 실패를 적어놨다 —
+ *    "플럼봅은 요란했고 11px 점은 안 보였다. 링이 계속 퍼져서 눈에 띄되 조용하다."
+ *
+ * 형태: 점 하나 + 퍼지는 링 2겹(시차). 라벨은 hover·포커스·열림에만.
+ */
 
-.markerNo {
+.marker {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+
+/* 이미 열어본 것은 물러난다 — 남은 것이 눈에 띄게. */
+.marker[data-seen="true"] {
+  opacity: 0.34;
+}
+.marker[data-seen="true"]:hover {
+  opacity: 0.9;
+}
+
+.dot {
+  position: relative;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--blue-wash);
-  color: var(--blue);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  background: radial-gradient(circle at 34% 30%, #fff 0%, var(--color-amber) 62%, #c97f4c 100%);
+  box-shadow:
+    0 0 0 3px rgba(11, 10, 12, 0.55),
+    0 0 14px 2px rgba(232, 168, 124, 0.6);
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.4, 0.5, 1),
+    box-shadow 0.22s;
 }
-.marker[data-accent="amber"] .markerNo {
-  background: var(--amber-wash);
-  color: var(--amber);
+
+/* 부 동선은 블루 — 아트디렉션의 두 축을 마커에서도 지킨다. */
+.marker[data-accent="blue"] .dot {
+  background: radial-gradient(circle at 34% 30%, #fff 0%, var(--color-blue) 62%, #3d6ea8 100%);
+  box-shadow:
+    0 0 0 3px rgba(11, 10, 12, 0.55),
+    0 0 14px 2px rgba(107, 163, 232, 0.55);
 }
+
+/* 퍼지는 링 2겹 — 시차를 둬서 물결처럼. 이게 "여기 누르세요" 를 말한다. */
+.dot::before,
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(232, 168, 124, 0.75);
+  animation: ripple 2.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+.dot::after {
+  animation-delay: 1.4s;
+}
+.marker[data-accent="blue"] .dot::before,
+.marker[data-accent="blue"] .dot::after {
+  border-color: rgba(107, 163, 232, 0.7);
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: scale(3.1);
+    opacity: 0;
+  }
+}
+
+.marker:hover .dot,
+.marker:focus-visible .dot {
+  transform: scale(1.35);
+  box-shadow:
+    0 0 0 3px rgba(11, 10, 12, 0.55),
+    0 0 20px 5px rgba(232, 168, 124, 0.85);
+}
+
+/* 열려 있는 것 — 초록으로 "지금 여기" 를 말한다(시안 .mk.now). */
+.marker[data-open="true"] .dot {
+  transform: scale(1.25);
+  background: radial-gradient(circle at 34% 30%, #fff 0%, #8fe6a8 55%, #2fa855 100%);
+  box-shadow:
+    0 0 0 3px rgba(11, 10, 12, 0.6),
+    0 0 22px 5px rgba(90, 220, 130, 0.8);
+}
+.marker[data-open="true"] .dot::before,
+.marker[data-open="true"] .dot::after {
+  border-color: rgba(120, 235, 160, 0.8);
+}
+
+/* 라벨 — 평소엔 없다. */
 .markerName {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 6px 11px;
+  white-space: nowrap;
+  border-radius: 3px;
+  border: 1px solid var(--color-amber-line);
+  background: rgba(12, 11, 15, 0.92);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--color-amber-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.markerName b {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  color: var(--color-amber);
+}
+.marker[data-accent="blue"] .markerName {
+  border-color: var(--color-blue-line);
+  color: #dbe7f7;
+}
+.marker[data-accent="blue"] .markerName b {
+  color: var(--color-blue);
+}
+
+.marker:hover .markerName,
+.marker:focus-visible .markerName,
+.marker[data-open="true"] .markerName {
+  opacity: 1;
 }
