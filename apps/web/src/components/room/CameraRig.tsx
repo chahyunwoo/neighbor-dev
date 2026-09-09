@@ -98,8 +98,37 @@ export const INTRO = {
  *    로는 기억하지 못한다. 새로고침하면 초기화되는 것이 맞다(그때는 방에
  *    처음 들어오는 것이다).
  */
-const seenIntro = new Set<string>()
-const SEEN_KEY = 'room'
+const SEEN_KEY = 'room:intro-seen'
+
+/**
+ * 이 탭에서 입장 연출을 이미 봤는가.
+ *
+ * 🔴 **`sessionStorage` 에 둔다.** 모듈 스코프 `Set` 으로 뒀더니 **복귀에도
+ *    3.2초짜리 연출이 그대로 재생됐다** — 실측 2026-09-09: 첫 진입 2748ms,
+ *    복귀 2713ms 로 거의 같았다. 라우트를 풀 페이지로 이동하면 모듈이 새로
+ *    평가되어 그 `Set` 이 비기 때문이다.
+ *
+ *    방을 나갔다 오는 사람에게 매번 "걸어 들어오기" 를 보이는 것은 연출이
+ *    아니라 대기다. 탭을 새로 열면 초기화되는 것이 맞다(그때는 처음 오는 것이다).
+ *
+ * ⚠️ `sessionStorage` 는 접근 자체가 던질 수 있다(사생활 보호 모드 등).
+ *    막히면 "처음 온 것" 으로 보고 연출을 보인다 — 안전한 쪽이다.
+ */
+function hasSeenIntro(): boolean {
+  try {
+    return sessionStorage.getItem(SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markIntroSeen(): void {
+  try {
+    sessionStorage.setItem(SEEN_KEY, '1')
+  } catch {
+    // 저장이 막히면 다음에도 연출을 본다. 기능이 깨지지는 않는다.
+  }
+}
 
 /** 시안 easeInOutCubic. */
 function ease(t: number): number {
@@ -182,8 +211,8 @@ export function CameraRig({
      *    → 처음 한 번만 문 밖에서 걸어 들어오고, 그다음부터는 짧게 자리를
      *      잡는다. "돌아왔다" 는 보이되 기다리지는 않는다.
      */
-    const first = !seenIntro.has(SEEN_KEY)
-    seenIntro.add(SEEN_KEY)
+    const first = !hasSeenIntro()
+    markIntroSeen()
     const introMs = first ? INTRO.ms : INTRO.ms * 0.28
 
     const from = new THREE.Vector3(...INTRO.from)
