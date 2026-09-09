@@ -1,6 +1,6 @@
 'use client'
 
-import { Html, OrbitControls, useGLTF } from '@react-three/drei'
+import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '../../lib/room'
@@ -15,7 +15,7 @@ import {
 } from './Fixtures'
 import { Furniture } from './Furniture'
 import { Lights } from './Lights'
-import { CAMERA_LIMITS, LAYOUT, ROOM_CENTER } from './layout'
+import { CAMERA_FOV, CAMERA_LIMITS, LAYOUT, ROOM_CENTER } from './layout'
 import styles from './Scene.module.css'
 import { ROOM_BG, Shell } from './Shell'
 
@@ -103,6 +103,23 @@ export function Scene({
 
   return (
     <>
+      {/*
+       * 🔴 카메라를 **씬이 낸다.** 캔버스는 앱 전체에 하나뿐이고
+       *    (`components/canvas/CanvasShell.tsx`) 홈과 페이지의 카메라가
+       *    다르다(여기 fov 37 · [7.2,5,-3.6] / 페이지 fov 34 · [3.4,2.2,4.2]).
+       *    `<Canvas camera={...}>` 는 **마운트 시 1회만** 반영되어 라우트마다
+       *    바꿀 수 없다 — `makeDefault` 는 drei 가 교체하고 언마운트 때 되돌린다.
+       *
+       * ⚠️ 값은 프로토타입 실측이다(`layout.ts` 주석 참고). 자리만 옮겼다.
+       *
+       * 🔴 **`position` 을 여기서 주지 않는다.** 이 컴포넌트는 마커 실측
+       *    보고(`report`)와 문 여닫힘 때문에 여러 번 리렌더되는데, 그때마다
+       *    React 가 `position` 을 다시 적용해 **입장 연출을 매 프레임
+       *    되감는다** — 실측 2026-09-09: 마커 좌표가 800ms 부터 최종
+       *    위치에 고정됐고 `onEntered` 가 영영 안 불려 **카피·목록·어둠막이
+       *    통째로 안 보였다.** 카메라 위치는 `CameraRig` 가 쥔다.
+       */}
+      <PerspectiveCamera makeDefault fov={CAMERA_FOV} />
       <color attach="background" args={[ROOM_BG]} />
       <Lights />
 

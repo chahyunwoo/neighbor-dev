@@ -106,6 +106,14 @@
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --pad-x: 56px;
   --radius: 3px;
+  /*
+   * 물건을 열었을 때 오른쪽 패널이 먹는 폭.
+   * ⚠️ 이 값이 세 곳에 흩어져 있었다 — `RoomPanel`(Tailwind `w-[480px]`),
+   *    `Room.module.css`(`right:480px`), `CameraRig.tsx`(`PANEL_WIDTH`).
+   *    CSS 쪽 둘은 이 토큰을 참조한다. TS 상수는 변수를 못 읽으므로
+   *    `CameraRig.tsx` 의 주석이 이 토큰을 가리킨다.
+   */
+  --panel-w: 480px;
 }
 
 @media (max-width: 768px) {
@@ -122,6 +130,119 @@
 
 html {
   color-scheme: dark;
+}
+
+/*
+ * ── 지속 캔버스의 기하 ──────────────────────────────────────────
+ *
+ * 캔버스는 앱 전체에 **하나**뿐인데(`components/canvas/CanvasShell.tsx`)
+ * 화면마다 자리·투명도·클릭 여부가 다르다. 그 차이를 여기서 낸다.
+ * 각 화면은 `<CanvasMode mode="…" />` 로 자기 모드를 선언한다.
+ *
+ * 값은 전부 전환 전 실측이다(1440x900). 눈대중으로 고치지 않는다:
+ *   홈    x=0   y=97  1440x733   opacity 1    클릭 받음
+ *   페이지 x=660 y=0    780x900   opacity .5   클릭 안 받음
+ */
+
+/* 아무도 선언하지 않았으면 안 보인다 — 이전 화면의 3D 가 남지 않게. */
+html {
+  --cv-top: 0px;
+  --cv-right: 0px;
+  --cv-bottom: 0px;
+  --cv-left: 0px;
+  --cv-opacity: 0;
+  --cv-pe: none;
+}
+
+/*
+ * 홈 — 방 전체. 헤더 아래에서 시작해 푸터 위에서 끝난다.
+ * 🔴 `--nav-h`·`--foot-h` 는 `CanvasShell` 이 실제 요소를 재서 채운다.
+ *    상수로 박으면 헤더 높이가 바뀔 때 조용히 어긋난다(page.module.css 가
+ *    같은 이유로 `calc(100dvh - 152px)` 를 버렸다 — 실측 15px 넘쳤다).
+ *    아래 기본값은 측정 전 한 프레임을 위한 것이고 실측값과 같다.
+ */
+html[data-canvas-mode="room"] {
+  --cv-top: var(--nav-h, 97px);
+  --cv-bottom: var(--foot-h, 70px);
+  --cv-opacity: 1;
+  --cv-pe: auto;
+}
+
+/* 패널이 열리면 오른쪽을 그만큼 비운다(마커가 패널 뒤로 숨지 않게). */
+html[data-canvas-mode="room"][data-panel-open="true"] {
+  --cv-right: var(--panel-w);
+}
+
+/*
+ * 페이지 — 오른쪽에 흐릿하게. 본문이 주인공이라 클릭을 받지 않는다.
+ * `min(56vw, 780px)` 를 left 로 역산한다.
+ */
+html[data-canvas-mode="object"] {
+  --cv-left: calc(100vw - min(56vw, 780px));
+  --cv-opacity: 0.5;
+  --cv-pe: none;
+}
+
+/* 3D 를 안 쓰는 화면. */
+html[data-canvas-mode="off"] {
+  --cv-opacity: 0;
+  --cv-pe: none;
+}
+
+/*
+ * 캔버스 껍데기의 자리.
+ *
+ * 🔴 **CSS Module 이 아니라 여기(전역)에 둔다.** `CanvasShell` 은
+ *    `dynamic(ssr:false)` 로 불러서, 그 모듈의 CSS 가 **라우트 스타일시트가
+ *    아니라 lazy 청크**에 들어간다. 실측 2026-09-09: `/work` 의 <link> 에
+ *    그 청크가 아예 없었고, 그래서 `pointer-events` 가 안 먹어
+ *    **캔버스가 본문 링크·버튼 클릭을 가로챘다**(사례 카드 4개, 토글 2개).
+ *    빌드도 검사기도 초록이었다.
+ *
+ * 🔴 `pointer-events` 는 **자손까지 강제한다.** R3F 가 껍데기와 canvas 사이에
+ *    자기 래퍼 <div> 를 끼우고 거기에 auto 를 주므로, 껍데기에만 걸면
+ *    canvas 가 그 래퍼에서 auto 를 물려받아 그대로 클릭을 먹는다.
+ */
+.canvas-shell {
+  position: fixed;
+  top: var(--cv-top, 0px);
+  right: var(--cv-right, 0px);
+  bottom: var(--cv-bottom, 0px);
+  left: var(--cv-left, 0px);
+  z-index: 0;
+  opacity: var(--cv-opacity, 0);
+  pointer-events: var(--cv-pe, none);
+  /* 패널이 열리면 오른쪽이 좁아진다. 시안 실측 .44s. */
+  transition:
+    right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    opacity 0.4s ease-out,
+    top 0.3s ease-out;
+}
+
+.canvas-shell * {
+  pointer-events: inherit;
+}
+
+/*
+ * 페이지에서는 본문 쪽(왼쪽)을 지운다 — 글 뒤에 3D 가 깔리면 안 읽힌다.
+ * ⚠️ mask 를 변수로 넣지 않는다. `none` 초기값 처리가 브라우저마다 달라
+ *    조용히 어긋난다 — 모드별로 통째로 선언한다.
+ */
+html[data-canvas-mode="object"] .canvas-shell {
+  mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
+}
+
+/* 3D 를 안 쓰는 화면에서는 보이지도 않고 클릭도 안 받는다. */
+html[data-canvas-mode="off"] .canvas-shell {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-shell {
+    transition: none;
+  }
 }
 
 body {

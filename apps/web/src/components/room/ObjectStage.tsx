@@ -1,11 +1,12 @@
 'use client'
 
-import { Environment, OrbitControls, useGLTF } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Environment, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
+import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
+import { useCanRender3D } from '../../lib/can-3d'
+import { CanvasMode } from '../canvas/CanvasMode'
+import { r3f } from '../canvas/tunnel'
 import { DEFAULTS, DEG, METALNESS, PALETTE, ROUGHNESS } from './layout'
-import styles from './ObjectStage.module.css'
 
 /**
  * 물건 하나를 페이지 배경에 세운다 (기획서 4절).
@@ -20,7 +21,9 @@ import styles from './ObjectStage.module.css'
  *    · 본문이 주인공인 화면에서 방이 다 보이면 글이 안 읽힌다
  *
  * ⚠️ 본문 뒤에 깔리므로 **읽기를 방해하면 안 된다.** 오른쪽에 치우쳐 두고
- *    투명도를 낮춘다. 마우스 이벤트도 받지 않는다(`pointer-events: none`).
+ *    투명도를 낮춘다. 마우스 이벤트도 받지 않는다.
+ *    자리·투명도·마스크는 이제 `tokens.css` 의 `html[data-canvas-mode="object"]`
+ *    가 정한다 — 캔버스가 하나뿐이라 DOM 속성으로는 못 바꾼다.
  */
 
 interface Props {
@@ -75,34 +78,29 @@ function Piece({ model, rotationY = 0, scale = 1 }: Props) {
  *    에서는 띄우지 않는다. 판단을 여기서 다시 하지 않고 같은 조건을 쓴다.
  */
 export function ObjectStage({ model, rotationY = 0, scale = 1 }: Props) {
-  const [can, setCan] = useState(false)
+  // 🔴 판단은 `lib/can-3d.ts` 한 곳에서 한다 — 홈(`Hero`)도 같은 훅을 부른다.
+  //    이전에는 이 파일이 자체 `useState(false)` 로 따로 읽어 판정 타입까지
+  //    달랐다(`boolean` vs `boolean|null`).
+  const can = useCanRender3D() === true
 
-  useEffect(() => {
-    const narrow = window.matchMedia('(max-width: 900px)')
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const decide = () => setCan(!narrow.matches && !reduced.matches)
-    decide()
-    narrow.addEventListener('change', decide)
-    reduced.addEventListener('change', decide)
-    return () => {
-      narrow.removeEventListener('change', decide)
-      reduced.removeEventListener('change', decide)
-    }
-  }, [])
-
-  if (!can) return null
+  /*
+   * ⚠️ 3D 를 못 쓰는 상황에서도 **모드는 선언한다.** 캔버스가 라우트를
+   *    넘어 살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 그대로
+   *    남는다(이전에는 언마운트로 저절로 정리됐다).
+   */
+  if (!can) return <CanvasMode mode="off" />
 
   return (
-    <div className={styles.stage} aria-hidden="true">
-      <Canvas
-        camera={{ position: [3.4, 2.2, 4.2], fov: 34 }}
-        dpr={[1, 1.75]}
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.9,
-        }}
-      >
+    <>
+      <CanvasMode mode="object" />
+      <r3f.In>
+        {/*
+         * 🔴 카메라를 여기서 낸다. 캔버스는 앱 전체에 하나뿐이고
+         *    (`components/canvas/CanvasShell.tsx`) 홈과 이 화면의 구도가
+         *    다르다(홈 fov 37 / 여기 34). `makeDefault` 라 라우트가 바뀌면
+         *    drei 가 교체하고 언마운트 때 되돌린다.
+         */}
+        <PerspectiveCamera makeDefault position={[3.4, 2.2, 4.2]} fov={34} />
         <ambientLight intensity={0.5} />
         {/* 램프 쪽에서 오는 따뜻한 빛 — 방의 조명 성격을 잇는다(4-A 절). */}
         <directionalLight position={[4, 6, 3]} intensity={1.5} color="#ffd9b0" />
@@ -123,7 +121,7 @@ export function ObjectStage({ model, rotationY = 0, scale = 1 }: Props) {
           enablePan={false}
           enableZoom={false}
         />
-      </Canvas>
-    </div>
+      </r3f.In>
+    </>
   )
 }

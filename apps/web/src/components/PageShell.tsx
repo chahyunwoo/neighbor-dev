@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { OBJECT_MODEL } from '../lib/room'
+import { CanvasMode } from './canvas/CanvasMode'
 import { Nav } from './Nav'
 import styles from './PageShell.module.css'
 import { ObjectStage } from './room/ObjectStage'
@@ -28,9 +29,15 @@ export function PageShell({ fig, crumb, title, lede, from, children }: Props) {
 
   return (
     <div className={styles.page}>
+      {/*
+       * 🔴 `from` 이 없어도 **모드를 선언한다**. 캔버스가 라우트를 넘어
+       *    살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 남는다.
+       */}
       {stage ? (
         <ObjectStage model={stage.model} rotationY={stage.rotationY} scale={stage.scale} />
-      ) : null}
+      ) : (
+        <CanvasMode mode="off" />
+      )}
       <Nav />
       <main className={styles.main}>
         <div className={styles.head}>

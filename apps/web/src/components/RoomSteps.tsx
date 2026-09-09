@@ -23,7 +23,18 @@ export function RoomSteps({
   onOpen: (id: string) => void
 }) {
   return (
-    <nav className="mt-2.5 flex flex-col" aria-label="작업실 둘러보기">
+    /*
+     * 🔴 폭을 카피 너비로 묶는다.
+     *
+     *    실측 2026-09-09: 이 목록이 **1328px 폭**(x=56~1384)으로 화면을
+     *    가로질러, 글자가 없는 오른쪽 절반이 3D 방을 통째로 덮고 있었다.
+     *    그래서 테이블 마커(x=1047)가 안 눌렸다 — 버튼이 `flex` 기본값대로
+     *    부모 폭을 다 먹는데, 보이는 것은 왼쪽 텍스트뿐이라 눈으로는 안 보인다.
+     *
+     *    시안의 어둠막(`.scrim`)이 520px 이므로 그 안에 맞춘다 —
+     *    보이는 모습은 그대로이고 마커만 살아난다.
+     */
+    <nav className="mt-2.5 flex w-fit max-w-[420px] flex-col" aria-label="작업실 둘러보기">
       {ROOM_OBJECTS.map((o) => {
         const now = o.id === openId
         const done = seen.has(o.id) && !now

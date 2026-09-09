@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useCanRender3D } from '../lib/can-3d'
 import styles from './Hero.module.css'
 import { RoomList } from './RoomList'
 import { RoomSteps } from './RoomSteps'
@@ -14,15 +15,20 @@ import { RoomPanel } from './room/RoomPanel'
  *    (`clip-path`, `display:none` 아님) — 3D 를 못 쓰는 보조기술 사용자가
  *    갈 곳을 잃지 않게. 크롤러와 JS 비활성 브라우저는 애초에 목록만 받는다.
  *
- * 🔴 판단은 Room 한 곳에서 한다. 여기서 미디어쿼리를 다시 읽지 않는다 —
- *    두 곳에서 판단하면 어긋난 상태(3D 도 목록도 없는 화면)가 생긴다.
+ * 🔴 판단은 `lib/can-3d.ts` **한 곳**에서 한다. 여기도 `CanvasRoot` 도 같은
+ *    훅을 부른다 — 이전에는 `Room` 과 `ObjectStage` 가 각각 미디어쿼리를
+ *    읽었고 판정 타입도 달라(`boolean|null` vs `boolean`) 어긋날 자리가 있었다.
+ *
+ * ⚠️ 이전에는 `Room` 이 `onActive` 콜백으로 알려줬다. 그 경로는 한 프레임
+ *    늦어(effect → 부모 setState) 목록이 깜빡였고, 캔버스가 layout 으로
+ *    올라가면서 콜백 체인이 끊어질 자리도 생겼다. 훅을 직접 부른다.
  *
  * 🔴 **열린 물건 상태를 여기서 쥔다.** 왼쪽 번호 목록과 3D 마커와 패널이
  *    같은 상태를 봐야 한다 — Room 안에 두면 목록이 "지금 어디인지" 를 모른다.
  */
 export function Hero({ children }: { children: React.ReactNode }) {
-  const [is3D, setIs3D] = useState(false)
-  const onActive = useCallback((active: boolean) => setIs3D(active), [])
+  // null(SSR·첫 페인트)이면 false — 서버 HTML 은 항상 목록을 내보낸다.
+  const is3D = useCanRender3D() === true
 
   /**
    * 입장 연출이 끝났는가.
@@ -45,7 +51,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.stage}>
-      <Room onActive={onActive} openId={openId} seen={seen} onOpen={open} onEntered={onEntered} />
+      <Room active={is3D} openId={openId} seen={seen} onOpen={open} onEntered={onEntered} />
 
       {/*
        * 좌측 어둠막 — 시안 `.scrim`.
@@ -64,6 +70,12 @@ export function Hero({ children }: { children: React.ReactNode }) {
         {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
         {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
       </div>
+
+      {is3D ? (
+        <p className={styles.hint} data-hidden={openId !== null}>
+          드래그해서 둘러보기 · 눌러서 열기
+        </p>
+      ) : null}
 
       <div className={styles.room} data-mode={is3D ? '3d' : 'list'}>
         <RoomList />
