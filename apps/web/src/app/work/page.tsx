@@ -33,6 +33,7 @@ export default function WorkPage() {
   return (
     <PageShell
       from="whiteboard"
+      wide
       fig={`[ fig. 2 · 화이트보드 · ${detail.length + summary.length}건 ]`}
       crumb="화이트보드"
       title="그동안 만든 것"
