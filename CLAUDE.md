@@ -94,6 +94,29 @@ python3 scripts/verify-gates.py                                     # 검사기�
 게재 컷(`checkPeriodCutoff`). **M1 이 "못 잡음" 으로 나오는 것은 정상이다**
 (개인 도메인 방어가 이중이라 하나만 죽이면 다른 하나가 막는다).
 
+## 구조는 FSD 다 — 전역 규칙(`frontend-react-fsd`)을 따른다
+
+```
+app/       Next.js App Router 가 이 레이어를 겸한다. 라우트는 얇게 두고 조합만 한다
+widgets/   여러 슬라이스를 조합한 화면 블록  hero · nav · page-shell
+features/  서버 리소스 없이 UI·흐름만        room-3d · reveal
+entities/  백엔드 엔드포인트가 있는 도메인   contact · diagnose · project · room
+shared/    가장 아래. 어느 도메인에도 안 속한다
+```
+
+**entities 판정은 "재사용될까"가 아니라 "백엔드 엔드포인트가 있는가"다.**
+실측: `apps/api` 의 `@Controller('contact')` · `@Controller('diagnose')`.
+`project`·`room` 은 엔드포인트가 없지만 이 사이트의 도메인 모델이라 여기 둔다
+(각 `index.ts` 주석에 근거를 적어놨다).
+
+🔴 **단방향 의존 — 예외 없다.** 하위가 상위를 import 하지 않는다. type-only 도 안 된다.
+🔴 **슬라이스는 `index.ts` 로만 노출한다.** 남의 슬라이스 내부 파일을 직접 부르지 않는다.
+🔴 **상대경로(`../`) 금지.** `@/` 절대경로만. 같은 폴더 `./` 만 예외.
+   ⚠️ CSS Module 은 `index.ts` 로 재노출이 안 되므로 경로 직접 참조를 허용한다.
+
+`node scripts/verify-fsd.mjs` 가 이 셋을 전부 검사한다(`pnpm verify` 에 포함).
+되돌리기 검증 완료 — 단방향 위반·슬라이스 내부 참조 둘 다 잡는다.
+
 ## 포트
 
 web `3200` · api `3100` · DB `5433`. 2026-09-09 실측 점유를 피한 값이다.

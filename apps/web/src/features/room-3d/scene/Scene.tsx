@@ -4,7 +4,7 @@ import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/dr
 import { useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ROOM_OBJECTS } from '../../lib/room'
+import { ROOM_OBJECTS } from '@/entities/room'
 import { anchorFromBox } from './anchors'
 import { CameraRig, type FocusTarget, type OrbitControlsLike } from './CameraRig'
 import {

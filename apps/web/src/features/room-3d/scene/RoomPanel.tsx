@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
-import { ROOM_OBJECTS, type RoomObject } from '../../lib/room'
+import { ROOM_OBJECTS, type RoomObject } from '@/entities/room'
 
 /**
  * 방의 물건을 열면 나오는 패널 (기획서 4절 · 시안 `#panel`).

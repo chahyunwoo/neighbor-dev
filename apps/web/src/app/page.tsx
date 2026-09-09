@@ -1,7 +1,7 @@
-import { Hero } from '../components/Hero'
-import { Nav } from '../components/Nav'
-import { getCounts } from '../lib/projects'
-import { ROOM_OBJECTS } from '../lib/room'
+import { getCounts } from '@/entities/project'
+import { ROOM_OBJECTS } from '@/entities/room'
+import { Hero } from '@/widgets/hero'
+import { Nav } from '@/widgets/nav'
 import styles from './page.module.css'
 
 /**

@@ -1,11 +1,8 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { OBJECT_MODEL } from '../lib/room'
-import { CanvasMode } from './canvas/CanvasMode'
-import { ContentWidth } from './canvas/ContentWidth'
-import { Nav } from './Nav'
+import { OBJECT_MODEL } from '@/entities/room'
+import { CanvasMode, ContentWidth, ObjectStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
-import { ObjectStage } from './room/ObjectStage'
 
 interface Props {
   /** 시안의 [ fig. N · … ] 캡션. 도면 규약을 화면 전체에 유지한다. */
@@ -35,7 +32,14 @@ interface Props {
   children: ReactNode
 }
 
-/** 물건을 열었을 때의 공통 껍데기. 시안 Interaction·Work 의 상단부다. */
+/**
+ * 물건을 열었을 때의 공통 껍데기. 시안 Interaction·Work 의 상단부다.
+ *
+ * 🔴 **`<Nav />` 를 여기서 렌더하지 않는다** (FSD 단방향 의존).
+ *    widgets 끼리 서로를 import 하면 같은 레이어 안에서 의존이 생겨
+ *    어느 쪽이 상위인지 알 수 없게 된다. 조합은 **라우트가** 한다 —
+ *    홈(`app/page.tsx`)이 이미 그렇게 하고 있어서 방식도 통일된다.
+ */
 export function PageShell({ fig, crumb, title, lede, from, wide, children }: Props) {
   const stage = from ? OBJECT_MODEL[from] : undefined
 
@@ -52,7 +56,6 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
       ) : (
         <CanvasMode mode="off" />
       )}
-      <Nav />
       <main className={styles.main}>
         <div className={styles.head}>
           <div className={styles.headText}>

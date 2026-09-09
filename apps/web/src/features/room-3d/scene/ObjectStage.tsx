@@ -3,9 +3,9 @@
 import { Environment, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
-import { useCanRender3D } from '../../lib/can-3d'
-import { CanvasMode } from '../canvas/CanvasMode'
-import { r3f } from '../canvas/tunnel'
+import { CanvasMode } from '@/features/room-3d/canvas/CanvasMode'
+import { r3f } from '@/features/room-3d/canvas/tunnel'
+import { useCanRender3D } from '@/shared'
 import { DEFAULTS, DEG, METALNESS, PALETTE, ROUGHNESS } from './layout'
 
 /**

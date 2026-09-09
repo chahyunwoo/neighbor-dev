@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ROOM_OBJECTS } from '../lib/room'
+import { ROOM_OBJECTS } from '@/entities/room/model/room'
 import styles from './RoomList.module.css'
 
 /**

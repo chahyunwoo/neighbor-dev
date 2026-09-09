@@ -9,7 +9,7 @@
  *    지난 세션의 사고(경력 요약 층에 문제·판단·수치를 실음)가 정확히 이 형태였다.
  */
 
-import generated from '../../../../data/generated/projects.json' with { type: 'json' }
+import generated from '@data/projects.json' with { type: 'json' }
 
 /** 어느 층에서나 보이는 것 — 도메인 + 기간 + 스택. */
 export interface BaseProject {

@@ -3,7 +3,7 @@
 import { useThree } from '@react-three/fiber'
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { getDetailProjects } from '../../lib/projects'
+import { getDetailProjects } from '@/entities/project'
 import { DESK_TOP } from './layout'
 import { makeBoardTexture, makeScreenTexture } from './textures'
 

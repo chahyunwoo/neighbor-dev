@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { PageShell } from '../../components/PageShell'
-import { StackTags } from '../../components/StackTags'
-import { displayStack, getSummaryProjects } from '../../lib/projects'
-import styles from '../work/page.module.css'
+import { displayStack, getSummaryProjects, StackTags } from '@/entities/project'
+import styles from '@/shared/ui/styles/list-page.module.css'
+import { Nav } from '@/widgets/nav'
+import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = {
   title: '이름 못 밝히는 일들',
@@ -20,31 +20,34 @@ export default function CareerPage() {
   const summary = getSummaryProjects()
 
   return (
-    <PageShell
-      from="drawer"
-      wide
-      fig={`[ fig. 4 · 서랍 · ${summary.length}건 ]`}
-      crumb="서랍"
-      title="이름 못 밝히는 일들"
-      lede="계약상 화면도 세부 판단도 공개할 수 없는 건들입니다. 도메인과 쓴 기술까지만 적었습니다."
-    >
-      <div className={styles.rows}>
-        {summary.map((p) => (
-          // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
-          <div key={`${p.label}${p.period}`} className={styles.row}>
-            <span className={styles.rowLabel}>{p.label}</span>
-            <span className={styles.rowPeriod}>{p.period}</span>
-            <div className={styles.rowStack}>
-              <StackTags names={displayStack(p.stack)} peek={3} label={p.label} />
+    <>
+      <Nav />
+      <PageShell
+        from="drawer"
+        wide
+        fig={`[ fig. 4 · 서랍 · ${summary.length}건 ]`}
+        crumb="서랍"
+        title="이름 못 밝히는 일들"
+        lede="계약상 화면도 세부 판단도 공개할 수 없는 건들입니다. 도메인과 쓴 기술까지만 적었습니다."
+      >
+        <div className={styles.rows}>
+          {summary.map((p) => (
+            // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
+            <div key={`${p.label}${p.period}`} className={styles.row}>
+              <span className={styles.rowLabel}>{p.label}</span>
+              <span className={styles.rowPeriod}>{p.period}</span>
+              <div className={styles.rowStack}>
+                <StackTags names={displayStack(p.stack)} peek={3} label={p.label} />
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <p className={styles.note}>
-        여기 적히지 않은 것이 실력의 공백은 아닙니다 — 공개 범위의 문제입니다.
-        <br />
-        구체적으로 궁금한 부분이 있으면 문의 때 직접 말씀드리겠습니다.
-      </p>
-    </PageShell>
+          ))}
+        </div>
+        <p className={styles.note}>
+          여기 적히지 않은 것이 실력의 공백은 아닙니다 — 공개 범위의 문제입니다.
+          <br />
+          구체적으로 궁금한 부분이 있으면 문의 때 직접 말씀드리겠습니다.
+        </p>
+      </PageShell>
+    </>
   )
 }

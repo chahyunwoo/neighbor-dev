@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useRef } from 'react'
-import { useCanRender3D } from '../../lib/can-3d'
+import { useCanRender3D } from '@/shared'
 
 /**
  * 🔴 3D 청크를 초기 번들에 넣지 않는다 (기획서 4절 성능 예산).

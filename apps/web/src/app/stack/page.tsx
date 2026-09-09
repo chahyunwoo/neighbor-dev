@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-import { PageShell } from '../../components/PageShell'
-import { getAllProjects, getStackFrequency } from '../../lib/projects'
+import { getAllProjects, getStackFrequency } from '@/entities/project'
+import { Nav } from '@/widgets/nav'
+import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
 
 export const metadata: Metadata = {
@@ -23,31 +24,34 @@ export default function StackPage() {
   const twice = freq.filter((f) => f.count === 2)
 
   return (
-    <PageShell
-      from="bookshelf"
-      wide
-      fig={`[ fig. 3 · 책장 · ${freq.length}종 ]`}
-      crumb="책장"
-      title="쓰는 기술"
-      lede={`${total}건에서 실제로 쓴 것만 셌습니다. 할 줄 아는 것이 아니라 써본 것입니다.`}
-    >
-      <div className={styles.groups}>
-        <Group
-          title="반복해서 쓴 것"
-          note={`3건 이상 · ${repeated.length}종`}
-          items={repeated}
-          weight={3}
-        />
-        <Group title="두 번 쓴 것" note={`${twice.length}종`} items={twice} weight={2} />
-      </div>
-      <p className={styles.note}>
-        <strong>두 번 이상 쓴 것만</strong> 실었습니다. 한 번 써본 것까지 늘어놓으면 무엇을 실제로
-        다루는지가 안 보입니다.
-        <br />
-        버전 표기는 합쳐서 셌고(NestJS 11 과 NestJS 는 한 종), 한 프로젝트 안의 중복은 한 번만
-        셉니다.
-      </p>
-    </PageShell>
+    <>
+      <Nav />
+      <PageShell
+        from="bookshelf"
+        wide
+        fig={`[ fig. 3 · 책장 · ${freq.length}종 ]`}
+        crumb="책장"
+        title="쓰는 기술"
+        lede={`${total}건에서 실제로 쓴 것만 셌습니다. 할 줄 아는 것이 아니라 써본 것입니다.`}
+      >
+        <div className={styles.groups}>
+          <Group
+            title="반복해서 쓴 것"
+            note={`3건 이상 · ${repeated.length}종`}
+            items={repeated}
+            weight={3}
+          />
+          <Group title="두 번 쓴 것" note={`${twice.length}종`} items={twice} weight={2} />
+        </div>
+        <p className={styles.note}>
+          <strong>두 번 이상 쓴 것만</strong> 실었습니다. 한 번 써본 것까지 늘어놓으면 무엇을 실제로
+          다루는지가 안 보입니다.
+          <br />
+          버전 표기는 합쳐서 셌고(NestJS 11 과 NestJS 는 한 종), 한 프로젝트 안의 중복은 한 번만
+          셉니다.
+        </p>
+      </PageShell>
+    </>
   )
 }
 

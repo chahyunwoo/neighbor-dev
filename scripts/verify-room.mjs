@@ -23,12 +23,12 @@ function extract(file, pattern) {
   return [...src.matchAll(pattern)].map((m) => m[1])
 }
 
-// lib/room.ts 의 id (목록·서버 렌더가 쓰는 정본)
-const roomIds = extract('lib/room.ts', /^\s+id:\s*'([\w-]+)',/gm)
+// entities/room/model/room.ts 의 id (목록·서버 렌더가 쓰는 정본)
+const roomIds = extract('entities/room/model/room.ts', /^\s+id:\s*'([\w-]+)',/gm)
 
 // 3D 가 그리는 핫스팟: LAYOUT 의 hotspot + Scene 이 직접 더하는 고정물
-const layoutHotspots = extract('components/room/layout.ts', /hotspot:\s*'([\w-]+)'/g)
-const sceneAnchors = extract('components/room/Scene.tsx', /\{\s*id:\s*'([\w-]+)',\s*at:/g)
+const layoutHotspots = extract('features/room-3d/scene/layout.ts', /hotspot:\s*'([\w-]+)'/g)
+const sceneAnchors = extract('features/room-3d/scene/Scene.tsx', /\{\s*id:\s*'([\w-]+)',\s*at:/g)
 const drawn = [...layoutHotspots, ...sceneAnchors]
 
 const problems = []
@@ -36,14 +36,14 @@ const problems = []
 // 1. 정본에 없는 것을 그리려 하는가 → 마커가 조용히 사라진다
 for (const id of drawn) {
   if (!roomIds.includes(id)) {
-    problems.push(`3D 가 '${id}' 를 그리려 하는데 lib/room.ts 에 없다 — 마커가 조용히 사라진다`)
+    problems.push(`3D 가 '${id}' 를 그리려 하는데 entities/room 에 없다 — 마커가 조용히 사라진다`)
   }
 }
 
 // 2. 정본에 있는데 3D 에 없는가 → 데스크톱에서만 못 가는 곳이 생긴다
 for (const id of roomIds) {
   if (!drawn.includes(id)) {
-    problems.push(`lib/room.ts 의 '${id}' 를 3D 가 그리지 않는다 — 데스크톱에서만 못 간다`)
+    problems.push(`entities/room 의 '${id}' 를 3D 가 그리지 않는다 — 데스크톱에서만 못 간다`)
   }
 }
 
