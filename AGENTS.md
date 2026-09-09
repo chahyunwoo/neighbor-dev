@@ -99,6 +99,39 @@ python3 scripts/verify-gates.py                                     # 검사기�
 web `3200` · api `3100` · DB `5433`. 2026-09-09 실측 점유를 피한 값이다.
 `pgrep -x cloudflared` 를 쓴다 — `ps aux | grep` 은 자기 명령줄을 세어 오답을 낸다.
 
+## 🔴 자동 수정이 앱을 죽인 적이 있다 — 고친 뒤 반드시 띄워본다
+
+`biome check --write` 가 NestJS 주입 대상의 import 를 `import type` 으로 바꿔
+**api 가 기동조차 못 했다.** 그런데 `pnpm build` 는 초록이었다(2026-09-09 실측).
+
+→ `apps/api` 는 Biome 대상에서 뺐다(근거: `apps/api/왜-biome-을-안-쓰나.md`).
+→ **api·web 을 고친 뒤에는 실제로 띄워서 확인한다.** 빌드 통과는 증거가 아니다.
+
+```bash
+pnpm verify                      # lint · typecheck · test · 방 검사 · 데이터 검사
+pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
+curl -s http://localhost:3100/diagnose/status
+pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
+```
+
+## 🔴 화면은 눈으로 본다 — 검사기만으로는 못 잡는 것이 있다
+
+실측 2026-09-09, **데이터 검사를 통과한 상태에서** 화면에 나가 있던 것들:
+
+- `@hyunwoo/ui` — 개인 스코프 패키지명이 스택 태그에 실렸다
+- `카페24` — 플랫폼 실명이 경력 요약 라벨에 실렸다
+- 책장에 170종이 깔려 아무것도 안 읽혔다(정본의 stack 이 기술명이 아니라 서술이다)
+
+셋 다 **스크린샷을 열어보고서야** 발견했다. 그 뒤 검사 항목으로 추가했지만,
+검사기를 늘리는 것과 별개로 화면은 계속 눈으로 본다.
+
+## 🔴 3D 좌표를 눈대중으로 고치지 않는다
+
+프로토타입(`.wip/room2.html`)의 값은 전부 실측이다. 감으로 채운 자리가
+화면에서 전부 틀렸다(카메라 z 부호, 화이트보드 벽 위치 — 2026-09-09).
+값을 바꾸기 전에 `apps/web/src/components/room/layout.ts` 의 주석을 읽는다.
+
 ## 커밋
 
 - 형식: `한글 요약` (이 저장소는 이슈 트래커 미정 — 정해지면 `[KEY] 요약` 으로 전환)
