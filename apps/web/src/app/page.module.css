@@ -1,9 +1,21 @@
+/*
+ * 🔴 한 화면에 정확히 담는다.
+ *
+ * `min-height: 100dvh` + 자식의 고정 높이는 **합이 넘칠 수 있다.**
+ * 실측 2026-09-09: nav 97 + stage 748 + footer 70 = 915px 인데 뷰포트가
+ * 900px 이라 **아래가 15px 잘리고 스크롤이 생겼다.** 히어로가 고정값
+ * `calc(100dvh - 152px)` 를 쓰는데 실제 nav·footer 합이 167px 이었다 —
+ * 글자를 키우면서 nav 가 커졌는데 그 상수는 그대로였다.
+ *
+ * 고정값을 고쳐도 다음에 또 어긋난다. `height` 로 못박고 자식이 남는 만큼
+ * 가져가게 한다(아래 `.main` 의 `flex: 1` + `min-height: 0`).
+ */
 .page {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* 램프 빛 — 책상에서 번지는 따뜻한 원. 기획서 4-A 의 유일한 온기다. */
@@ -25,7 +37,10 @@
 
 .main {
   position: relative;
+  /* 🔴 `min-height: 0` 이 없으면 flex 자식이 내용 크기 아래로 줄지 않아
+     부모를 밀어낸다 — 위 잘림의 다른 절반이다. */
   flex: 1;
+  min-height: 0;
   padding: 0 var(--pad-x);
   z-index: 1;
 }

@@ -2,7 +2,10 @@
 
 import { Html, OrbitControls, useGLTF } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
+import { useCallback, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '../../lib/room'
+import { anchorFromBox } from './anchors'
+import { CameraRig, type FocusTarget, type OrbitControlsLike } from './CameraRig'
 import {
   MONITOR_POSITION,
   Monitor,
@@ -37,30 +40,61 @@ export function Scene({
   seen: ReadonlySet<string>
   onOpen: (id: string) => void
 }) {
-  // 배치 중 클릭 지점이 있는 것만 골라, lib/room.ts 의 정의와 맞춘다.
-  // 배치에서 오는 것 + 직접 만든 고정물. 좌표만 다르고 뜻은 같다.
-  const anchors: { id: string; at: [number, number, number] }[] = [
-    ...LAYOUT.flatMap((p) =>
-      p.hotspot ? [{ id: p.hotspot, at: p.position as [number, number, number] }] : [],
-    ),
-    // ⚠️ 마커는 물건 **옆**에 둔다. 바로 위에 두면 화면 내용을 가린다
-    //    (실측 2026-09-09: 모니터 마커가 파이프라인을, 노트북 마커가 보드를 덮었다).
-    {
-      id: 'monitor',
-      at: [MONITOR_POSITION[0] + 0.72, MONITOR_POSITION[1] + 0.35, MONITOR_POSITION[2]],
-    },
-    {
-      id: 'whiteboard',
-      at: [WHITEBOARD_POSITION[0] + 1.25, WHITEBOARD_POSITION[1], WHITEBOARD_POSITION[2]],
-    },
+  const controls = useRef<OrbitControlsLike>(null)
+
+  /*
+   * 마커 위치 — 물건의 **실제 꼭대기**에서 낸다(`anchors.ts` 참고).
+   *
+   * 🔴 이전에는 배치 원점 + 고정값 0.85 였다. 배치 원점은 대개 바닥이고
+   *    물건 높이가 제각각이라 마커가 엉뚱한 데 떴다 — 실측 2026-09-09:
+   *    화이트보드 마커가 허공에, 모니터 마커가 화이트보드 위에 있었다.
+   */
+  /**
+   * 마커 위치 — 물건의 **실제 꼭대기**에서 낸다(`anchors.ts`).
+   *
+   * 🔴 이전에는 배치 원점 + 고정값 0.85 였다. 배치 원점은 대개 바닥이고
+   *    물건 높이가 제각각이라 마커가 엉뚱한 데 떴다 — 실측 2026-09-09:
+   *    화이트보드 마커가 허공에, 모니터 마커가 화이트보드 위에 있었다.
+   *
+   * ⚠️ 계산에는 로드된 모델이 필요하다. 여기서 모델을 다시 열면 반복문 안에서
+   *    훅을 부르게 되므로, **이미 열어 둔 `Furniture` 가 보고**하게 한다.
+   */
+  const [measured, setMeasured] = useState<Record<string, [number, number, number]>>({})
+  const report = useCallback((id: string, at: [number, number, number]) => {
+    setMeasured((prev) => {
+      const old = prev[id]
+      if (old && old[0] === at[0] && old[1] === at[1] && old[2] === at[2]) return prev
+      return { ...prev, [id]: at }
+    })
+  }, [])
+
+  const anchors: { id: string; at: [number, number, number]; radius: number }[] = [
+    ...LAYOUT.flatMap((p) => {
+      if (!p.hotspot) return []
+      // 아직 안 재였으면 배치 좌표로 버틴다 — 한 프레임 뒤 제자리를 찾는다.
+      const at = measured[p.hotspot] ?? (p.position as [number, number, number])
+      const sc = Array.isArray(p.scale) ? Math.max(...p.scale) : p.scale
+      return [{ id: p.hotspot, at, radius: Math.max(0.45, sc * 0.42) }]
+    }),
+    // 직접 만든 고정물 — 크기를 알고 있으니 그 값으로 낸다(Fixtures 실측값).
+    { id: 'monitor', at: anchorFromBox(MONITOR_POSITION, 0.28), radius: 0.6 },
+    { id: 'whiteboard', at: anchorFromBox(WHITEBOARD_POSITION, 0.64), radius: 1.1 },
   ]
 
   const hotspots = anchors.flatMap((a) => {
     const meta = ROOM_OBJECTS.find((o) => o.id === a.id)
     // 🔴 짝이 없으면 그리지 않는다. 조용히 어긋나느니 안 보이는 편이 낫다 —
     //    verify-room.mjs 가 이 짝을 전수로 확인한다.
-    return meta ? [{ at: a.at, meta }] : []
+    return meta ? [{ at: a.at, radius: a.radius, meta }] : []
   })
+
+  // 열린 물건의 초점 — 카메라가 여기로 날아간다.
+  const focus: FocusTarget | null = (() => {
+    const h = hotspots.find((x) => x.meta.id === openId)
+    if (!h) return null
+    // 마커는 물건 **위**에 있으므로, 초점은 그만큼 내려 물건 몸통을 본다.
+    return { center: [h.at[0], h.at[1] - h.radius * 0.6, h.at[2]], radius: h.radius }
+  })()
 
   return (
     <>
@@ -73,7 +107,12 @@ export function Scene({
        * 좌표는 이 방에서 유일하다(한 자리에 두 개를 놓지 않는다).
        */}
       {LAYOUT.map((p) => (
-        <Furniture key={`${p.model}@${p.position.join(',')}`} placement={p} />
+        <Furniture
+          key={`${p.model}@${p.position.join(',')}`}
+          placement={p}
+          openId={openId}
+          onAnchor={report}
+        />
       ))}
 
       {/* 팩에 없거나 못 쓰는 것 — 배지 1·2 라 빠지면 안 된다. */}
@@ -86,9 +125,16 @@ export function Scene({
       {hotspots.map(({ at, meta }) => (
         <Html
           key={meta.id}
-          position={[at[0], at[1] + 0.85, at[2]]}
+          position={at}
           center
-          distanceFactor={8}
+          /*
+           * 🔴 **값이 클수록 마커가 커진다** — 방향을 반대로 알고 8 → 14 로
+           *    올렸다가 더 커졌다(실측 스크린샷으로 확인). drei 의
+           *    `distanceFactor` 는 "이 거리에서 1배" 라는 기준 거리이므로,
+           *    값을 키우면 같은 거리에서 더 크게 그려진다.
+           *    마커는 안내지 주인공이 아니다 — 낮춘다.
+           */
+          distanceFactor={5}
           zIndexRange={[10, 0]}
         >
           {/*
@@ -115,7 +161,10 @@ export function Scene({
         </Html>
       ))}
 
+      <CameraRig focus={focus} controls={controls} />
+
       <OrbitControls
+        ref={controls}
         target={ROOM_CENTER}
         enablePan={false}
         // 줌은 막는다 — 아이소메트릭 구도를 유지한다(기획서 4절).

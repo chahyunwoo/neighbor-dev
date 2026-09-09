@@ -1,11 +1,11 @@
 'use client'
 
 import { useGLTF } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { DEFAULTS, METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
-
-const DEG = Math.PI / 180
+import { anchorOf } from './anchors'
+import { DEFAULTS, DEG, METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
+import { reactionOf, useReaction } from './useReaction'
 
 /**
  * Kenney 가구 하나.
@@ -18,8 +18,25 @@ const DEG = Math.PI / 180
  *    쓰면 의자 4개가 한 자리에 겹치고, 머티리얼을 고치면 다른 인스턴스까지
  *    바뀐다. `clone()` 으로 인스턴스마다 복제한다.
  */
-export function Furniture({ placement }: { placement: Placement }) {
+export function Furniture({
+  placement,
+  openId,
+  onAnchor,
+}: {
+  placement: Placement
+  /** 지금 열려 있는 물건. 이 물건이면 반응한다(서랍이 빠지고 문이 열린다). */
+  openId?: string | null
+  /**
+   * 이 물건의 마커 위치를 부모에게 알린다.
+   *
+   * 🔴 앵커는 **모델을 실제로 재서** 낸다(`anchors.ts`). 그 계산에는 로드된
+   *    씬이 필요한데, 그걸 이미 들고 있는 곳이 여기다 — 부모가 따로
+   *    로드하면 훅 규칙(반복문 안 훅 호출)을 어기게 된다.
+   */
+  onAnchor?: (id: string, at: [number, number, number]) => void
+}) {
   const { scene } = useGLTF(`/models/${placement.model}.glb`)
+  const ref = useRef<THREE.Object3D>(null)
 
   const object = useMemo(() => {
     const cloned = scene.clone(true)
@@ -50,12 +67,28 @@ export function Furniture({ placement }: { placement: Placement }) {
     return cloned
   }, [scene])
 
+  const hotspot = placement.hotspot
+  useEffect(() => {
+    if (!hotspot || !onAnchor) return
+    onAnchor(hotspot, anchorOf(placement, scene))
+  }, [hotspot, onAnchor, placement, scene])
+
   const scale: [number, number, number] = Array.isArray(placement.scale)
     ? placement.scale
     : [placement.scale, placement.scale, placement.scale]
 
+  // 🔴 열린 물건은 실제로 움직인다 — 서랍이 빠지고 문이 열린다(`useReaction`).
+  //    핫스팟이 없는 가구는 반응하지 않는다(null 이면 훅이 아무것도 안 한다).
+  useReaction(
+    ref,
+    { position: placement.position, rotationY: placement.rotationY },
+    hotspot ? reactionOf(hotspot) : null,
+    hotspot != null && hotspot === openId,
+  )
+
   return (
     <primitive
+      ref={ref}
       object={object}
       position={placement.position}
       rotation={[0, placement.rotationY * DEG, 0]}

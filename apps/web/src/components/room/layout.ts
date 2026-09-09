@@ -9,6 +9,9 @@
  */
 
 /** 전역 스케일. 실측: Kenney 모델이 실제 크기의 약 절반이다. */
+/** 도 → 라디안. 배치는 도로 적고 three 는 라디안을 쓴다. */
+export const DEG = Math.PI / 180
+
 export const S = 2.05
 
 /** 책상 상판 높이. 위에 올리는 물건은 이 y 를 쓴다. */
@@ -136,7 +139,13 @@ export const ROUGHNESS: Record<string, number> = {
 /** 팔레트·거칠기·금속도에 없는 이름의 기본값. 프로토타입과 같다. */
 export const DEFAULTS = { color: 0x1b1a21, roughness: 0.6, metalness: 0.05 } as const
 
-/** 카메라 제한 — 프로토타입 실측값. */
+/**
+ * 카메라 제한 — 프로토타입 실측값(시안 `LIMITS`).
+ *
+ * 🔴 **상태마다 다르다.** 방 전체를 볼 때와 물건 하나에 다가갔을 때 허용 범위가
+ *    같으면 안 된다 — overview 의 `minDistance: 4.6` 을 그대로 두면 물건에
+ *    다가갈 수 없고, focus 의 `1.2` 를 늘 쓰면 방을 뚫고 들어간다.
+ */
 export const CAMERA_LIMITS = {
   minDistance: 4.6,
   maxDistance: 12,
@@ -144,6 +153,16 @@ export const CAMERA_LIMITS = {
   maxPolarAngle: Math.PI * 0.46,
   minAzimuthAngle: Math.PI * 0.54,
   maxAzimuthAngle: Math.PI * 0.98,
+} as const
+
+/** 물건 하나를 보고 있을 때. 시안 `LIMITS.focus`. */
+export const CAMERA_LIMITS_FOCUS = {
+  minDistance: 1.2,
+  maxDistance: 6.5,
+  minPolarAngle: Math.PI * 0.14,
+  maxPolarAngle: Math.PI * 0.52,
+  minAzimuthAngle: Math.PI * 0.44,
+  maxAzimuthAngle: Math.PI * 1.08,
 } as const
 
 /**
