@@ -1,61 +1,38 @@
 'use client'
 
-import { Canvas } from '@react-three/fiber'
 import dynamic from 'next/dynamic'
-import { Suspense, useEffect, useState } from 'react'
-import * as THREE from 'three'
-import { CAMERA_FOV, CAMERA_POSITION, ROOM_CENTER } from './layout'
-import styles from './Room.module.css'
+import { Suspense, useEffect } from 'react'
+import { CanvasMode } from '../canvas/CanvasMode'
+import { r3f } from '../canvas/tunnel'
 
 // 🔴 3D 청크를 초기 번들에 넣지 않는다 (기획서 4절 성능 예산).
 //    모바일·크롤러는 이 청크를 아예 받지 않는다.
 const Scene = dynamic(() => import('./Scene').then((m) => m.Scene), { ssr: false })
 
 /**
- * 3D 를 띄울지 판단한다 (기획서 4절 폴백 3단).
+ * 작업실을 지속 캔버스에 실어 보낸다.
  *
- * | 조건 | 결과 |
- * |---|---|
- * | 데스크톱 | R3F 3D + 포스트프로세싱 |
- * | 좁은 화면 · reduced-motion | 3D 를 띄우지 않는다 → 부모가 목록을 남긴다 |
- * | JS 비활성 · 크롤러 | 이 컴포넌트가 아예 실행되지 않는다 → 서버 렌더 목록 |
+ * 🔴 **여기에 `<Canvas>` 가 없다.** 캔버스는 `app/layout.tsx` 에 하나뿐이고
+ *    (`components/canvas/CanvasShell.tsx`) 라우트가 바뀌어도 안 죽는다.
+ *    이전에는 캔버스가 이 컴포넌트 안에 있어서, 방을 나가면 3D 가 통째로
+ *    사라지고 돌아올 때 GLTF 21개를 다시 파싱했다.
  *
- * ⚠️ 실측(프로토타입): 모바일에서 3D 와 목록을 함께 두면 3D 에 남는 세로가
- *    390x844 에서 103px, 390x600 에서는 **-141px** 이다. 공존이 불가능하다.
- *    그래서 "3D 대신 목록" 이지 "3D 위에 목록" 이 아니다.
- */
-function useCanRender3D(): boolean | null {
-  // null = 아직 모른다(SSR·첫 페인트). 이 동안에는 목록만 보인다.
-  const [can, setCan] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    const narrow = window.matchMedia('(max-width: 900px)')
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const decide = () => setCan(!narrow.matches && !reduced.matches)
-    decide()
-    narrow.addEventListener('change', decide)
-    reduced.addEventListener('change', decide)
-    return () => {
-      narrow.removeEventListener('change', decide)
-      reduced.removeEventListener('change', decide)
-    }
-  }, [])
-
-  return can
-}
-
-/**
- * @param onActive 3D 가 실제로 뜨는지 부모에게 알린다 — 부모는 그때 목록을
- *   접고 카피를 3D 위로 올린다. 판단을 두 곳에서 하지 않기 위해서다.
+ * 🔴 3D 가부는 **부모(`Hero`)가 판단해 `active` 로 내려준다.** 판단 자체는
+ *    `lib/can-3d.ts` 한 곳에서만 한다 — 이전에는 이 파일과 `ObjectStage` 가
+ *    각각 미디어쿼리를 읽어 어긋날 자리가 있었다.
+ *
+ * ⚠️ 카메라·조명·컨트롤·이펙트는 전부 `Scene` 안(= tunnel 의 In 쪽)에 있다.
+ *    캔버스는 그것들을 모른다 — 홈과 페이지가 하나도 안 겹치기 때문이다.
  */
 export function Room({
-  onActive,
+  active,
   openId,
   seen,
   onOpen,
   onEntered,
 }: {
-  onActive?: (active: boolean) => void
+  /** 3D 를 띄울 상황인가. 판단은 `Hero` 가 `useCanRender3D()` 로 한다. */
+  active: boolean
   /**
    * 🔴 상태는 **부모(Hero)가 쥔다.** 왼쪽 번호 목록과 3D 마커가 같은 상태를
    *    봐야 하기 때문이다 — 여기서 들고 있으면 목록이 "지금 어디인지" 를 모른다.
@@ -65,40 +42,35 @@ export function Room({
   onOpen: (id: string) => void
   onEntered: () => void
 }) {
-  const can = useCanRender3D()
-
+  /*
+   * 패널이 열리면 캔버스를 왼쪽으로 좁힌다.
+   *
+   * 🔴 실측 2026-09-09: 패널을 그냥 얹었더니 **마커 2개(서랍·현관문)가 패널
+   *    뒤로 숨었다.** 열린 물건 옆의 다른 물건을 못 누르면 "방을 돌아다닌다"
+   *    가 깨진다. 방을 좁히면 마커가 남는 영역 안으로 들어온다.
+   *
+   * ⚠️ 캔버스가 이 컴포넌트 밖(layout)에 있으므로 클래스가 아니라
+   *    `<html>` 속성으로 알린다. 폭 값은 `tokens.css` 의 `--panel-w`.
+   */
+  const open = active && openId !== null
   useEffect(() => {
-    if (can !== null) onActive?.(can)
-  }, [can, onActive])
+    if (!open) return
+    document.documentElement.dataset.panelOpen = 'true'
+    return () => {
+      delete document.documentElement.dataset.panelOpen
+    }
+  }, [open])
 
-  if (can !== true) return null
+  if (!active) return null
 
   return (
-    <div className={styles.canvas} data-narrow={openId !== null}>
-      <Canvas
-        // 프로토타입 실측 구도. 값을 바꾸려면 layout.ts 의 주석을 먼저 읽는다.
-        camera={{ position: CAMERA_POSITION, fov: CAMERA_FOV }}
-        shadows
-        dpr={[1, 2]}
-        /*
-         * 🔴 톤매핑이 조명의 절반이다. 프로토타입과 같은 조명값을 넣어도
-         *    이 설정이 없으면 전혀 다르게 나온다 — 가구가 갈색으로 뭉개진다
-         *    (실측 2026-09-09, 프로토타입 스크린샷과 대조해 발견).
-         */
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.88,
-        }}
-        onCreated={({ camera }) => camera.lookAt(...ROOM_CENTER)}
-      >
+    <>
+      <CanvasMode mode="room" />
+      <r3f.In>
         <Suspense fallback={null}>
           <Scene openId={openId} seen={seen} onOpen={onOpen} onEntered={onEntered} />
         </Suspense>
-      </Canvas>
-      <p className={styles.hint} data-hidden={openId !== null}>
-        드래그해서 둘러보기 · 눌러서 열기
-      </p>
-    </div>
+      </r3f.In>
+    </>
   )
 }

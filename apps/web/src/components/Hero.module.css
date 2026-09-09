@@ -16,16 +16,16 @@
 }
 
 /*
- * 🔴 3D 는 화면 끝까지 간다. 부모(main)의 좌우 패딩만큼 되밀어 낸다 —
- *    패딩 안에 갇히면 캔버스가 1440x900 화면에서 1328x640 으로 줄어들고,
- *    방이 작게 보인다(실측 2026-09-09: 캔버스 실제 크기를 재서 발견했다).
- *    카피는 패딩 안에 그대로 둔다 — 글이 화면 끝에 붙으면 안 읽힌다.
+ * 🔴 위치 기반 음수 마진 규칙을 **삭제했다**(2026-09-09 전환).
+ *
+ *    `.stage > div:first-child` 로 캔버스를 부모 패딩 밖으로 밀어내던
+ *    규칙이었는데, 캔버스가 `app/layout.tsx` 로 올라가면서 대상을 잃었다.
+ *    그대로 두면 scrim 이나 copyLayer 가 `:first-child` 가 되어 −56px 을
+ *    물려받고 **카피가 화면 밖으로 밀리는데 빌드는 통과한다.**
+ *
+ *    이제 캔버스는 `position:fixed` 라 애초에 부모 패딩에 갇히지 않는다.
+ *    자리는 `tokens.css` 의 `--cv-*` 변수가 정한다.
  */
-.stage > :global(div):first-child {
-  margin-left: calc(var(--pad-x) * -1);
-  margin-right: calc(var(--pad-x) * -1);
-  width: auto;
-}
 
 /* 3D 가 뜨면 목록을 접고 카피만 남긴다. */
 .copyLayer {
@@ -34,7 +34,23 @@
   padding-top: 26px;
   pointer-events: none;
 }
-.copyLayer > * {
+
+/*
+ * 🔴 **자식 전체에 `auto` 를 주지 않는다.**
+ *
+ *    실측 2026-09-09: `.copyLayer > *` 에 `auto` 를 주었더니 캡션(`fig. 1`)·
+ *    리드 문단·번호 목록이 3D 마커 위를 덮어 **마커 클릭이 죽었다.**
+ *    `elementFromPoint` 로 재보니 7개 중 화이트보드는 캡션이, 테이블은
+ *    번호 목록 버튼이, 노트북은 리드 문단이 가로채고 있었다.
+ *
+ *    정적 검사기로는 안 잡힌다 — `pnpm verify` 도 `verify-room.mjs` 도
+ *    초록이었다. 실제로 눌러봐야 보인다.
+ *
+ *    → 클릭이 **필요한 것에만** 준다. 글(캡션·제목·리드)은 읽는 것이지
+ *      누르는 것이 아니므로 `none` 인 채로 두어 클릭이 3D 로 통과하게 한다.
+ */
+.copyLayer :global(a),
+.copyLayer :global(button) {
   pointer-events: auto;
 }
 
@@ -123,4 +139,29 @@
 }
 .scrim[data-lit="true"] {
   opacity: 1;
+}
+
+/*
+ * 조작 안내 — 3D 일 때만. `Room.module.css` 에서 옮겨왔다(2026-09-09 전환).
+ * 캔버스가 layout 으로 올라가 `Room` 이 DOM 을 더 이상 그리지 않으므로,
+ * 이 문구를 낼 곳이 여기밖에 없다.
+ */
+.hint {
+  position: absolute;
+  left: 0;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg-faint);
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+/* 패널이 열리면 조작 안내는 물러난다 — 이미 열어봤으니 안내가 끝났다. */
+.hint[data-hidden="true"] {
+  opacity: 0;
 }

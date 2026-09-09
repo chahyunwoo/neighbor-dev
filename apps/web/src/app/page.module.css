@@ -16,6 +16,13 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  /*
+   * 🔴 빈 곳의 클릭은 3D 로 통과시킨다 (2026-09-09 지속 캔버스 전환).
+   *    캔버스가 이 요소 밖(`app/layout.tsx`)으로 나가면서, 이 래퍼가
+   *    화면 전체를 덮어 마커를 가로챘다. 아래 자식들(`.main`·`nav`)이
+   *    각자 누를 수 있는 것만 `auto` 로 되살린다.
+   */
+  pointer-events: none;
 }
 
 /* 램프 빛 — 책상에서 번지는 따뜻한 원. 기획서 4-A 의 유일한 온기다. */
@@ -43,6 +50,26 @@
   min-height: 0;
   padding: 0 var(--pad-x);
   z-index: 1;
+  /*
+   * 🔴 **클릭을 3D 로 통과시킨다** (2026-09-09 지속 캔버스 전환).
+   *
+   *    캔버스가 이 요소 **안**에 있을 때는 문제가 없었다. layout 으로
+   *    올라가면서 캔버스(z 0)가 `main`(z 1) 아래로 내려갔고, `main` 이
+   *    화면 전체를 덮어 **마커 7개가 전부 안 눌렸다**(실측 0/7).
+   *
+   *    빈 곳의 클릭은 3D 로 보내고, 실제 글·버튼만 `auto` 로 되살린다
+   *    (`Hero.module.css` 의 `.copyLayer a/button` 과 같은 원리).
+   */
+  pointer-events: none;
+}
+
+/* 누를 수 있는 것만 클릭을 받는다. 나머지는 3D 로 통과한다. */
+.main a,
+.main button,
+.main input,
+.main textarea,
+.main select {
+  pointer-events: auto;
 }
 
 .caption {

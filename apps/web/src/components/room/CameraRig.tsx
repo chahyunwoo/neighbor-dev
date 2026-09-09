@@ -138,6 +138,8 @@ export function CameraRig({
    *    사라진다** — 실측 2026-09-09: 250ms 시점에 이미 최종 구도였다.
    */
   const landed = useRef(false)
+  /** 입장 중 문을 이미 닫았는가. `useFrame` 이 매 프레임 돌므로 한 번만 부른다. */
+  const doorClosed = useRef(false)
 
   // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
   useEffect(() => {
@@ -163,19 +165,20 @@ export function CameraRig({
       t0: look.clone(),
       p1: new THREE.Vector3(...CAMERA_POSITION),
       t1: new THREE.Vector3(...ROOM_CENTER),
-      start: performance.now(),
+      // 0 = 아직 시작 안 함. 첫 프레임이 시계를 켠다(위 useFrame 주석 참고).
+      start: 0,
       ms: INTRO.ms,
     }
 
-    // 문이 열렸다 닫힌다 — 들어온 티가 나게(시안 그대로).
-    const t1 = setTimeout(() => onIntroDoor(true), INTRO.doorOpenAt)
-    const t2 = setTimeout(() => onIntroDoor(false), INTRO.doorCloseAt)
-    const t3 = setTimeout(() => onEntered(), INTRO.doorCloseAt + 100)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-    }
+    /*
+     * 문이 열렸다 닫힌다 — 들어온 티가 나게(시안 그대로).
+     *
+     * 🔴 **`setTimeout` 을 쓰지 않는다.** 벽시계로 재면 GLTF 를 파싱하는
+     *    동안(프레임이 안 그려지는 동안) 타이머만 흘러, 문이 열리는 것도
+     *    `onEntered` 도 **화면에 아무것도 안 나온 사이에 끝나 버린다.**
+     *    비행 진행도(`useFrame`)에 맞춰 부른다 — 그래야 보이는 것과 맞는다.
+     */
+    onIntroDoor(true)
   }, [camera, controls, onEntered, onIntroDoor])
 
   useEffect(() => {
@@ -269,14 +272,40 @@ export function CameraRig({
     const ctl = controls.current
     if (!f || !ctl) return
 
+    /*
+     * 🔴 **첫 프레임에서 시계를 시작한다.**
+     *
+     *    `start` 를 effect 안에서 `performance.now()` 로 잡으면, GLTF 21개를
+     *    파싱하는 동안 프레임이 안 그려지는데 **시계만 흐른다.** 첫 프레임이
+     *    올 때는 이미 상당 시간이 지나 연출이 중간부터 시작하거나 그냥 끝난다.
+     *
+     *    실측 2026-09-09 (지속 캔버스 전환): 3.2초 연출이 **1초 만에** 끝났다
+     *    (200ms 에 이미 x=2.39, 1200ms 에 착지). 그래서 `onEntered` 가
+     *    일찍 불려도 화면에는 연출이 안 보였다. 캔버스가 페이지 안에 있을
+     *    때는 마운트와 첫 프레임이 붙어 있어 드러나지 않던 문제다.
+     */
+    if (f.start === 0) f.start = performance.now()
+
     const t = Math.min(1, (performance.now() - f.start) / f.ms)
     const e = ease(t)
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
+    // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
+    if (f.ms === INTRO.ms) {
+      const closeAt = INTRO.doorCloseAt / INTRO.ms
+      if (t >= closeAt && !doorClosed.current) {
+        doorClosed.current = true
+        onIntroDoor(false)
+      }
+    }
+
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
-      if (f.ms === INTRO.ms) landed.current = true
+      if (f.ms === INTRO.ms) {
+        landed.current = true
+        onEntered()
+      }
       fly.current = null
     }
   })
