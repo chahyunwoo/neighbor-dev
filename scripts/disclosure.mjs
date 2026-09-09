@@ -111,6 +111,15 @@ function findIssueKeys(text) {
 }
 
 /** 검사 12항목. 각각 (이름, 찾는 함수). */
+const SUMMARY_ONLY_IDS = new Set([
+  'payment-gateway-api',
+  'flow-logistics-frontend',
+  'past-satellite-saas',
+  'past-backoffice-ds',
+  'cafe24-playbook',
+  'game-crawler',
+])
+
 const CHECKS = [
   ['사설IP', findPrivateIps],
   // 이메일. ⚠️ RFC 2606 이 문서용으로 못박은 도메인은 뺀다 — placeholder 의
@@ -150,6 +159,17 @@ const CHECKS = [
   ['개인스코프', (t) => [...t.matchAll(/@hyunwoo\/[\w-]+/g)].map((m) => m[0])],
   // 플랫폼·서비스 실명 (기획서 11절이 익명 표기를 정한 건).
   ['플랫폼실명', (t) => ['카페24', 'Cafe24', 'CAFE24'].filter((w) => t.includes(w))],
+  /*
+   * 경력 요약 건의 **저장소명**. `id` 가 곧 정본의 파일명이고, 그 이름이
+   * 클라이언트·플랫폼·도메인을 드러낸다(`cafe24-playbook` 등).
+   *
+   * 🔴 화면에 안 그려도 새어나간다 — React 의 `key={p.id}` 가 **RSC 페이로드로
+   *    직렬화되어 HTML 에 실린다.** 실측 2026-09-09: `/career`·`/work` 의 서버
+   *    HTML 에 6개가 그대로 나가 있었다(눈에는 안 보이고 페이지 소스에는 보인다).
+   *    `플랫폼실명` 검사는 `카페24`·`Cafe24` 만 봐서 소문자 id 를 놓쳤다.
+   *    → **보이는 텍스트가 아니라 HTML 원문을 검사한다**(verify-rendered 가 그렇게 한다).
+   */
+  ['요약건저장소명', (t) => [...SUMMARY_ONLY_IDS].filter((id) => t.includes(id))],
   [
     '호스트명·포트',
     (t) => [...t.matchAll(/\b[\w-]+\.(local|internal|lan|home)\b(:\d+)?/gi)].map((m) => m[0]),
@@ -219,14 +239,6 @@ export function checkNoPdfGeneration(manifestText) {
  *
  * 기획서 11절의 판정 결과를 그대로 옮긴 것이며, 기획서가 바뀌면 여기도 바꾼다.
  */
-const SUMMARY_ONLY_IDS = new Set([
-  'payment-gateway-api',
-  'flow-logistics-frontend',
-  'past-satellite-saas',
-  'past-backoffice-ds',
-  'cafe24-playbook',
-  'game-crawler',
-])
 
 /** 이 id 들은 어느 층으로도 실리면 안 된다 (기획서 11절 채널 제외). */
 const NEVER_PUBLISHED_IDS = new Set(['discord-bot'])

@@ -70,8 +70,17 @@ function main() {
 
   const problems = []
 
-  // 1~10. 텍스트 검사
-  for (const finding of scanText(raw, realCompanyNames())) {
+  /*
+   * 1~10. 텍스트 검사
+   *
+   * ⚠️ **게재분(detail·summary)만 훑는다.** `audit` 는 검사기 전용 메타데이터라
+   *    저장소에는 있어도 브라우저로 나가지 않는다(`lib/projects.ts` 가 안 읽는다).
+   *    파일 전체를 훑으면 감사 명단의 저장소명이 위반으로 잡혀, 정작 잡아야 할
+   *    "화면에 나간 것" 과 구별이 안 된다.
+   *    🔴 화면에 실제로 나가는지는 `verify-rendered.mjs` 가 서버 HTML 로 확인한다.
+   */
+  const published = JSON.stringify({ detail: payload.detail, summary: payload.summary })
+  for (const finding of scanText(published, realCompanyNames())) {
     // 회사표기는 값을 출력하면 그 자체가 유출이므로 건수만 낸다.
     const shown = finding.check === '회사표기' ? [`${finding.hits.length}건`] : finding.hits
     problems.push(`${finding.check}: ${shown.join(', ')}`)
@@ -82,8 +91,19 @@ function main() {
     problems.push(`층규칙: ${v.id} 의 summary 층에 상세 필드 '${v.field}' 가 있다`)
   }
 
-  // 12. 층 배정 — 명단을 직접 검사한다 (checkTierRules 로는 안 잡히는 형태)
-  for (const v of checkTierAssignment(all)) {
+  /*
+   * 12. 층 배정 — 명단을 직접 검사한다 (checkTierRules 로는 안 잡히는 형태)
+   *
+   * 🔴 **`audit` 를 본다.** 경력 요약 건은 `id` 가 저장소명이라 공개 항목에서
+   *    뺐는데(`tiers.mjs`), 그러자 이 검사가 `p.id` 를 못 읽어 게재 금지 건이
+   *    실려도 안 잡히게 됐다(실측: verify-gates 의 M6 이 '못 잡음' 이 됐다).
+   *    검사에 필요한 것과 화면에 나가는 것을 가른다.
+   */
+  const audit = payload.audit ?? []
+  if (audit.length !== all.length) {
+    problems.push(`층배정: 감사 명단이 ${audit.length}건인데 게재는 ${all.length}건이다`)
+  }
+  for (const v of checkTierAssignment(audit)) {
     problems.push(`층배정: ${v.id} — ${v.reason}`)
   }
 

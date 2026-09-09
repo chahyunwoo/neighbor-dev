@@ -996,7 +996,6 @@
   ],
   "summary": [
     {
-      "id": "payment-gateway-api",
       "tier": "summary",
       "label": "결제 대행 서비스 백엔드 — 카드 결제와 계좌 송금 사이의 상태·정합성 설계",
       "period": "2026.07 ~ 2026.09 (운영 중)",
@@ -1032,7 +1031,6 @@
       ]
     },
     {
-      "id": "game-crawler",
       "tier": "summary",
       "label": "게임 계정 거래 매물 통합 수집 데스크톱 앱",
       "period": "2026.07 ~ 2026.07",
@@ -1058,7 +1056,6 @@
       ]
     },
     {
-      "id": "cafe24-playbook",
       "tier": "summary",
       "label": "커머스 플랫폼 주문 검증 시스템 — 주문 데이터 실시간 검증",
       "period": "2026.05 ~ 2026.05 (운영 중)",
@@ -1101,7 +1098,6 @@
       ]
     },
     {
-      "id": "flow-logistics-frontend",
       "tier": "summary",
       "label": "공장 물류 이동 관리 어드민",
       "period": "2026.01 ~ 2026.06 (계약 종료)",
@@ -1140,7 +1136,6 @@
       ]
     },
     {
-      "id": "past-satellite-saas",
       "tier": "summary",
       "label": "위성영상 B2B SaaS 플랫폼 — 9개 앱 Turborepo 모노레포",
       "period": "2026.01 ~ 2026.03 (계약 종료)",
@@ -1172,7 +1167,6 @@
       ]
     },
     {
-      "id": "past-backoffice-ds",
       "tier": "summary",
       "label": "대기업 백오피스 공통 컴포넌트·디자인 시스템",
       "period": "2025.08 ~ 2025.12",
@@ -1195,6 +1189,72 @@
         "공통 컴포넌트 라이브러리",
         "사내 npm 레지스트리 (패키지 배포)"
       ]
+    }
+  ],
+  "audit": [
+    {
+      "tier": "detail",
+      "id": "portfolio-pipeline"
+    },
+    {
+      "tier": "detail",
+      "id": "claude-board"
+    },
+    {
+      "tier": "detail",
+      "id": "api-server"
+    },
+    {
+      "tier": "detail",
+      "id": "hyunwoo-dev-admin"
+    },
+    {
+      "tier": "detail",
+      "id": "hyunwoo-dev-blog"
+    },
+    {
+      "tier": "detail",
+      "id": "hyunwoo-dev-monorepo"
+    },
+    {
+      "tier": "detail",
+      "id": "hyunwoo-dev-web"
+    },
+    {
+      "tier": "detail",
+      "id": "github-tier"
+    },
+    {
+      "tier": "detail",
+      "id": "booking-settlement"
+    },
+    {
+      "tier": "detail",
+      "id": "qs-fe"
+    },
+    {
+      "tier": "summary",
+      "id": "payment-gateway-api"
+    },
+    {
+      "tier": "summary",
+      "id": "game-crawler"
+    },
+    {
+      "tier": "summary",
+      "id": "cafe24-playbook"
+    },
+    {
+      "tier": "summary",
+      "id": "flow-logistics-frontend"
+    },
+    {
+      "tier": "summary",
+      "id": "past-satellite-saas"
+    },
+    {
+      "tier": "summary",
+      "id": "past-backoffice-ds"
     }
   ]
 }

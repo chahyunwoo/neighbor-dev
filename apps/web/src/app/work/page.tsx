@@ -55,7 +55,8 @@ export default function WorkPage() {
         </div>
         <div className={styles.rows}>
           {summary.map((p) => (
-            <SummaryRow key={p.id} project={p} />
+            // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
+            <SummaryRow key={`${p.label}${p.period}`} project={p} />
           ))}
         </div>
         <p className={styles.note}>

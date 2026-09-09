@@ -28,7 +28,8 @@ export default function CareerPage() {
     >
       <div className={styles.rows}>
         {summary.map((p) => (
-          <div key={p.id} className={styles.row}>
+          // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
+          <div key={`${p.label}${p.period}`} className={styles.row}>
             <span className={styles.rowLabel}>{p.label}</span>
             <span className={styles.rowPeriod}>{p.period}</span>
             <div className={styles.rowStack}>

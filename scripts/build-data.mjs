@@ -98,8 +98,11 @@ function main() {
   const index = JSON.parse(readFileSync(join(SOURCE, 'index.json'), 'utf8'))
   const byId = new Map(index.projects.map((p) => [p.id, p]))
 
-  const detail = []
-  const summary = []
+  let detail = []
+  let summary = []
+  // 감사 명단용 — 정본 id 를 층별로 짝지어 둔다(공개 항목에는 안 들어간다).
+  let detailIds = []
+  let summaryIds = []
   const excluded = []
 
   for (const p of projects) {
@@ -109,12 +112,27 @@ function main() {
       continue
     }
     const pub = project2public(p, byId.get(p.id), tier)
-    ;(tier === TIER.DETAIL ? detail : summary).push(pub)
+    if (tier === TIER.DETAIL) {
+      detail.push(pub)
+      detailIds.push(p.id)
+    } else {
+      summary.push(pub)
+      summaryIds.push(p.id)
+    }
   }
 
+  /*
+   * ⚠️ 정렬은 **id 와 짝을 유지한 채** 한다. 따로 정렬하면 감사 명단의
+   *    id 가 엉뚱한 항목에 붙어 검사가 조용히 틀린 것을 본다.
+   */
   const sortKey = (p) => p.period ?? ''
-  detail.sort((a, b) => sortKey(b).localeCompare(sortKey(a)))
-  summary.sort((a, b) => sortKey(b).localeCompare(sortKey(a)))
+  const pairSort = (items, ids) => {
+    const pairs = items.map((v, i) => [v, ids[i]])
+    pairs.sort((a, b) => sortKey(b[0]).localeCompare(sortKey(a[0])))
+    return [pairs.map((x) => x[0]), pairs.map((x) => x[1])]
+  }
+  ;[detail, detailIds] = pairSort(detail, detailIds)
+  ;[summary, summaryIds] = pairSort(summary, summaryIds)
 
   mkdirSync(OUT_DIR, { recursive: true })
   const payload = {
@@ -122,6 +140,24 @@ function main() {
     counts: { detail: detail.length, summary: summary.length, excluded: excluded.length },
     detail,
     summary,
+    /*
+     * 🔴 **감사용 명단.** 어느 정본 항목이 어느 층으로 나갔는지 검사기가
+     *    확인할 수 있게 남긴다. 화면은 이걸 **절대 렌더하지 않는다.**
+     *
+     *    경력 요약 건의 `id` 는 저장소명이라 공개 항목에서 뺐는데
+     *    (`tiers.mjs` 의 ALLOWED_FIELDS 참고), 그러자 층 배정 검사가
+     *    `p.id` 를 못 읽어 **게재 금지 건이 실려도 안 잡히게 됐다**
+     *    (실측: verify-gates 의 M6 이 '못 잡음' 으로 바뀌었다).
+     *    검사에 필요한 것과 화면에 나가는 것을 가른다.
+     *
+     * ⚠️ 이 파일은 저장소에 커밋되지만 **번들에 들어가지 않는다** —
+     *    `lib/projects.ts` 가 detail·summary 만 읽는다. 확인:
+     *      curl -s localhost:3200/career | grep -c cafe24   → 0
+     */
+    audit: [
+      ...detail.map((p, i) => ({ tier: p.tier, id: detailIds[i] })),
+      ...summary.map((p, i) => ({ tier: p.tier, id: summaryIds[i] })),
+    ],
   }
   writeFileSync(join(OUT_DIR, 'projects.json'), `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
 

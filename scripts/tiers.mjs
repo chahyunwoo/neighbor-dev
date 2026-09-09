@@ -63,5 +63,21 @@ export const ALLOWED_FIELDS = {
     'metrics',
     'scale',
   ],
-  [TIER.SUMMARY]: ['id', 'tier', 'label', 'period', 'domain', 'stack'],
+  /*
+   * 🔴 **경력 요약에는 `id` 를 내보내지 않는다.**
+   *
+   *    `id` 는 정본의 **저장소명**이다(`cafe24-playbook`, `payment-gateway-api`,
+   *    `flow-logistics-frontend` …). 저장소명 자체가 클라이언트·플랫폼·도메인을
+   *    드러내는 건이 많고, 이 층은 정확히 그걸 감추려고 만든 층이다.
+   *
+   *    ⚠️ 화면에 안 그려도 새어나간다 — React 의 `key={p.id}` 가 **RSC 페이로드로
+   *       직렬화되어 HTML 에 그대로 실린다**(실측 2026-09-09: `/career`·`/work`
+   *       서버 HTML 에 `cafe24`·`payment-gateway`·`flow-logistics` 등 6개가
+   *       나가 있었다). 눈에는 안 보이지만 크롤러와 페이지 소스에는 보인다.
+   *       `verify-rendered.mjs` 는 보이는 텍스트만 봐서 못 잡았다.
+   *
+   *    → 목록 key 가 필요하면 `label+period` 처럼 **드러내지 않는 값**을 쓴다.
+   *    (사례 상세 10건은 `clientSafe:true` 이고 URL 이 필요해서 `id` 를 남긴다.)
+   */
+  [TIER.SUMMARY]: ['tier', 'label', 'period', 'domain', 'stack'],
 }
