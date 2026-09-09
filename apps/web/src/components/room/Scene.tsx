@@ -1,8 +1,9 @@
 'use client'
 
 import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '../../lib/room'
 import { anchorFromBox } from './anchors'
 import { CameraRig, type FocusTarget, type OrbitControlsLike } from './CameraRig'
@@ -18,6 +19,21 @@ import { Lights } from './Lights'
 import { CAMERA_FOV, CAMERA_LIMITS, LAYOUT, ROOM_CENTER } from './layout'
 import styles from './Scene.module.css'
 import { ROOM_BG, Shell } from './Shell'
+
+/**
+ * 마커 래퍼에 붙이는 표식. **CSS Module 해시가 아니라 고정 문자열**이다 —
+ * `useEdgeClamp` 가 `querySelectorAll` 로 찾고, 스타일은 전역에서 건다.
+ */
+const MARKER_WRAP = 'room-marker-wrap'
+/** 가장자리에 붙일 때 남기는 여백(px). 마커 반지름(15)보다 커야 잘리지 않는다. */
+const EDGE_PAD = 26
+/** 가장자리에 붙은 것끼리 최소 간격(px). 이보다 가까우면 아래로 민다. */
+const EDGE_GAP = 34
+/**
+ * 왼쪽 UI(카피·번호 목록)가 덮는 폭. `CameraRig.UI_WIDTH` 와 같은 값이다.
+ * ⚠️ 좁은 화면에서는 이 값이 화면 절반을 넘을 수 있어 `w*0.5` 로 한 번 접는다.
+ */
+const UI_LEFT = 520
 
 // 배치에 쓰는 모델을 미리 받아 둔다 — 하나씩 늦게 뜨면 방이 조립되는 것이 보인다.
 for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
@@ -46,6 +62,9 @@ export function Scene({
   const controls = useRef<OrbitControlsLike>(null)
   /** 입장 연출이 문을 여는 동안만 true. 열린 물건과는 별개다. */
   const [introDoor, setIntroDoor] = useState(false)
+
+  // 🔴 캔버스 밖으로 나간 마커를 가장자리에 붙인다(이슈 #3).
+  useEdgeClamp()
 
   /*
    * 마커 위치 — 물건의 **실제 꼭대기**에서 낸다(`anchors.ts` 참고).
@@ -149,6 +168,9 @@ export function Scene({
           key={meta.id}
           position={at}
           center
+          // 🔴 캔버스 밖으로 밀려난 마커를 가장자리로 끌어온다(이슈 #3).
+          //    표식을 남겨 `useEdgeClamp` 가 찾을 수 있게 한다.
+          wrapperClass={MARKER_WRAP}
           /*
            * 🔴 **값이 클수록 마커가 커진다** — 방향을 반대로 알고 8 → 14 로
            *    올렸다가 더 커졌다(실측 스크린샷으로 확인). drei 의
@@ -207,4 +229,144 @@ export function Scene({
       </EffectComposer>
     </>
   )
+}
+
+/**
+ * 캔버스 밖으로 밀려난 마커를 **가장자리에 붙여 살린다** (이슈 #3).
+ *
+ * 🔴 왜 필요한가. 물건 하나를 열면 카메라가 그리로 날아가는데, 그 구도에서
+ *    나머지 마커의 가로 퍼짐이 캔버스 폭을 넘는다 — 실측 2026-09-09
+ *    (1440x900, 패널이 열려 캔버스는 960):
+ *
+ *    | 연 물건 | 마커 퍼짐 | 캔버스 |
+ *    |---|---|---|
+ *    | 테이블 | 613 | 960 ✓ |
+ *    | 현관문 | 848 | 960 ✓ |
+ *    | 책장 | 1047 | 960 ❌ |
+ *    | 노트북 | 1187 | 960 ❌ |
+ *    | 모니터 | **1680** | 960 ❌ |
+ *
+ *    **카메라 거리로는 못 푼다.** 하한을 4.8 → 7.2 까지 올려봤지만 도달
+ *    가능 마커는 3/7 → 4/7 에 그쳤다(화면 밖이 UI 뒤로 바뀔 뿐이다).
+ *    1680px 퍼짐은 960px 안에 애초에 안 들어간다.
+ *
+ * 🔴 **CSS 로는 못 한다.** drei 가 래퍼 div 의 `transform` 을 **인라인**으로
+ *    매 프레임 덮어쓴다 — 같은 형태의 함정을 이 저장소가 이미 한 번 밟았다
+ *    (`pointer-events` 를 CSS 로 세 번 고쳤는데 전부 헛수고였다).
+ *    그래서 JS 로 인라인 값을 읽어 접는다.
+ *
+ * ⚠️ 안쪽에 있는 마커는 **건드리지 않는다.** 3D 앵커를 그대로 둬야
+ *    "물건 위에 떠 있다" 가 유지된다. 밖으로 나간 것만 끌어온다.
+ */
+function useEdgeClamp() {
+  const { gl } = useThree()
+
+  useEffect(() => {
+    const canvas = gl.domElement
+    /*
+     * ⚠️ 마커 래퍼는 `canvas.parentElement` **바로 밑이 아니다** — 드리가
+     *    자기 컨테이너 div 를 한 겹 더 끼운다(실측: 래퍼 7개가 잡히는데
+     *    `parentElement` 기준으로는 0개였다). 문서 전체에서 찾는다.
+     */
+    const root = document
+
+    let raf = 0
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      const w = canvas.clientWidth
+      const h = canvas.clientHeight
+      if (!w || !h) return
+
+      const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
+      const read = (el: HTMLElement) => {
+        const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform)
+        return m ? { x: Number(m[1]), y: Number(m[2]) } : null
+      }
+
+      /*
+       * 🔴 **안 접힌 마커의 자리도 미리 넣어 둔다.**
+       *    접힌 것이 제자리에 있는 마커 위에 내려앉으면 그 마커를 덮어
+       *    영영 못 누르게 된다 — 실측 2026-09-09: 책장(799,144, 안 접힘)에
+       *    현관문(801,169, 접힘)이 25px 옆에 내려앉아 책장이 안 열렸다.
+       */
+      const parked: { x: number; y: number }[] = []
+      for (const el of wraps) {
+        const p = read(el)
+        if (!p) continue
+        const w2 = canvas.clientWidth
+        const h2 = canvas.clientHeight
+        const l2 = Math.min(UI_LEFT, w2 * 0.5) + EDGE_PAD
+        const inside = p.x >= l2 && p.x <= w2 - EDGE_PAD && p.y >= EDGE_PAD && p.y <= h2 - EDGE_PAD
+        if (inside) parked.push(p)
+      }
+
+      for (const el of wraps) {
+        // drei 가 넣은 인라인 transform 에서 좌표를 읽는다.
+        const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform)
+        if (!m) continue
+        const x = Number(m[1])
+        const y = Number(m[2])
+
+        /*
+         * 🔴 **캔버스가 아니라 "가용 영역" 안으로 접는다.**
+         *    왼쪽은 카피·번호 목록이 덮고 있어서, 캔버스 왼쪽 끝에 붙이면
+         *    그 UI 뒤로 들어가 여전히 안 눌린다 — 실측 2026-09-09:
+         *    책장(x=80)·테이블(x=91)이 그래서 5/7 이었다.
+         *    `UI_LEFT` 는 `CameraRig` 의 `UI_WIDTH` 와 같은 값이다.
+         */
+        const left = Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
+        const cx = Math.min(w - EDGE_PAD, Math.max(left, x))
+        const cy = Math.min(h - EDGE_PAD, Math.max(EDGE_PAD, y))
+        const clamped = cx !== x || cy !== y
+
+        /*
+         * 🔴 **접은 결과를 다시 읽지 않는다.**
+         *
+         *    처음에는 접은 좌표를 `style.transform` 에 그대로 덮어썼는데,
+         *    그러면 다음 프레임에 **접힌 값을 원본으로 읽어** `clamped` 가
+         *    false 가 되고 `data-edge` 가 도로 꺼진다 — 스타일이 한 프레임만
+         *    붙었다 사라진다(실측 2026-09-09: 화면 가장자리 마커가
+         *    `edge="false"` 로 나왔다).
+         *
+         *    드리는 매 프레임 `transform` 을 새로 쓰므로 **원본은 늘 드리가
+         *    준다.** 우리는 그 위에 `translate` 를 덧대기만 하고, 판정은
+         *    항상 드리가 준 값으로 한다.
+         */
+        /*
+         * ⚠️ `transform` 에 덧붙이지 않는다 — 드리가 매 프레임 쓰는 값 위에
+         *    또 덧대면 **누적된다**(실측 2026-09-09: x 가 -12063 까지 갔다).
+         *    보정량만 변수로 넘기고, 적용은 **자식 요소**가 한다.
+         *    그래야 드리의 transform 과 우리 보정이 서로를 안 건드린다.
+         */
+        /*
+         * 🔴 접힌 것끼리 **같은 자리에 포개진다.** 그러면 위의 것만 눌리고
+         *    아래 것은 영영 못 누른다 — 실측 2026-09-09: `elementsFromPoint`
+         *    에 dot 이 2개 겹쳐 나왔고, 책장이 그래서 안 열렸다.
+         *
+         * ⚠️ 밀어내는 순서가 프레임마다 달라지면 마커가 떨려서 더 못 누른다
+         *    (한 번 그렇게 만들어 7/7 → 5/7 로 떨어뜨렸다). 그래서
+         *    **DOM 순서대로** 훑으며 **아래로만** 밀고, 밀린 자리는 그 프레임
+         *    안에서만 쓴다 — 같은 입력이면 늘 같은 결과가 나온다.
+         */
+        let py = cy
+        if (clamped) {
+          while (
+            parked.some((q) => Math.abs(q.x - cx) < EDGE_GAP && Math.abs(q.y - py) < EDGE_GAP)
+          ) {
+            py += EDGE_GAP
+            if (py > h - EDGE_PAD) break
+          }
+          parked.push({ x: cx, y: py })
+        }
+
+        el.style.setProperty('--edge-dx', `${cx - x}px`)
+        el.style.setProperty('--edge-dy', `${py - y}px`)
+        if ((el.dataset.edge === 'true') !== clamped) {
+          el.dataset.edge = clamped ? 'true' : 'false'
+        }
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [gl])
 }
