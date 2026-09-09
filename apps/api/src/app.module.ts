@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { ContactModule } from './contact/contact.module'
 import { DiagnoseModule } from './diagnose/diagnose.module'
+import { HealthController } from './health.controller'
 
 /**
  * 🔴 env 경로를 **`__dirname` 기준 절대경로**로 잡는다.
@@ -29,5 +30,6 @@ const API_ROOT = join(__dirname, '..')
     DiagnoseModule,
     ContactModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
