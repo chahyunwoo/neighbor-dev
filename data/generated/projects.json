@@ -1,0 +1,1200 @@
+{
+  "generatedAt": "2026-09-09",
+  "counts": {
+    "detail": 10,
+    "summary": 6,
+    "excluded": 7
+  },
+  "detail": [
+    {
+      "id": "portfolio-pipeline",
+      "tier": "detail",
+      "label": "포트폴리오·블로그 무인 발행 파이프라인",
+      "period": "2026.09 ~ 2026.09 (운영 중)",
+      "domain": [
+        "자동화",
+        "업무자동화",
+        "배치",
+        "스케줄러",
+        "크론",
+        "cron",
+        "launchd",
+        "무인운영",
+        "파이프라인",
+        "CI/CD",
+        "배포자동화",
+        "모니터링",
+        "알림봇",
+        "디스코드봇",
+        "슬랙알림",
+        "콘텐츠자동화",
+        "블로그자동화",
+        "정적사이트",
+        "캐시무효화",
+        "데이터동기화",
+        "DB동기화",
+        "스크립트",
+        "Python자동화"
+      ],
+      "stack": [
+        "Python 3.9 (표준 라이브러리만)",
+        "pytest",
+        "launchd",
+        "Docker (원격 DB 접근)",
+        "PostgreSQL",
+        "Cloudflare R2",
+        "Discord Webhook/Bot API"
+      ],
+      "role": "설계·구현·운영 전부",
+      "problem": "정본(JSON)을 고칠 때마다 사이트 반영·색인·이력서 PDF 를 손으로 돌려야 했고, 블로그 글은 아예 수동이었다. 무인화하면 실패했을 때 아무도 모른다는 문제가 따라온다 — 실제로 다른 자동화가 6일간 죽어 있었는데 발견되지 않은 적이 있다. 자동화 자체보다 '조용한 실패'를 어떻게 드러낼지가 핵심 과제였다.",
+      "decisions": [
+        {
+          "선택": "글쓰기는 AI 에게 맡기되 발행 권한은 주지 않는다",
+          "대안": "AI 에게 발행 명령까지 위임",
+          "이유": "AI 가 발행 CLI 를 직접 부르면 게이트를 우회하거나 인자를 잘못 줄 여지가 생긴다. 원고 파일 하나만 쓰게 하고, 검사와 발행은 검증된 경로가 한다.",
+          "트레이드오프": "셸이 AI 를 호출하는 계층이 하나 늘었다. 대신 게이트를 통과하지 않은 글은 구조적으로 나갈 수 없다."
+        },
+        {
+          "선택": "주기 판정을 launchd 가 아니라 코드가 한다",
+          "대안": "StartCalendarInterval 로 주기 고정",
+          "이유": "18~24일 랜덤은 launchd 로 표현할 수 없다. 그리고 매일 깨우는 편이 감시에 유리하다 — 3주에 한 번 도는 잡은 죽어도 3주 뒤에나 드러난다.",
+          "트레이드오프": "대부분의 실행이 '아직 아니다'로 끝나 로그에 빈 실행이 쌓인다. 워치독이 '이틀 안 돌면 경보'로 감시할 수 있는 이득이 더 크다고 봤다."
+        },
+        {
+          "선택": "알림 실패가 작업 실패가 되지 않게 한다",
+          "대안": "알림 실패 시 예외를 올려 종료코드를 오염",
+          "이유": "초안이 저장된 뒤에는 되돌릴 수 없다(발행용 키에 삭제 권한이 없다). 알림 실패로 작업을 실패 처리하면 글은 서버에 남았는데 재실행은 중복 게이트에 막혀, 사람이 그 초안의 존재를 영영 모른다.",
+          "트레이드오프": "알림이 안 갔는데 종료코드가 0 이라 로그를 봐야 안다. 대신 폴백 경로를 둬서 알림이 통째로 사라지지는 않게 했다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "테스트",
+          "값": "184건 통과",
+          "재현": "cd <repoPath> && python3 -m pytest tests/ -q"
+        },
+        {
+          "항목": "코드 규모",
+          "값": "lib 2,780줄 · tests 1,535줄 · bin 485줄",
+          "재현": "cat lib/*.py | wc -l; cat tests/*.py | wc -l; cat bin/*.sh | wc -l"
+        },
+        {
+          "항목": "외부 의존성",
+          "값": "0개 (표준 라이브러리만)",
+          "재현": "grep -rhoE '^(import|from) [a-z_]+' lib/*.py | awk '{print $2}' | sort -u"
+        },
+        {
+          "항목": "게이트 검사 종류",
+          "값": "6종 (금지어·시크릿·nonDisclosure·중복·규격·태그표기)",
+          "재현": "grep -c 'def check_' lib/blog_guard.py"
+        },
+        {
+          "항목": "무인 실행 단계",
+          "값": "11단계",
+          "재현": "grep -oE 'step \"[^\"]+\"' bin/run-pipeline.sh | wc -l"
+        },
+        {
+          "항목": "launchd 에이전트",
+          "값": "2종 (정본 감시 · 블로그 주기)",
+          "재현": "ls launchd/*.plist | wc -l"
+        },
+        {
+          "항목": "발행 주기",
+          "값": "18~24일 랜덤 · 19~22시",
+          "재현": "python3 lib/blog_schedule.py --status"
+        }
+      ],
+      "scale": "Python 3.9 표준 라이브러리만(외부 의존성 0) · lib 2,879줄 · 테스트 193건 · 게이트 6종 · launchd 에이전트 2종 · 무인 실행 11단계"
+    },
+    {
+      "id": "claude-board",
+      "tier": "detail",
+      "label": "claude-board — 여러 프로젝트에 흩어진 Claude Code 세션을 한 화면에서 보는 로컬 대시보드",
+      "period": "2026.08 ~ 2026.09 (운영 중)",
+      "domain": [
+        "개발자도구",
+        "대시보드",
+        "로컬 전용",
+        "실시간(SSE)",
+        "로그 파싱",
+        "메뉴바 앱"
+      ],
+      "stack": [
+        "TypeScript",
+        "Vue 3",
+        "Vite",
+        "Tailwind CSS 4",
+        "Vitest + @vue/test-utils",
+        "Playwright (e2e)",
+        "Biome",
+        "SwiftUI (macOS 메뉴바 앱)",
+        "Java 21",
+        "Spring Boot 3.5",
+        "Gradle (Kotlin DSL)",
+        "JUnit 5 + AssertJ",
+        "NIO RandomAccessFile (역순 읽기)",
+        "SseEmitter (SSE)",
+        "@Scheduled",
+        "ProcessBuilder",
+        "Jackson",
+        "launchd 에이전트 (macOS 자동 기동)",
+        "GitHub Actions CI",
+        "git pre-commit 훅",
+        "로컬 전용 바인딩 전용 바인딩 (외부 노출 없음)"
+      ],
+      "role": "1인 개발. (1) 데이터 수집 — `claude agents --json`을 ProcessBuilder로 실행해 살아있는 세션 목록을 얻고, 세션 기록 JSONL을 역순으로 읽어 제목·마지막 발화·컨텍스트 사용량을 붙이는 수집 계층, (2) 상태 판별 — 레코드 타입이 아니라 `message.content`의 블록(tool_use / tool_result)까지 봐서 '답변 대기 / 작업 중 / 멈춤 의심'을 가르는 순수 도메인 로직, (3) 성능 — 대용량 기록을 통째로 파싱하지 않고 NIO `RandomAccessFile`로 파일 끝에서부터 필요한 레코드까지만 읽는 역순 리더와 상한 튜닝, (4) API — `@Scheduled` 주기 수집 + `SseEmitter` 실시간 스트림, record DTO, (5) 프론트 — Vue 3 + Vite + Tailwind로 프로젝트별 그룹 화면과 SSE 구독 훅, (6) macOS 메뉴바 앱 — SwiftUI로 답변 대기 수를 메뉴바에 띄우고 SSE를 구독, 백엔드가 죽으면 되살리는 클라이언트, (7) 배포 — 빌드 스크립트와 launchd 에이전트, (8) CI — 빌드·테스트에 더해 '바인딩이 로컬 전용 바인딩인가', '배포 산출물에 세션 데이터가 섞이지 않았는가'를 검사하는 게이트.",
+      "problem": "여러 프로젝트에서 Claude Code 세션을 동시에 띄워두고, 컨텍스트가 차면 새 세션을 여는 방식으로 쓰다 보니 세션이 계속 쌓였다. `claude agents --json`은 살아있는 세션 목록은 주지만 **무슨 작업 중인지·어느 브랜치인지·내 답을 기다리는지는 알려주지 않는다.** 그 정보는 세션 기록 파일에 따로 있다. 이 둘을 이어서 '지금 내 답을 기다리는 세션'과 '멈춰 있는 세션', '컨텍스트가 얼마나 찼는지'를 한 화면에 놓는 것이 목표였다. 기획 시점 실측으로 살아있는 세션 10개 중 7개가 답변 대기 상태였고, 한 세션은 27일째 떠 있었다. 만들고 끝낸 도구가 아니라 2026-09-04 확인 기준 매일 사용 중이며, 쓰면서 나온 불편을 계속 반영하고 있다.",
+      "decisions": [
+        {
+          "선택": "세션 기록을 통째로 파싱하지 않고, NIO `RandomAccessFile`로 **파일 끝에서부터 필요한 레코드까지만** 역순으로 읽는다. 읽을 상한(`DEFAULT_MAX_BYTES`)은 상한별 소요 시간과 정보 손실을 표로 뽑아 정했다",
+          "대안": "파일을 순차로 전부 파싱해 마지막 레코드를 찾거나, 수집 결과를 DB에 캐시해 두고 증분만 갱신하는 안",
+          "이유": "필요한 것은 '마지막 user/assistant 레코드' 하나인데 기록 파일은 계속 자란다(2026-09-04 실측 138개 파일 총 421MB, 단일 최대 21MB). 앞에서부터 읽으면 파일이 커질수록 선형으로 느려지지만, 뒤에서 읽으면 파일 크기와 거의 무관해진다. 캐시를 두면 무효화 시점을 따로 관리해야 하는데 5초 주기 수집에는 과하다.",
+          "트레이드오프": "상한을 넘어가는 위치에 필요한 레코드가 있으면 제목이나 마지막 발화를 못 찾는다 — 그래서 상한을 하나로 못 정하고 손실과 시간을 같이 재는 벤치마크를 남겼다(실측: 64K에서 발화 없음 56건 → 1024K에서 3건, 대신 67ms → 136ms). 또 역순 읽기는 줄 경계를 직접 다뤄야 해서 순차 읽기보다 코드가 까다롭고, 인코딩·개행 처리 실수가 조용한 버그로 남는다."
+        },
+        {
+          "선택": "세션 상태를 레코드 타입(`user`/`assistant`)이 아니라 `message.content`의 블록까지 보고 판정한다 — `assistant`이면서 `tool_use`면 작업 중, `text`로 끝나면 답변 대기, `user`이면서 `tool_result`면 작업 중",
+          "대안": "레코드 타입만으로 '마지막이 assistant면 답변 대기'로 단순 판정하는 안",
+          "이유": "도구 결과가 `type: \"user\"`로 기록된다. 이걸 사용자 입력으로 오인하면 '작업 중'과 '답변 대기'가 정확히 뒤바뀌는데, 이 도구의 존재 이유가 바로 그 둘을 가르는 것이라 판정이 틀리면 도구 전체가 무의미해진다. 함정이 `user`·`assistant` 양쪽에 대칭으로 있다.",
+          "트레이드오프": "판정이 기록 파일의 내부 포맷에 묶였다. Claude Code가 레코드 구조를 바꾸면 조용히 틀린 상태를 보여주게 되고, 컴파일도 테스트도 그걸 잡아주지 못한다(형태가 바뀌어도 JSON 파싱은 통과한다). 그래서 판정부를 외부 의존 없는 순수 로직으로 떼어 JUnit으로 고정해 두었지만, 그건 '규칙이 유지되는 한' 맞다는 보장일 뿐이다."
+        },
+        {
+          "선택": "중앙 서버·계정·외부 전송을 두지 않고 백엔드를 로컬 전용 바인딩에만 바인딩한다. 그리고 그 원칙을 문서가 아니라 **CI 게이트**로 검사한다 — '바인딩이 로컬 전용 바인딩인가', '배포 산출물에 세션 데이터가 섞이지 않았는가'",
+          "대안": "여러 기기의 세션을 한 서버로 모아 어디서든 보게 하거나, 최소한 LAN 바인딩으로 열어 다른 기기에서 접속하게 하는 안",
+          "이유": "세션 기록에는 프롬프트 전문·절대 경로·브랜치명·PR 정보가 들어 있다. 남의 기계 데이터를 한곳에 모으면 유출 시 그 책임을 지게 되는데, 개인용 도구가 그 책임을 질 이유가 없다. 그리고 '외부로 안 나간다'는 문서에 적어두면 다음 커밋에서 조용히 깨질 수 있어 게이트로 만들었다.",
+          "트레이드오프": "다기기에서 한 번에 보는 기능을 포기했다 — 기기마다 따로 띄워야 한다. 조회 전용 원칙도 함께 세워서 세션 종료·재개를 앱에서 못 한다(메뉴바 앱은 kill 명령을 클립보드로 복사해 주는 선까지만 한다). 잘못 눌러 작업이 날아가는 위험 대비 편의가 작다고 봤지만, 쓰는 사람 입장에서는 한 단계 번거로운 것이 맞다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "역순 읽기 성능 (실측)",
+          "값": "역순 리더 96ms vs 전체 파싱 1,684ms(181,140줄) — 17.5배. 대상은 세션 기록 138개 파일, 총 421MB. 2026-09-04 이 기계에서 측정",
+          "재현": "./gradlew test --tests '*ReaderBenchmark*' -Dbenchmark=true  (※ `-Dbenchmark=true` 없이 돌리면 @EnabledIfSystemProperty 때문에 skipped 2로 조용히 건너뛴다)"
+        },
+        {
+          "항목": "읽기 상한별 시간·정보 손실 (실측)",
+          "값": "64K 67ms(발화없음 56건) / 128K 61ms(26) / 256K 78ms(14) / 512K 97ms(6) / 1024K 136ms(3). 상한을 올릴수록 손실은 줄고 시간은 는다 — 이 표가 상한 선택의 근거다",
+          "재현": "위와 같은 명령의 '상한별_시간과_정보손실' 테스트 출력"
+        },
+        {
+          "항목": "커밋 수 / 작업 기간",
+          "값": "23개 / 2026-09-03 ~ 2026-09-04 (이틀), 단독 작업",
+          "재현": "git log --oneline | wc -l → 23 / git log --format='%an' | sort | uniq -c"
+        },
+        {
+          "항목": "백엔드 규모",
+          "값": "Java 본문 21파일 1,730줄 + 테스트 7파일 1,238줄 (테스트가 본문의 0.72배)",
+          "재현": "git ls-files 'src/main/**/*.java' | xargs wc -l | tail -1 → 1730 / git ls-files 'src/test/**/*.java' | xargs wc -l | tail -1 → 1238"
+        },
+        {
+          "항목": "테스트 메서드 수",
+          "값": "54개",
+          "재현": "grep -rhoE '@Test' src/test | wc -l → 54"
+        },
+        {
+          "항목": "프론트 규모",
+          "값": "TypeScript/Vue 13파일 1,697줄, spec 5개 + Playwright e2e",
+          "재현": "git ls-files 'frontend/src/**' | grep -E '\\.(ts|vue)$' | xargs wc -l | tail -1 → 1697 / git ls-files 'frontend/**' | grep -c 'spec.ts' → 5"
+        },
+        {
+          "항목": "macOS 메뉴바 앱 규모",
+          "값": "Swift 3파일 894줄 (App · BoardClient · Models)",
+          "재현": "git ls-files 'macos/**/*.swift' | xargs wc -l | tail -1 → 894"
+        },
+        {
+          "항목": "설계 문서 분량",
+          "값": "8개 2,332줄. 구현 전에 문제 정의·데이터 실측·API 스키마·검증 절차를 먼저 쓰고 착수했다",
+          "재현": "cat docs/*.md | wc -l → 2332 / ls docs/*.md | wc -l → 8"
+        },
+        {
+          "항목": "CI 게이트",
+          "값": "빌드·테스트 외에 프로젝트 고유 게이트 3종 — 커밋 훅이 잔재를 실제로 잡는가 / 배포 산출물에 세션 데이터가 섞이지 않았는가 / 바인딩이 로컬 전용 바인딩인가",
+          "재현": "grep -n 'name:' .github/workflows/ci.yml"
+        }
+      ],
+      "scale": "Java 1,730줄 + 프론트 1,697줄 + Swift 894줄 · 테스트 54개 · 문서 2,332줄"
+    },
+    {
+      "id": "api-server",
+      "tier": "detail",
+      "label": "개인 기술 블로그·포트폴리오 백엔드 API 서버",
+      "period": "2025.12 ~ 2026.04 (운영 중)",
+      "domain": [
+        "백엔드",
+        "REST API",
+        "개인서비스",
+        "CMS",
+        "인증",
+        "애널리틱스"
+      ],
+      "stack": [
+        "TypeScript 5",
+        "NestJS 11",
+        "Fastify 5 (@nestjs/platform-fastify)",
+        "Prisma 7 (@prisma/adapter-pg)",
+        "PostgreSQL 16 (multi-schema)",
+        "Passport-JWT",
+        "bcryptjs",
+        "otplib (TOTP 2FA)",
+        "class-validator / class-transformer",
+        "@nestjs/swagger (OpenAPI)",
+        "@nestjs/throttler (rate limit)",
+        "@nestjs/cache-manager (in-memory)",
+        "@nestjs/schedule (cron)",
+        "nodemailer",
+        "Jest / ts-jest",
+        "Docker (멀티스테이지 빌드)",
+        "Docker Compose (base + local/prod override)",
+        "GitHub Actions (CI / Deploy)",
+        "자체 호스팅 서버 (구체 구성은 비공개)",
+        "Cloudflare R2 (@aws-sdk/client-s3)",
+        "Biome 2 (lint/format)",
+        "pnpm + Dependabot"
+      ],
+      "role": "백엔드 단독 개발. 구체적으로 (1) REST API 설계 — 5개 도메인(blog/portfolio/auth/analytics/health) 72개 오퍼레이션의 라우트·쿼리·DTO 계약 설계, (2) DB 모델링 — PostgreSQL 멀티스키마(auth/blog/portfolio/analytics) 21개 모델과 마이그레이션 14회 운영, (3) 인증·인가 — JWT 액세스 토큰 + Refresh Token Rotation, TOTP 2FA, 공개 API용 API Key, 어드민 IP 화이트리스트, 전역 Guard 체인 구성, (4) 파일 스토리지 — Cloudflare R2(S3 호환) 업로드·이동·삭제와 임시 파일 크론 정리, (5) 배포 — Dockerfile 멀티스테이지, Compose 환경 분리(base/local/prod), GitHub Actions CI(lint·typecheck·OpenAPI drift·build·test) 및 사설 VPN 경유 SSH를 통한 자체 호스팅 서버 자동 배포, (6) 프론트와의 타입 계약 — openapi.json 생성 파이프라인과 CI 게이트, (7) 테스트 기반 구축 — 운영 DB 접속 차단 가드와 순수 로직 단위 테스트 도입. 프론트엔드 코드는 이 저장소에 없다(별도 저장소).",
+      "problem": "블로그와 포트폴리오라는 성격이 다른 두 프론트(별도 저장소)가 하나의 백엔드를 소비해야 했고, 글·이미지·다국어 이력·방문 통계·어드민 인증이 각각 따로 관리되면 운영이 불가능했다. 한 서버에서 콘텐츠 CRUD와 자산 저장, 다국어 조회, 접속 통계, 어드민 보안을 모두 처리하면서, 정적 생성 기반 프론트가 변경을 즉시 반영할 수 있도록 갱신 신호까지 밀어 주는 것이 목표였다.",
+      "decisions": [
+        {
+          "선택": "다국어를 `title_ko`/`title_en` 같은 컬럼 접미사나 JSONB 한 컬럼이 아니라, 엔티티마다 별도 translation 테이블(`profile_translations`, `experience_translations`, `project_translations`, `work_translations`, `education_translations`)로 분리하고 `(entityId, locale)` 유니크 제약을 걸었다. 지원 언어 자체도 `portfolio.locales` 테이블로 관리해 파이프에서 검증한다.",
+          "대안": "번역 대상 컬럼마다 언어 접미사를 붙이는 방식, 또는 번역 전체를 JSONB 한 컬럼에 넣는 방식.",
+          "이유": "언어를 추가할 때 스키마 변경이 필요 없고(행만 추가), 번역 누락을 DB 제약과 조회로 확인할 수 있다. 지원 언어를 코드 상수가 아니라 테이블로 두면 `?locale=` 검증이 하드코딩 목록에 묶이지 않는다.",
+          "트레이드오프": "모든 조회에 `include: { translations: { where: { locale } } }`가 붙어 쿼리와 매핑 코드가 늘었고(portfolio.service.ts 815줄 중 상당량이 이 매핑), 번역이 없으면 빈 문자열/빈 배열로 떨어질 뿐 기본 언어로의 폴백이 없다. 또 locale 테이블이 검증 경로에 들어오면서 캐시가 빈 결과로 굳으면 포트폴리오 조회 전체가 400이 되는 실패 모드를 새로 만들었다(실제로 발생, 커밋 51a899b에서 수정)."
+        },
+        {
+          "선택": "OpenAPI 스펙을 런타임에만 노출하지 않고 `openapi.json`으로 추출해 저장소에 커밋하고, CI에서 재생성 후 `git diff --exit-code`로 drift를 막았다. 여기에 더해 '모든 오퍼레이션은 200/201 JSON 스키마를 갖거나 204를 선언한다'는 불변식을 Jest 테스트(`src/dto/openapi-coverage.spec.ts`)로 고정했다.",
+          "대안": "프론트가 빌드 시점에 실행 중인 서버의 `/docs-json`을 fetch해 타입을 생성하는 방식, 또는 DTO 타입을 공유 npm 패키지로 배포하는 방식.",
+          "이유": "프론트가 별도 저장소라 빌드 타임에 API 서버가 떠 있다고 보장할 수 없다. 파일로 커밋해 두면 서버 없이도 타입 생성이 되고, 스펙 변경이 diff로 리뷰에 드러난다. Swagger 설정을 `swagger.config.ts` 한 곳에서만 만들어 `/docs`와 추출본이 갈라지지 않게 했다.",
+          "트레이드오프": "DTO를 건드릴 때마다 `pnpm openapi:generate` 후 함께 커밋해야 하고, 잊으면 CI가 빨개진다(의도한 마찰이지만 마찰은 마찰이다). 생성물이 커밋에 섞여 diff 노이즈가 생기고, 스펙 파일을 lint 대상에서 제외(`biome.json`의 `!openapi.json`)해야 했다. 또 커버리지 테스트는 '스키마가 선언돼 있는가'만 보장할 뿐 '그 스키마가 실제 응답과 같은가'는 보장하지 않아, 도메인별 DTO 테스트를 따로 둬야 했다."
+        },
+        {
+          "선택": "본문 이미지를 `blog/temp/`에 먼저 올려 두고 글 저장 시 확정 경로로 옮기는 2단계 플로우에서, 순서를 'DB 저장 → R2 이동 → 이동 결과 DB 반영'으로 두고, 이동이 중간에 실패하면 **그때까지 옮겨진 만큼을 DB에 반영한 뒤 500을 던진다**. 실패를 삼키고 200을 반환하지 않는다.",
+          "대안": "R2 이동을 먼저 끝내고 확정 URL로 DB를 한 번만 쓰는 방식, 또는 이동 실패를 로그만 남기고 삼켜 200을 반환하는 방식.",
+          "이유": "R2 이동은 Copy→Head→Delete라 성공한 파일의 원본 temp가 이미 사라진다. 이동을 먼저 하고 DB 쓰기가 실패하면 파일은 옮겨졌는데 DB는 없어진 temp URL을 가리켜 이미지가 즉시 깨진다. 반대로 실패를 삼키면 temp URL이 남은 채 200이 나가고, 매일 3시 크론이 24시간 지난 temp를 지우므로 저장 당시엔 멀쩡하다가 다음 날 깨진다 — 원인 추적이 가장 어려운 형태다.",
+          "트레이드오프": "부분 성공 상태를 정상 응답이 아니라 500으로 알리므로 사용자는 '저장은 됐는데 이미지를 다시 저장하라'는 애매한 상태를 마주한다. 트랜잭션으로 묶을 수 없는 외부 스토리지라 완전한 원자성은 포기했고, 태그 정리·revalidation 같은 부수 효과의 실행 순서를 손으로 관리해야 해서 실제로 병합 과정에서 순서가 뒤집혀 회귀가 한 번 났다(커밋 70b00e4)."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "커밋 수 / 개발 기간",
+          "값": "118건, 2026-03-21 ~ 2026-09-04 (dev 브랜치 기준, 2026-09-04 측정)",
+          "재현": "git log --oneline | wc -l → 118 / git log --format='%ad' --date=short | sort | sed -n '1p;$p' → 2026-03-21 / 2026-09-04"
+        },
+        {
+          "항목": "API 오퍼레이션 수",
+          "값": "72개 (portfolio 36 / blog 15 / auth 12 / analytics 8 / health 1)",
+          "재현": "jq '[.paths|to_entries[]|.value|to_entries[]]|length' openapi.json → 72"
+        },
+        {
+          "항목": "OpenAPI 성공 응답 스키마 커버리지",
+          "값": "72개 중 60개가 200/201 JSON 스키마 선언, 12개가 204 → 미선언 0건 (#103 착수 시점에는 미선언 67건)",
+          "재현": "jq '[.paths|to_entries[]|.value|to_entries[]|select((.value.responses[\"200\"].content[\"application/json\"]//.value.responses[\"201\"].content[\"application/json\"])!=null)]|length' openapi.json → 60 / select(.value.responses[\"204\"]!=null) → 12. 착수 시점 67건은 src/dto/openapi-coverage.spec.ts 주석과 CLAUDE.md '남은 작업' 항목에 기록"
+        },
+        {
+          "항목": "DB 규모",
+          "값": "Prisma 모델 21개, 스키마 4개(auth/blog/portfolio/analytics), 마이그레이션 14회",
+          "재현": "grep -c '^model ' prisma/schema.prisma → 21 / ls prisma/migrations | grep -c '^2026' → 14"
+        },
+        {
+          "항목": "소스 규모",
+          "값": "src/ TypeScript 7,634줄 (portfolio 2,698 / blog 2,051 / analytics 1,032 / auth 800 / common 570)",
+          "재현": "wc -l $(git ls-files 'src/**' | grep -E '\\.ts$') | tail -1 → 7634 total"
+        },
+        {
+          "항목": "테스트",
+          "값": "spec 파일 11개, 1,465줄 (2026-09-04 재측정). `pnpm test`는 `jest` — `--passWithNoTests` 아님",
+          "재현": "git ls-files | grep -c 'spec.ts$' → 11 / wc -l $(git ls-files | grep 'spec.ts$') | tail -1 → 1465 / grep '\"test\"' package.json"
+        },
+        {
+          "항목": "병합된 PR",
+          "값": "13건 (전체 커밋 중 dependabot 자동 커밋 10건 포함)",
+          "재현": "git log --oneline | grep -c 'Merge pull request' → 13 / git log --format='%an' | sort | uniq -c → Cha Hyun Woo 57, chahyunwoo 51(같은 사람의 다른 git 설정), dependabot[bot] 10"
+        },
+        {
+          "항목": "저장소 문서(CLAUDE.md)와 실제 상태의 괴리",
+          "값": "CLAUDE.md '현재 남은 작업' 4건 중 3건이 이미 해결됐는데 문서만 낡아 있었다 — (1) 포트폴리오 어드민 CRUD: 8개 리소스 전부 변경 라우트 보유(총 23개) → 완료 (2) 응답 DTO '72개 중 1개뿐' → 실제 60개 스키마 + 12개 204 = 미선언 0건 (3) '테스트 0건 / passWithNoTests' → 실제 spec 11파일 1,465줄, 스크립트도 `jest` 실제로 남은 건 pg_trgm 검색 인덱스 1건뿐이고 그마저 '(필요 시)' 조건부다. 2026-09-04 실측",
+          "재현": "grep -cE \"@(Post|Put|Patch|Delete)\\(\" src/portfolio/*.controller.ts → 23 / jq '[.paths|to_entries[]|.value|to_entries[]|select((.value.responses[\"200\"].content[\"application/json\"]//.value.responses[\"201\"].content[\"application/json\"])!=null)]|length' openapi.json → 60 / grep -rl trgm prisma/ | wc -l → 0"
+        }
+      ],
+      "scale": "오퍼레이션 72개 · Prisma 모델 21개 · 스키마 4개 · 소스 7,634줄"
+    },
+    {
+      "id": "hyunwoo-dev-admin",
+      "tier": "detail",
+      "label": "개인 기술 사이트 어드민 — 콘텐츠·포트폴리오 운영 콘솔",
+      "period": "2025.12 ~ 2026.04 (운영 중)",
+      "domain": [
+        "어드민",
+        "사내툴",
+        "관리자 대시보드",
+        "CMS",
+        "에디터",
+        "2FA"
+      ],
+      "stack": [
+        "TypeScript",
+        "React 19",
+        "Vite 6",
+        "TanStack Router (파일 기반)",
+        "TanStack Query",
+        "TanStack Table",
+        "react-hook-form + @hookform/resolvers + Zod",
+        "@monaco-editor/react",
+        "Recharts",
+        "Zustand",
+        "ky",
+        "Tailwind CSS 4",
+        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "date-fns",
+        "lucide-react",
+        "Vercel",
+        "Turborepo/pnpm workspace의 한 앱으로 빌드"
+      ],
+      "role": "1인 개발. (1) TanStack Router 파일 기반 라우팅으로 로그인·포스트·포트폴리오 관리 화면 12개 라우트 구성, (2) TanStack Query 기반 서버 상태 관리와 entities 단위 쿼리 옵션/훅 캡슐화, (3) TOTP 2단계 인증의 **프런트 플로우**(코드 입력 폼, 실패 처리, 세션 수립)와 남은 세션 시간을 표시·연장하는 세션 타이머 훅 구현 — 서버 측 TOTP 검증은 별도 저장소의 API 서버에 있고 그쪽 항목에서 다룬다, (4) Monaco 에디터를 붙인 글·작업물 작성 폼(react-hook-form + Zod 검증), (5) Recharts 기반 애널리틱스 대시보드(유입 경로 파이 차트 등), (6) 어드민에 남아 있던 Mantine을 걷어내고 shadcn/Radix 기반 `@hyunwoo/ui` 공용 컴포넌트로 통일, (7) FSD 레이어(app → pages → features → entities → shared)로 소스 구조 정리.",
+      "problem": "블로그 콘텐츠를 저장소 밖 API로 옮기고 나니 글을 쓰고 고칠 도구가 필요해졌다. 동시에 어드민은 로그인 뒤에서만 도는 화면이라 SEO나 초기 렌더 비용보다 '편집 중 상태를 얼마나 잘 붙들고 있느냐'가 중요했고, 블로그·포트폴리오가 이미 쓰던 shadcn과 어드민의 Mantine이 갈라져 같은 폼을 두 번 만들고 있었다.",
+      "decisions": [
+        {
+          "선택": "어드민만 Next.js가 아니라 Vite + React SPA로 만들고, 라우팅은 TanStack Router 파일 기반으로 잡았다",
+          "대안": "블로그·포트폴리오와 같이 Next.js App Router로 통일하거나, 어드민을 블로그 앱 안의 `/admin` 경로로 흡수하는 안",
+          "이유": "어드민은 전부 로그인 뒤 화면이라 SSR·RSC·SEO에서 얻는 게 없고, 오히려 서버 컴포넌트 경계가 편집 폼의 클라이언트 상태를 쪼개는 비용만 남는다. 빌드도 세 앱 중 어드민만 정적 산출물이라 Vite 쪽이 훨씬 빠르다. 라우팅은 TanStack Query와 같은 계열이라 로더·캐시 연동이 자연스러웠다.",
+          "트레이드오프": "세 앱 중 하나만 번들러·라우터·렌더링 모델이 달라, 공용 패키지가 Next와 Vite 양쪽 빌드에서 모두 동작해야 한다는 제약이 생겼다(`packages/ui`·`packages/shared`가 두 환경을 다 만족해야 한다). 앱 간 코드 이동도 그대로는 안 되고 라우팅·데이터 패칭을 다시 써야 한다."
+        },
+        {
+          "선택": "어드민에서 Mantine을 전부 걷어내고 shadcn/Radix 기반 `packages/ui` 공용 컴포넌트로 통일했다 (커밋 b624987, 이어서 블로그의 중복 shadcn 컴포넌트도 00087bc에서 공용 패키지로 흡수)",
+          "대안": "어드민은 Mantine을 유지하고 공용 패키지는 타입·API 클라이언트만 공유하는 안",
+          "이유": "어드민(Mantine)과 블로그(shadcn)가 서로 다른 컴포넌트 체계를 쓰면 같은 폼·다이얼로그·테이블을 두 번 만들게 되고, 디자인 토큰도 두 벌이 된다. shadcn은 컴포넌트 소스를 저장소가 소유하는 방식이라 공용 패키지로 끌어올리기가 쉬웠다.",
+          "트레이드오프": "Mantine이 기본 제공하던 것들(날짜 입력, 폼 상태, 알림 등)을 직접 조립하게 되어 초기 작업량이 늘었고, 이전 작업 자체가 어드민 화면 전반을 건드리는 큰 diff라 그 시점에 다른 기능 작업을 병행할 수 없었다."
+        },
+        {
+          "선택": "세션 만료를 요청 실패 시점에 처리하지 않고, 남은 시간을 초 단위로 세는 `useSessionTimer` 훅을 두어 만료 5분 전부터 경고와 연장 버튼을 노출했다",
+          "대안": "401 응답을 받으면 그때 로그아웃시키거나, 사용자 조작이 있을 때마다 조용히 세션을 연장하는 안",
+          "이유": "어드민의 주 작업이 '긴 글을 Monaco 에디터에서 편집하는 것'이라, 저장 버튼을 누르는 순간 401이 나면 작성 중이던 본문을 잃는다. 남은 시간을 보여주고 만료 전에 연장을 제안하면 사용자가 저장 타이밍을 스스로 정할 수 있다.",
+          "트레이드오프": "만료 시각을 클라이언트가 들고 세므로 탭이 오래 백그라운드에 있거나 기기 시계가 어긋나면 표시가 실제와 벌어질 수 있다. 표시가 정확해도 서버가 세션을 먼저 끊으면 소용없어서, 401 처리 경로를 없앤 게 아니라 그 위에 얹은 안전장치라는 점은 그대로 남는다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "어드민 앱 소스 규모",
+          "값": "TypeScript/TSX 103개 파일, 6,625줄 (생성물 routeTree.gen.ts 제외) — 세 앱 중 가장 크다",
+          "재현": "git ls-files 'apps/admin/' | grep -E '\\.tsx?$' | grep -v 'routeTree.gen.ts' | wc -l → 103 / 같은 목록에 xargs wc -l | tail -1 → 6625"
+        },
+        {
+          "항목": "어드민 앱에 닿은 커밋 수",
+          "값": "23건",
+          "재현": "git log --oneline -- apps/admin | wc -l → 23"
+        },
+        {
+          "항목": "라우트 수",
+          "값": "12개 (루트·로그인·포스트 3·포트폴리오 6·인덱스)",
+          "재현": "git ls-files 'apps/admin/src/routes/*' | grep -v routeTree.gen.ts | wc -l → 12"
+        },
+        {
+          "항목": "FSD 슬라이스",
+          "값": "entities 5개(analytics/auth/category/portfolio/post), features 2개(category/post)",
+          "재현": "ls apps/admin/src/entities | wc -l → 5 / ls apps/admin/src/features | wc -l → 2"
+        },
+        {
+          "항목": "어드민 앱 테스트",
+          "값": "1개 파일(get-icon.test.ts). 개인 프로젝트라 테스트 범위를 의도적으로 좁혔고, 검증은 타입체크·린트 게이트와 수동 확인에 의존한다",
+          "재현": "git ls-files | grep -E 'apps/admin/.*\\.(test|spec)\\.[tj]sx?$'"
+        }
+      ],
+      "scale": "라우트 12개 · 소스 6,625줄 · 리소스 8종 CRUD"
+    },
+    {
+      "id": "hyunwoo-dev-blog",
+      "tier": "detail",
+      "label": "개인 기술 블로그 — 파일 기반 MDX를 걷어내고 API 콘텐츠로 전환",
+      "period": "2025.12 ~ 2026.04 (운영 중)",
+      "domain": [
+        "콘텐츠",
+        "블로그",
+        "CMS 연동",
+        "SEO",
+        "퍼블리싱",
+        "다국어"
+      ],
+      "stack": [
+        "TypeScript",
+        "Next.js 16 (App Router, RSC)",
+        "React 19 + React Compiler",
+        "Tailwind CSS 4",
+        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "next-mdx-remote v6",
+        "rehype-pretty-code (Shiki)",
+        "rehype-slug / rehype-autolink-headings",
+        "remark-gfm / remark-breaks",
+        "cmdk",
+        "next-themes",
+        "nextjs-toploader",
+        "Zustand",
+        "Vitest + Testing Library",
+        "Next.js Route Handler — `/api/revalidate` (시크릿 검증 후 revalidateTag/revalidatePath)",
+        "별도 저장소의 콘텐츠 API를 소비 (NestJS + PostgreSQL, 이 저장소에 코드 없음)",
+        "Vercel",
+        "Turborepo/pnpm workspace의 한 앱으로 빌드"
+      ],
+      "role": "1인 개발. (1) Next.js 16 App Router 기반 목록/상세/검색/TOC 화면 구현, (2) 저장소 안 MDX 파일 36건을 걷어내고 백엔드 API에서 본문을 받아 next-mdx-remote v6로 런타임 렌더링하는 구조로 전환, (3) 시간 기반 ISR을 끄고 어드민 저장 웹훅이 호출하는 `/api/revalidate` Route Handler(시크릿 검증 + 태그·경로 선택 무효화)로 갱신 경로를 바꿈, (4) 캐시 태그가 한글 slug에서 깨지는 문제를 ASCII 해시 태그로 해소, (5) ko/en/jp About 페이지를 `[locale]` 세그먼트로 분리하고 `generateStaticParams`·`alternates.languages`로 다국어 메타데이터 구성, (6) 미발행 글 미리보기 라우트(`/preview/[slug]`)를 토큰 검증 뒤에 분리 배치, (7) next-themes 다크모드·cmdk 검색 팔레트 구성.",
+      "problem": "블로그 글이 저장소 안 MDX 파일이라 오타 하나 고치는 데도 커밋·CI·재배포 사이클이 통째로 붙었고, 시간 기반 ISR로는 '지금 고친 게 언제 반영되는지'를 확인할 수 없었다. 글쓰기와 배포를 떼어내되, 무엇을 고치면 어떤 캐시가 깨지는지가 코드에 명시적으로 남는 갱신 경로를 만드는 것이 목표였다.",
+      "decisions": [
+        {
+          "선택": "저장소 안 파일 기반 MDX 36건을 전부 걷어내 별도 콘텐츠 API로 옮기고(커밋 d32ced5), 시간 기반 ISR을 끈 채(`DEFAULT_REVALIDATE = false`) 어드민 저장 시 웹훅이 `/api/revalidate`를 호출해 `revalidateTag`/`revalidatePath`로만 갱신하도록 전환했다",
+          "대안": "MDX 파일을 그대로 두고 Git 기반 CMS를 얹거나, ISR 60초 같은 시간 기반 재검증을 유지하는 안",
+          "이유": "글 하나 수정에 커밋·CI·재배포가 붙는 게 실제 병목이었고, 시간 기반 ISR은 반영 시점이 불확실해 고친 것을 확인할 방법이 없었다. 태그 단위 무효화로 바꾸니 어떤 글을 고치면 어떤 캐시가 깨지는지가 `CACHE_TAGS`에 코드로 남는다.",
+          "트레이드오프": "빌드와 렌더가 백엔드 가용성에 묶였다. `apiFetch`가 실패 시 예외 대신 `null`을 반환해 빈 목록으로 degrade하는데, 이건 장애를 조용히 만든다는 뜻이기도 하다. 글 이력이 더 이상 `git diff`에 남지 않아 버전 추적이 백엔드 DB로 넘어갔고, 프리뷰 토큰·revalidate 시크릿·API 키라는 운영 표면이 새로 생겼다. 참고로 이 저장소의 Lighthouse CI는 배포본이 아니라 블로그 앱을 로컬에서 띄워 재는 구성이라(`.github/lighthouse/lighthouserc.json`의 `startServerCommand`), CI가 초록이어도 실제 배포본 점수를 보증하지 않는다."
+        },
+        {
+          "선택": "캐시 태그에 한글 slug를 그대로 쓰지 않고 ASCII 해시로 변환해 `CACHE_TAGS.BLOG_POST`를 만들었다 (커밋 88d0a44)",
+          "대안": "slug를 `encodeURIComponent`로 감싸거나, 글 식별자를 숫자 id로 바꿔 태그에 쓰는 안",
+          "이유": "`revalidateTag`에 넘긴 값이 `x-next-cache-tags` 헤더로 나가는데, 비ASCII 문자가 들어가면 헤더 인코딩 단계에서 `ERR_INVALID_CHAR`로 터진다. 인코딩으로 덧칠하면 이번엔 태그 문자열이 무효화 호출부와 어긋나 404/500을 오간다. 해시는 어느 쪽에서 만들어도 같은 값이 나오는 게 보장된다.",
+          "트레이드오프": "태그만 보고 어떤 글인지 알 수 없어 디버깅 때 역추적이 안 된다. 해시 함수를 바꾸면 기존 캐시 태그가 전부 고아가 되므로 사실상 고정 상수가 됐다."
+        },
+        {
+          "선택": "미발행 글 미리보기를 본문 라우트에 플래그로 얹지 않고 `/preview/[slug]` 별도 라우트로 분리하고, `searchParams`의 토큰이 없으면 `notFound()`로 끊었다",
+          "대안": "`/blog/[slug]`에 `?preview=1`을 붙여 같은 라우트에서 분기하거나, 어드민 안에 미리보기 화면을 따로 만드는 안",
+          "이유": "발행 라우트에 미리보기 분기를 넣으면 캐시 대상 경로에 '캐시하면 안 되는 응답'이 섞인다. 라우트를 갈라 두면 미발행 본문이 공개 캐시에 얹힐 경로 자체가 없어지고, 미리보기는 실제 렌더러(`PostBody`)를 그대로 태워 발행 후 모습과 어긋나지 않는다.",
+          "트레이드오프": "라우트가 하나 늘어 레이아웃·메타데이터를 두 곳에서 관리하게 됐고, 토큰이 URL 쿼리에 실려 브라우저 히스토리와 리퍼러에 남는다. 토큰 만료·폐기는 백엔드 책임으로 넘어가 이 앱에서는 존재 여부만 검증한다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "블로그 앱 소스 규모",
+          "값": "TypeScript/TSX 92개 파일, 3,876줄 (생성물 제외)",
+          "재현": "git ls-files 'apps/blog/' | grep -E '\\.tsx?$' | grep -v 'routeTree.gen.ts' | grep -v 'api/generated/' | wc -l → 92 / 같은 목록에 xargs wc -l | tail -1 → 3876"
+        },
+        {
+          "항목": "블로그 앱에 닿은 커밋 수",
+          "값": "35건",
+          "재현": "git log --oneline -- apps/blog | wc -l → 35"
+        },
+        {
+          "항목": "App Router 페이지 라우트",
+          "값": "5개 (목록 /, 글 상세 /blog/[slug], About /about, 다국어 About /about/[locale], 미리보기 /preview/[slug])",
+          "재현": "git ls-files | grep -E 'apps/blog/.*page\\.tsx'"
+        },
+        {
+          "항목": "파일 기반 MDX 이전 규모",
+          "값": "단일 커밋에서 MDX 36건 일괄 삭제",
+          "재현": "git show --name-status d32ced5 | grep -c '^D.*\\.mdx' → 36"
+        },
+        {
+          "항목": "블로그 앱 테스트",
+          "값": "2개 파일 (lib/utils, services/post) — 커버리지는 얇다",
+          "재현": "git ls-files | grep -E 'apps/blog/.*\\.(test|spec)\\.[tj]sx?$'"
+        },
+        {
+          "항목": "발행된 글 수",
+          "값": "42건 (2026-09-04 측정). sitemap 전체 URL 152개, 카테고리 5종(Frontend/Programming/Backend/DevOps/Career)",
+          "재현": "curl -s <배포 도메인>/sitemap.xml | grep -oE '<loc>[^<]+/blog/[^<]+</loc>' | wc -l → 42"
+        },
+        {
+          "항목": "배포본 Lighthouse (블로그)",
+          "값": "Performance 67 / Accessibility 95 / Best Practices 100 / SEO 100 (LCP 5.9s, TBT 0ms). 2026-09-04 측정, Lighthouse 12.8.2 모바일 에뮬레이션 기본값, 1회 실행",
+          "재현": "npx lighthouse@12 <배포 도메인> --only-categories=performance,accessibility,best-practices,seo --chrome-flags='--headless=new'"
+        },
+        {
+          "항목": "검색 유입 실적 (Google Search Console, 최근 3개월)",
+          "값": "총 클릭수 481 / 총 노출수 약 5,490 / 평균 CTR 8.8% / 평균 게재순위 6.9위. 노출수는 GSC가 '5.49천'으로 반올림해 표시한 값이라 정확한 정수가 아니다 (481 ÷ 5,490 = 8.76%로 표시된 CTR 8.8%와 일치하므로 자릿수는 맞다). 2026-09-04 확인",
+          "재현": "Search Console > 실적 > 검색결과, 기간 필터 '지난 3개월'의 상단 4개 카드"
+        }
+      ],
+      "scale": "발행 글 42건 · 라우트 5개 · 소스 3,876줄"
+    },
+    {
+      "id": "hyunwoo-dev-monorepo",
+      "tier": "detail",
+      "label": "개인 기술 사이트 모노레포 — 앱 3개 공통 인프라와 OpenAPI 타입 파이프라인",
+      "period": "2025.12 ~ 2026.04 (운영 중)",
+      "domain": [
+        "모노레포",
+        "디자인시스템",
+        "공통 인프라",
+        "CI/CD",
+        "OpenAPI",
+        "코드젠"
+      ],
+      "stack": [
+        "TypeScript",
+        "React 19",
+        "Tailwind CSS 4",
+        "shadcn/ui (Radix Primitives)",
+        "next-mdx-remote v6 + rehype-pretty-code(Shiki)",
+        "OpenAPI 3.0 스펙 소비 파이프라인 (openapi-typescript 코드젠)",
+        "별도 저장소의 NestJS API 서버가 커밋한 스펙을 소비 (이 저장소에 서버 코드 없음)",
+        "Turborepo + pnpm workspaces",
+        "Vercel (앱 3개 개별 배포)",
+        "GitHub Actions — CI / CodeQL / Lighthouse CI / OpenAPI drift check / release-please",
+        "Dependabot (weekly, dependabot-staging 브랜치 격리)",
+        "Husky + lint-staged + Biome",
+        "release-please (자동 릴리스·CHANGELOG)",
+        "자체 호스팅 API 서버 (구체 구성은 비공개)"
+      ],
+      "role": "1인 개발. (1) 단일 Next.js 블로그를 Turborepo + pnpm workspace로 재구성해 앱 3개 + 공유 패키지 3개 구조로 분할(커밋 f614877), (2) 공유 패키지 설계 — API 클라이언트·ENDPOINTS·OpenAPI 생성 타입(`packages/shared`), Radix 기반 공용 컴포넌트 21개(`packages/ui`), MDX 렌더러와 커스텀 컴포넌트(`packages/mdx`), (3) 백엔드 `openapi.json`을 바이트 그대로 복사·커밋하는 동기화 스크립트와 `openapi-typescript` 코드젠 파이프라인 구성, (4) 성공 응답 스키마가 없는 라우트를 고유 심볼로 브랜딩해 컴파일 시점에 잡는 `MissingResponseSchema` 타입 설계, (5) GitHub Actions 5종(CI, CodeQL, Lighthouse CI, OpenAPI drift 검사, release-please) 구성과 워크플로 YAML 파싱 검사 스텝 추가, (6) Biome + Husky + lint-staged 커밋 게이트, Dependabot 격리 브랜치 정책, (7) 각 앱 `src/`를 FSD 레이어로 정리하고 위반 4건을 문서로 채증한 뒤 해소.",
+      "problem": "블로그·포트폴리오·어드민이 따로 놀면서 API 타입·UI 컴포넌트·MDX 렌더링이 각자 중복돼 있었고, 프런트와 백엔드 저장소가 갈린 탓에 API 스펙이 바뀌어도 프런트가 그것을 알 방법이 없었다. 세 앱을 한 저장소로 묶어 타입·디자인 시스템·캐시 무효화 규칙을 하나의 소스에서 공유하되, 빌드가 백엔드 가용성에 끌려가지 않게 만드는 것이 목표였다.",
+      "decisions": [
+        {
+          "선택": "단일 Next.js 블로그를 Turborepo + pnpm workspace 모노레포로 쪼개 앱 3개 + 공유 패키지 3개로 재구성하고(커밋 f614877), 각 앱 `src/`를 FSD 레이어(app → pages → widgets → features → entities → shared)로 나눴다",
+          "대안": "앱별로 저장소를 분리하고 공용 코드를 사내 npm 패키지로 배포하거나, 앱마다 자체 UI 라이브러리를 유지하는 안",
+          "이유": "세 앱이 같은 API 타입·캐시 태그·MDX 렌더러를 쓰는데 저장소가 갈라지면 버전 동기화 비용이 상수로 든다. 패키지 배포를 끼우면 공용 코드를 한 줄 고치는 데 배포 사이클이 붙어, 1인 개발에서는 그 오버헤드가 이득을 넘는다.",
+          "트레이드오프": "FSD 레이어 규칙이 도구로 강제되지 않는다 — Biome에 import 경계 룰이 없어 리뷰로만 잡는데, 실제로 `shared`가 `entities`를 import하는 등 위반 4건이 쌓여 별도 문서(`docs/FSD-LAYER-VIOLATIONS.md`)로 채증한 뒤에야 해소됐다. CI 한 번이 세 앱을 전부 빌드해 앱 하나만 고쳐도 전체가 돌고 PR 피드백이 느려진다."
+        },
+        {
+          "선택": "백엔드가 커밋해 둔 `openapi.json`을 바이트 그대로 이 저장소에 복사·커밋하고(`scripts/sync-openapi.mjs`), `openapi-typescript`로 타입을 생성해 수동 API 타입을 전부 교체했다. `ENDPOINTS`의 정적 경로는 `satisfies`로 스펙의 `keyof paths`에 묶었다",
+          "대안": "수동으로 쓴 API 타입을 계속 유지하거나, 빌드 때마다 백엔드에서 스펙을 직접 fetch하거나, 백엔드 저장소를 이 모노레포로 합치는 안",
+          "이유": "수동 타입이 nullable을 숨기고 있었다 — `description`·`category`가 응답에서 null일 수 있는데 `string`으로 선언돼 있어 런타임까지 안 드러났고, 생성 타입으로 바꾸자 컴파일 에러로 잡혔다. 빌드가 백엔드 네트워크에 의존하면 운영 배포가 백엔드 장애에 끌려가므로, 스펙은 파일로 커밋해 CI가 네트워크 없이 돌게 했다.",
+          "트레이드오프": "스펙 동기화가 사람이 `pnpm api:sync`를 돌려야 일어나므로 안 돌리면 조용히 낡는다. 그래서 매일 도는 별도 워크플로가 업스트림과 diff를 떠 이슈를 열게 했지만, 그건 게이트가 아니라 알림이라 배포를 막지는 않는다. 같은 맥락에서 API 키도 스펙과 함께 프런트로 내려오는 값이라, 타입은 생성물로 검증되지만 접근 통제는 생성물이 보증해 주지 않는다."
+        },
+        {
+          "선택": "성공 응답 스키마가 없는 라우트의 반환 타입을 `never`가 아니라 고유 심볼로 브랜딩한 `MissingResponseSchema`로 두어, 대입 시점에 컴파일이 터지게 했다 (커밋 c64faa4)",
+          "대안": "`never`를 반환하거나, `unknown`으로 두고 호출부에서 캐스팅하게 하는 안",
+          "이유": "`never`는 모든 타입의 서브타입이라 어디에나 조용히 대입된다. 즉 '코드젠 타입을 붙였으니 안전하다'고 믿는 순간, 스키마가 없는 라우트만 아무 검사도 받지 않고 통과한다. 고유 심볼로 브랜딩하면 어떤 기대 타입에도 대입되지 않아 그 자리에서 컴파일이 멈춘다.",
+          "트레이드오프": "스펙에 응답 스키마가 붙기 전까지는 해당 라우트를 쓰는 코드가 컴파일되지 않으므로, 프런트 작업이 백엔드의 `@ApiOkResponse` 선언 진도에 묶인다. 급할 때 우회하려면 명시적 캐스팅을 쓰게 되는데 그러면 브랜딩의 의미가 사라진다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "저장소 전체 커밋 / 병합 커밋",
+          "값": "커밋 327건, 머지 커밋 57건 (2025-03-17 ~ 2026-09-04)",
+          "재현": "git log --oneline | wc -l → 327 / git log --oneline --merges | wc -l → 57 / git log --format='%ad' --date=short --reverse | head -1"
+        },
+        {
+          "항목": "워크스페이스 구성",
+          "값": "앱 3개(blog, admin, portfolio) + 공유 패키지 3개(shared, ui, mdx)",
+          "재현": "ls apps packages"
+        },
+        {
+          "항목": "공유 패키지 규모",
+          "값": "ui 23파일 1,362줄 / shared 16파일 404줄(생성 타입 제외) / mdx 9파일 259줄",
+          "재현": "각 패키지에 대해 git ls-files '<pkg>/' | grep -E '\\.tsx?$' | grep -v 'api/generated/' | xargs wc -l | tail -1"
+        },
+        {
+          "항목": "공용 UI 컴포넌트 수",
+          "값": "21개",
+          "재현": "git ls-files 'packages/ui/src/*.tsx' | wc -l → 21"
+        },
+        {
+          "항목": "OpenAPI 스펙 규모",
+          "값": "경로 51개 / 오퍼레이션 72개 / 스키마 80개, 생성 타입 4,997줄",
+          "재현": "node -e \"const s=require('./packages/shared/openapi.json');console.log(Object.keys(s.paths).length, Object.values(s.paths).reduce((a,i)=>a+Object.keys(i).length,0), Object.keys(s.components.schemas).length)\" → 51 72 80 / wc -l packages/shared/src/api/generated/api.types.ts → 4997"
+        },
+        {
+          "항목": "ENDPOINTS 항목 수",
+          "값": "51개 (blog, portfolio, auth, analytics 4개 그룹)",
+          "재현": "grep -cE \"^\\s{4}[a-zA-Z][a-zA-Z0-9]*:\" packages/shared/src/api/endpoints.ts → 51"
+        },
+        {
+          "항목": "GitHub Actions 워크플로",
+          "값": "5개 (ci, codeql, lighthouse, openapi-sync-check, release-please)",
+          "재현": "ls .github/workflows/"
+        },
+        {
+          "항목": "Turborepo 태스크",
+          "값": "7개 (build, dev, lint, lint:ci, typecheck, test, test:run)",
+          "재현": "jq -r '.tasks|keys|join(\", \")' turbo.json"
+        },
+        {
+          "항목": "release-please 자동 릴리스",
+          "값": "3건 (1.0.0, 2.0.0, 2.0.1)",
+          "재현": "grep -cE '^## ' CHANGELOG.md → 3"
+        },
+        {
+          "항목": "저장소 전체 테스트 파일",
+          "값": "3개 (blog 2, admin 1, portfolio 0). 개인 프로젝트라 테스트 범위를 의도적으로 좁혔고, 회귀 방어는 타입체크·Biome·OpenAPI drift 검사·워크플로 YAML 파싱 검사 같은 CI 게이트 쪽에 몰아 두었다",
+          "재현": "git ls-files | grep -E '\\.(test|spec)\\.[tj]sx?$' | wc -l → 3"
+        }
+      ],
+      "scale": "앱 3개 + 공유 패키지 3개 · 공용 컴포넌트 21개 · 워크플로 5종"
+    },
+    {
+      "id": "hyunwoo-dev-web",
+      "tier": "detail",
+      "label": "개인 기술 사이트 프론트 — Three.js 인터랙티브 원페이지",
+      "period": "2025.12 ~ 2026.04 (운영 중)",
+      "domain": [
+        "기업/개인 웹사이트",
+        "인터랙티브",
+        "3D",
+        "랜딩",
+        "PDF 생성"
+      ],
+      "stack": [
+        "TypeScript",
+        "Next.js 16 (App Router, RSC)",
+        "React 19 + React Compiler",
+        "Three.js (@react-three/fiber, @react-three/drei) + GLSL",
+        "Framer Motion",
+        "@react-pdf/renderer",
+        "next-mdx-remote v6 + rehype-pretty-code(Shiki)",
+        "Tailwind CSS 4 + @tailwindcss/typography",
+        "shadcn/ui (Radix Primitives) — @hyunwoo/ui",
+        "react-hook-form + Zod",
+        "Zustand",
+        "Next.js Route Handler — `/api/revalidate` (시크릿 검증 후 revalidateTag/revalidatePath)",
+        "별도 저장소의 포트폴리오 API를 소비 (이 저장소에 코드 없음)",
+        "Vercel",
+        "Turborepo/pnpm workspace의 한 앱으로 빌드",
+        "GitHub Actions Lighthouse CI 대상"
+      ],
+      "role": "1인 개발. (1) Next.js 16 App Router 기반 단일 페이지 구성, (2) @react-three/fiber + drei로 GLSL 셰이더 히어로 구현, (3) requestAnimationFrame 기반 스킬 궤도·3D 캐러셀 인터랙션, (4) @react-pdf/renderer로 ko/en/jp 이력서를 브라우저에서 즉시 생성·내려받게 구현, (5) Framer Motion 기반 스크롤 인터랙션, (6) 작업물 콘텐츠를 백엔드 API에서 받아 MDX(next-mdx-remote + Shiki)로 렌더링, (7) `/api/revalidate` Route Handler로 어드민 저장 시 캐시 태그·경로 무효화.",
+      "problem": "프리랜서로 직접 수주하는 입장에서 포트폴리오는 '무엇을 만들 수 있는지'를 문장이 아니라 화면 자체로 보여줘야 했고, 동시에 상대가 요구하는 형식(국문·영문·일문 이력서 PDF)으로도 즉시 건네줄 수 있어야 했다. 인터랙션을 넣되 그 비용이 초기 로딩과 저사양 기기에서 감당 가능한 선에 머무르게 하는 것이 과제였다.",
+      "decisions": [
+        {
+          "선택": "이력서 PDF를 서버에서 만들지 않고 `@react-pdf/renderer`로 브라우저에서 ko/en/jp 3개 언어를 즉시 생성해 내려받게 했다",
+          "대안": "언어별 PDF 파일을 만들어 정적 자산으로 올려두거나, 서버에서 Puppeteer로 화면을 인쇄해 생성하는 안",
+          "이유": "정적 파일은 이력 내용이 바뀔 때마다 3개 파일을 다시 만들어 올려야 하고, 그 순간 화면에 보이는 내용과 PDF가 어긋나기 시작한다. 서버 렌더는 이 앱만을 위해 헤드리스 브라우저를 띄우는 운영 부담이 붙는다. 브라우저 생성은 화면과 같은 데이터 소스를 쓰므로 둘이 어긋날 여지가 구조적으로 없다.",
+          "트레이드오프": "PDF 레이아웃을 React 컴포넌트로 다시 짜야 해서 화면 컴포넌트를 재사용할 수 없고, 폰트(특히 한글·일문)를 직접 등록해야 하며 그 폰트가 번들 용량으로 들어온다. 생성이 사용자 기기에서 일어나므로 저사양 기기에서는 버튼을 누른 뒤 잠깐 멈춘 것처럼 보인다."
+        },
+        {
+          "선택": "히어로 배경을 이미지나 동영상이 아니라 Three.js GLSL 셰이더로 그리고, 스킬 궤도·캐러셀 애니메이션은 CSS 트랜지션이 아니라 requestAnimationFrame 루프로 직접 돌렸다",
+          "대안": "미리 렌더한 배경 영상이나 Lottie 애니메이션을 얹거나, 전부 CSS 애니메이션·트랜지션으로 처리하는 안",
+          "이유": "배경 영상은 용량이 크고 화면 비율마다 다시 뽑아야 한다. 셰이더는 해상도에 독립적이고 파일 크기가 사실상 코드 길이다. 궤도·캐러셀은 요소가 서로의 위치를 참조하며 매 프레임 갱신돼야 해서, 선언형 CSS 트랜지션으로는 중간 상태를 계산할 자리가 없었다.",
+          "트레이드오프": "Three.js와 셰이더 코드가 번들에 들어와 이 앱만 초기 로딩 비용이 눈에 띄게 커졌고, GPU가 약한 기기에서는 프레임이 떨어진다. 2026-09-04 실측에서 이 대가가 그대로 나왔다 — 배포본 Lighthouse Performance 38(TBT 1,170ms)로, 같은 조건의 블로그(67, TBT 0ms)와 갈렸다. 접근성 96·Best Practices 100·SEO 100은 유지되므로 '전반적으로 나쁜 페이지'가 아니라 '메인 스레드를 오래 잡는 페이지'라는 성격이 분명하다. rAF 루프는 직접 정리(cleanup)를 놓치면 그대로 누수라, CSS라면 브라우저가 대신 해줬을 관리 책임을 코드가 떠안았다."
+        },
+        {
+          "선택": "작업물 본문도 블로그와 같은 방식으로 API에서 받아 MDX를 런타임 렌더링하고, 갱신은 어드민 저장 웹훅 → `/api/revalidate`(태그·경로 선택 무효화)로 통일했다",
+          "대안": "포트폴리오는 변경이 잦지 않으니 저장소 안 MDX 파일로 두고 빌드 타임에 정적 생성하는 안",
+          "이유": "블로그와 포트폴리오가 서로 다른 콘텐츠 파이프라인을 쓰면 MDX 렌더러·캐시 태그 규칙·프리뷰 처리가 두 벌이 된다. 어차피 `packages/mdx`와 `packages/shared`를 공유하는 구조라, 소스만 통일하면 두 앱이 같은 규칙 위에서 돈다.",
+          "트레이드오프": "변경이 드문 콘텐츠까지 백엔드 가용성에 묶였다. 블로그와 마찬가지로 `apiFetch` 실패가 예외가 아니라 빈 화면으로 degrade되므로, 포트폴리오가 비어 보이는 상태와 백엔드 장애가 화면상 구별되지 않는다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "포트폴리오 앱 소스 규모",
+          "값": "TypeScript/TSX 59개 파일, 3,665줄 (생성물 제외)",
+          "재현": "git ls-files 'apps/portfolio/' | grep -E '\\.tsx?$' | wc -l → 59 / 같은 목록에 xargs wc -l | tail -1 → 3665"
+        },
+        {
+          "항목": "포트폴리오 앱에 닿은 커밋 수",
+          "값": "30건",
+          "재현": "git log --oneline -- apps/portfolio | wc -l → 30"
+        },
+        {
+          "항목": "페이지 라우트",
+          "값": "1개 (원페이지 구성)",
+          "재현": "git ls-files | grep -E 'apps/portfolio/.*page\\.tsx' → apps/portfolio/src/app/page.tsx"
+        },
+        {
+          "항목": "이력서 지원 언어",
+          "값": "3개 (ko / en / jp), 브라우저에서 즉시 생성",
+          "재현": "apps/portfolio/package.json의 @react-pdf/renderer 의존성 및 이력서 생성 컴포넌트"
+        },
+        {
+          "항목": "포트폴리오 앱 테스트",
+          "값": "0개 — 렌더링·인터랙션 위주라 자동 테스트가 없다",
+          "재현": "git ls-files | grep -E 'apps/portfolio/.*\\.(test|spec)\\.[tj]sx?$' → 출력 없음"
+        },
+        {
+          "항목": "배포본 Lighthouse (포트폴리오)",
+          "값": "Performance 38 / Accessibility 96 / Best Practices 100 / SEO 100 (FCP 4.9s, LCP 5.8s, TBT 1,170ms, CLS 0). 같은 조건에서 잰 블로그는 Performance 67 / TBT 0ms — 3D 번들이 실제로 얼마를 먹는지가 두 앱 차이로 드러난다. 2026-09-04 측정, Lighthouse 12.8.2 모바일 에뮬레이션 기본값, 1회 실행",
+          "재현": "npx lighthouse@12 <포트폴리오 도메인> --only-categories=performance,accessibility,best-practices,seo --chrome-flags='--headless=new'"
+        }
+      ],
+      "scale": "원페이지 · 소스 3,665줄 · 3개 국어 이력서 생성"
+    },
+    {
+      "id": "github-tier",
+      "tier": "detail",
+      "label": "GitHub Tier — GitHub 활동을 게임 랭크 카드(SVG)로 렌더링하는 오픈소스 사이드 프로젝트",
+      "period": "2025.12 ~ 2025.12 (운영 중)",
+      "domain": [
+        "오픈소스",
+        "개발자도구",
+        "위젯",
+        "SVG 렌더링",
+        "서버리스",
+        "스코어링"
+      ],
+      "stack": [
+        "서버사이드 SVG 문자열 생성 (템플릿 리터럴)",
+        "SVG CSS 애니메이션(fadeIn/slideIn)",
+        "SMIL animate",
+        "테마 토큰 9종",
+        "TypeScript 5.9",
+        "Hono 4",
+        "@hono/node-server",
+        "Node.js 서버리스 핸들러(IncomingMessage/ServerResponse)",
+        "GitHub REST API",
+        "GitHub GraphQL API",
+        "Vitest 4",
+        "Vercel Serverless Functions",
+        "esbuild 0.27 (CJS 번들)",
+        "GitHub Actions CI",
+        "Dependabot",
+        "pnpm"
+      ],
+      "role": "1인 개발. 티어 점수 산출 로직(CDF 가중합·디비전 매핑) 설계와 구현, GitHub REST/GraphQL 연동부 작성, SVG 카드 렌더러(엠블럼·스탯바·프리미엄 효과·9종 테마) 구현, Vercel 서버리스 배포 파이프라인(esbuild 번들 + 산출물 커밋) 구성, GitHub Actions CI(타입체크 + vitest) 및 Dependabot·이슈/PR 템플릿 설정, README 문서 작성",
+      "problem": "GitHub 프로필 README에 붙이는 통계 카드는 숫자를 나열할 뿐 '이게 잘하는 건지'를 알려주지 않는다. 커밋·스타·PR·팔로워·이슈 5개 지표를 하나의 상대적 순위(Iron~Challenger, 31개 구간)로 환산해 한 장의 SVG로 보여주는 것이 목표였다.",
+      "decisions": [
+        {
+          "선택": "Next.js로 시작한 프로젝트를 하루 만에 Hono + 순수 SVG 문자열 생성으로 갈아엎었다 (커밋 e292625 → 7e3508b)",
+          "대안": "Next.js Route Handler를 그대로 두고 이미지 응답만 추가",
+          "이유": "실제 라우트가 `/api/tier` 하나뿐이고 반환값이 `image/svg+xml` 문자열이다. 페이지·번들러·React 런타임이 전혀 쓰이지 않는데 프레임워크 전체를 서버리스 함수에 싣게 된다.",
+          "트레이드오프": "라우팅·검증·에러 처리를 직접 짜야 하고, JSX 대신 템플릿 리터럴로 SVG를 조립하게 되어 렌더러 파일(render-tier-card.ts 124줄 등)이 문자열 덩어리로 남았다. 마크업 오타를 타입 시스템이 잡아주지 못한다."
+        },
+        {
+          "선택": "Vercel Edge Runtime을 포기하고 Node.js 서버리스 함수로 전환한 뒤, esbuild 번들 산출물 `api/tier.js`를 저장소에 커밋해 배포한다 (c06baab에서 .gitignore에서 제외, be4ce90/b180e7b/851154a에서 런타임 전환)",
+          "대안": "Vercel의 buildCommand로 배포 시점에 빌드시키기 / Edge Runtime을 계속 붙들기",
+          "이유": "Edge 경로 매칭·모듈 포맷 문제로 디버깅 커밋이 10여 개 쌓였고(f4f4030 '디버그: 최소 Edge Function 테스트', 2f21c13 '디버그 에러 메시지 노출' 등), 빌드 산출물을 직접 커밋하니 '무엇이 배포되는지'가 눈에 보이는 파일 하나로 고정됐다. `type: module`도 CJS 호환을 위해 제거했다(851154a).",
+          "트레이드오프": "947줄짜리 생성 파일이 저장소에 들어와 diff를 오염시키고, 소스를 고치고 빌드를 잊으면 배포본과 소스가 조용히 어긋난다. CI가 타입체크·테스트는 돌리지만 '번들이 최신인지'는 검사하지 않아 이 위험은 남아 있다. Edge의 콜드스타트 이점도 포기했다."
+        },
+        {
+          "선택": "점수 계산을 `f(x) = x / (1 + x)` 형태의 정규화 함수와 지표별 중앙값·가중치 테이블로 만들고, 네트워크·환경변수에 의존하지 않는 순수 함수로 `features/tier/lib`에 격리했다",
+          "대안": "지표별 하드코딩 구간(예: 커밋 1000개 이상이면 Gold)으로 임계값 테이블만 두기",
+          "이유": "구간 하드코딩은 경계에서 계단처럼 튀고 지표를 추가할 때마다 표 전체를 다시 손봐야 한다. 중앙값으로 나눈 뒤 0~1로 눌러주면 상위값에서 자연스럽게 수확체감이 생기고, 새 지표는 MEDIANS/WEIGHTS에 한 줄만 추가하면 된다. 순수 함수라 GitHub API 없이 테스트가 된다. 중앙값·가중치는 감이 아니라 실제 GitHub 사용자 표본을 수집해 분포를 확인하고, 합성 사용자 시뮬레이션으로 티어 분포가 한쪽에 몰리지 않는지 검증한 뒤 정했다.",
+          "트레이드오프": "표본 조사와 시뮬레이션은 실제로 수행했지만 그 스크립트와 데이터를 저장소에 남기지 않아, 지금은 상수가 근거 없는 매직넘버처럼 보인다. 값을 바꿨을 때 무엇이 좋아졌는지 재현할 방법이 없다는 뜻이라 실질적으로는 검증하지 않은 것과 같은 상태다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "커밋 수 / 커밋 일자",
+          "값": "65개, 전부 2026-03-20",
+          "재현": "git log --oneline | wc -l → 65 / git log --format='%ad' --date=short | sort -u → 2026-03-20 한 줄"
+        },
+        {
+          "항목": "테스트",
+          "값": "45개 / 6파일 전부 통과",
+          "재현": "npx vitest run → Test Files 6 passed (6) / Tests 45 passed (45)"
+        },
+        {
+          "항목": "소스 규모",
+          "값": "src TypeScript 40개 파일, 테스트 제외 1,193줄 + 테스트 322줄",
+          "재현": "git ls-files 'src/**/*.ts' | wc -l → 40 / wc -l $(git ls-files 'src/**/*.ts' | grep -v __tests__) → 1193 / wc -l src/__tests__/*.ts → 322"
+        },
+        {
+          "항목": "티어 구간 수",
+          "값": "31개 (10등급, Diamond 이하 7등급은 IV~I 디비전)",
+          "재현": "grep -c '  { name:' src/shared/constants/tier.ts → 31"
+        },
+        {
+          "항목": "테마 수",
+          "값": "9종",
+          "재현": "grep -cE '^  [a-z]+: \\{' src/shared/constants/themes.ts → 9"
+        },
+        {
+          "항목": "런타임 의존성",
+          "값": "3개 (hono, @hono/node-server, esbuild)",
+          "재현": "jq '.dependencies|keys' package.json"
+        },
+        {
+          "항목": "커밋된 배포 번들 크기",
+          "값": "api/tier.js 947줄",
+          "재현": "wc -l api/tier.js → 947"
+        },
+        {
+          "항목": "저장소에 커밋된 시크릿",
+          "값": "0건",
+          "재현": "grep -rEn 'gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' . --exclude-dir=node_modules --exclude-dir=.git → 출력 없음"
+        }
+      ],
+      "scale": "소스 1,193줄 · 테스트 45개 · 티어 구간 31개 · 테마 9종"
+    },
+    {
+      "id": "booking-settlement",
+      "tier": "detail",
+      "label": "멀티테넌트 예약·결제·정산 솔루션 코어",
+      "period": "2025.11 ~ 2026.09 (백엔드 완료, 프론트 착수 전)",
+      "domain": [
+        "예약",
+        "예약시스템",
+        "부킹",
+        "정산",
+        "수수료정산",
+        "파트너정산",
+        "결제연동",
+        "PG연동",
+        "웹훅",
+        "멀티테넌트",
+        "SaaS",
+        "백오피스",
+        "관리자페이지",
+        "회원권",
+        "횟수권",
+        "환불",
+        "대사",
+        "원장",
+        "동시성제어",
+        "필라테스",
+        "공유미용실",
+        "스포츠센터",
+        "골프장",
+        "학원"
+      ],
+      "stack": [
+        "Java 21",
+        "Spring Boot 4.1.1",
+        "Spring Security (세션 + 쿠키, CSRF)",
+        "Spring JDBC (JdbcTemplate)",
+        "PostgreSQL 17 (btree_gist, numeric, 제약 트리거)",
+        "Flyway (마이그레이션 14개)",
+        "Gradle 9.7.1 멀티모듈 (Wrapper)",
+        "Lombok",
+        "JUnit 5 / AssertJ",
+        "Testcontainers (PostgreSQL)",
+        "토스페이먼츠 (테스트 키)",
+        "Docker (Testcontainers 실행 기반)",
+        "GitHub Issues / PR 기반 이슈 추적"
+      ],
+      "role": "설계·백엔드 단독 개발. 구체적으로 (1) 제품 방향 결정을 위한 도메인 전수조사 — 예약·정산 구조를 쓰는 여러 업종의 요구사항 1,300건을 수집·집계해 도메인 빈도·규모·스택 수요를 근거로 '예약+정산' 코어를 선택, (2) 도메인 모델링 — 예약 상태 머신, 복식 원장, 크레딧(회원권), 정산 회차·이월, 대사 불일치 5유형 설계, (3) 동시성 제어 — PostgreSQL 배타 제약(EXCLUDE USING gist) 기반 좌석 분해 점유와 홀드 승격, (4) 결제 파이프라인 — PG 어댑터 추상화, 웹훅 멱등 관문, 승인·커밋 불일치 복구 배치, 부분환불 누계 상한, (5) 정산 엔진 — 파트너 요율 기간 스냅샷, 매출 인식, PG 수수료 배치, 회차 확정과 확정 후 환불 이월, (6) 인증·인가 — 세션+쿠키, 역할 4종, 테넌트 격리 판정을 한 곳(TenantGuard)으로 통합, (7) 코어/프리셋 분리 — 확장점 설계와 2차 프리셋으로 '코어 커밋 0건' 실증, (8) 검증 체계 — 되돌리기(뮤테이션) 검증과 전수 게이트 테스트 설계. 프론트엔드는 아직 착수 전이라 이 저장소에 코드가 없다.",
+      "problem": "시설·인력의 시간 슬롯을 팔고 받은 돈을 강사·파트너·지점에 나누는 사업자를 위한 시스템을 만들되, 한 업종에 고정된 시스템이 아니라 업종을 갈아끼울 수 있는 재사용 코어로 만드는 것이 목표였다. 예약만 하는 제품은 흔하지만 대부분 정산 지점에서 멈추고 사업자는 엑셀로 돌아간다. 기술적으로는 (a) 같은 시간·같은 좌석을 두 명이 잡는 중복 예약, (b) PG 웹훅 중복 발송으로 인한 원장 이중 반영, (c) 승인은 됐는데 우리 DB 커밋이 실패한 불일치, (d) 부분 환불이 원금을 넘는 초과 환불, (e) 확정된 정산 회차에 뒤늦게 도착한 환불의 이월 처리가 핵심 난제였다. 이들은 전부 틀렸을 때 조용히 번지고 발견 시점엔 원장이 이미 오염돼 있어 되돌리기가 어렵다.",
+      "decisions": [
+        {
+          "선택": "슬롯 중복 예약 방지를 애플리케이션 락이나 SELECT ... FOR UPDATE가 아니라 PostgreSQL의 `EXCLUDE USING gist (resource_id WITH =, seat_no WITH =, during WITH &&)` 배타 제약으로 DB에 맡겼다. 좌석은 capacity만큼 행으로 분해해 넣고, 홀드→예약 승격은 두 문장이 아니라 UPDATE 한 문장으로 처리했다.",
+          "대안": "비관적 락(SELECT ... FOR UPDATE)으로 리소스 행을 잡고 애플리케이션에서 겹침을 계산하는 방식, 또는 Redis 분산 락.",
+          "이유": "중복 예약은 오프라인에서 고객 두 명이 같은 시간에 오는 사고가 되므로 애플리케이션 로직이 아니라 DB 불변식으로 막아야 한다. 승격을 UPDATE 한 문장으로 둔 이유는, 배타 제약의 대상 상태 목록에 HELD와 CONFIRMED가 둘 다 있어서 점유 집합이 바뀌지 않기 때문이다 — '홀드 만료 + 예약 INSERT' 두 문장으로 짜면 그 틈에 남이 가져가는데, 그때는 이미 PG 승인이 끝나 되돌릴 수 없다.",
+          "트레이드오프": "배타 제약은 즉시 거부가 아니라 **블로킹한다** — 충돌 상대가 커밋/롤백할 때까지 기다린다(실측: 상대가 5초 뒤 커밋하면 4초 대기 후 거부). 그래서 모든 요청이 같은 좌석을 먼저 노리면 사실상 직렬화되고 커넥션 풀이 대기 스레드로 가득 찬다. 시작 좌석 무작위 분산과 `lock_timeout`을 함께 넣어야 했다. 또 실패한 INSERT가 트랜잭션 전체를 죽이므로(`current transaction is aborted`) '실패하면 다음 좌석' 루프를 한 트랜잭션 안에서 짤 수 없어 시도마다 새 트랜잭션을 여는 구조가 됐다. 그리고 락 대기 초과(55P03)는 '찼다'가 아니라 '모른다'인데, 이를 만석으로 뭉개면 정원이 남았는데 409가 나가는 오판이 생긴다.",
+          "재현": "grep -n 'EXCLUDE USING gist' api/src/main/resources/db/migration/V1__init.sql → 127행"
+        },
+        {
+          "선택": "결제 반영 순서를 'PENDING 커밋 → PG 승인(트랜잭션 밖) → 반영(트랜잭션 1개)'으로 고정하고, 웹훅 멱등은 `UNIQUE (provider, event_id)` 제약을 관문으로 두되 **처리 로직을 인자로 받는 형태**로 감쌌다. `boolean isDuplicate()`를 공개하지 않았다. 환불도 같은 형태로 '예약(누계 증가) → PG → 확정' 순서를 강제했다.",
+          "대안": "PG를 먼저 호출하고 성공하면 DB에 기록하는 방식(가장 단순), 멱등 판정을 `if (isDuplicate()) return;`으로 호출부마다 푸는 방식.",
+          "이유": "PENDING 커밋이 없으면 '승인 성공 + 반영 실패' 시 우리 DB에 흔적이 없어 복구할 대상 자체가 존재하지 않는다. 멱등 관문이 boolean을 공개하면 호출부마다 if를 풀어 쓰게 되고, 새 핸들러 하나가 빼먹으면 조용히 중복 반영된다 — 에러가 안 나므로 아무도 모른다. 환불 순서를 뒤집은 이유는 실측으로 드러났다: PG를 먼저 부르고 상한을 나중에 검사하면 동시 요청 20건이 **전부 PG에 도달해 실제로 돈이 나가고** 우리 DB는 4건만 받아들인다. 원장은 깨끗한데 PG에서 돈이 빠져나간 상태다.",
+          "트레이드오프": "트랜잭션이 세 조각으로 나뉘어 중간 상태(PENDING)가 DB에 남고, 그 상태를 청소할 복구 배치가 별도로 필요해졌다. 복구 배치는 '오래 PENDING이면 실패겠지'라고 우리 DB만 보고 판단할 수 없어 반드시 PG에 재조회해야 하고(그러지 않으면 승인된 결제를 실패로 기록해 대사가 어긋난다), PG 취소 내역에는 우리 refund 행을 가리키는 식별자가 없어서 부분 환불이 여러 건이고 금액까지 같으면 **어느 취소가 내 것인지 원리적으로 알 수 없다**. 그래서 배치를 '구멍을 메우는 것'이 아니라 '애매하지 않은 것과 애매한 것을 가르는 것'으로 설계하고, 애매한 건은 자동 판정을 포기해 수동 검토로 남기는 컬럼을 따로 뒀다.",
+          "재현": "grep -n 'payment_webhook_event_id_unique' api/src/main/resources/db/migration/V2__payment_and_ledger.sql → 111행"
+        },
+        {
+          "선택": "정산 금액 계산과 대사 판정을 Spring 의존이 전혀 없는 순수 함수(`SettlementCalculation`, `ReconciliationMatcher`)로 `core-domain`에 분리했다. 반올림은 파트너 몫과 원천징수 두 지점에서만, 둘 다 `RoundingMode.FLOOR`로 한다.",
+          "대안": "정산 계산을 서비스 레이어나 SQL 집계로 두는 방식(조회와 계산을 한 번에 끝낼 수 있어 더 짧다).",
+          "이유": "되돌리기(뮤테이션) 검증이 제값을 하려면 판정이 단독으로 결과를 결정해야 한다. 계산이 어댑터에 섞여 있으면 DB CHECK나 상태 머신이 같은 결과를 내주기 때문에, 계산 로직을 지워도 테스트가 초록으로 남는다. 실제로 순수 함수로 뽑은 뒤 판정 분기를 하나씩 지웠더니 **전부 갈렸다**. FLOOR로 통일한 이유는 파트너 몫과 원천징수를 모두 내리면 플랫폼 몫이 나머지를 흡수해 '지급 + 원천세 + 플랫폼 = 기준액'이 항상 성립하기 때문이다 — 100건을 합산해도 1원이 새지 않는다.",
+          "트레이드오프": "계산에 필요한 값을 전부 인자로 모아 넘겨야 해서 조회 쿼리와 DTO가 늘었고, 여러 서브쿼리가 같은 질문에 답하게 되면서 그 기준이 미세하게 갈리는 새로운 실패 모드가 생겼다 — 실제로 `settled_*`와 `last_refund`가 하나는 DRAFT 제외, 하나는 포함이었을 때 그 비대칭이 특정 항목 금액을 정확히 두 번 깎았다(파트너 몫 -198 vs 정답 2,202). 예외도 제약 위반도 없이 지급액만 틀리고, 항목 **개수**는 어느 구현에서도 같아서 개수로는 안 보이고 합계로 봐야 갈렸다. 이 계열 버그를 잡느라 이 슬라이스는 리뷰 4회전이 필요했고, 매 회전마다 직전 수정이 만든 버그가 나왔다.",
+          "재현": "ls core-domain/src/main/java/kr/hyunwoo/booking/domain/settlement/SettlementCalculation.java core-domain/src/main/java/kr/hyunwoo/booking/domain/reconciliation/ReconciliationMatcher.java"
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "테스트 수 (전체 통과, 실패·에러 0)",
+          "값": "437건 (core-domain 146 / core-app 30 / api 258 / preset-golf 3)",
+          "재현": "./gradlew clean build 후 `grep -ho 'tests=\"[0-9]*\"' */build/test-results/test/*.xml | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s}'` → 437, 같은 방식으로 failures/errors 합계 → 0"
+        },
+        {
+          "항목": "코드 규모 (main / test)",
+          "값": "main 15,993줄 187파일 / test 14,338줄 53파일",
+          "재현": "find . -name '*.java' -path '*/src/main/*' -exec cat {} + | wc -l → 15993 · find . -name '*.java' -path '*/src/test/*' -exec cat {} + | wc -l → 14338"
+        },
+        {
+          "항목": "DB 마이그레이션",
+          "값": "Flyway 14개 (V1~V14)",
+          "재현": "ls api/src/main/resources/db/migration/*.sql | wc -l → 14"
+        },
+        {
+          "항목": "REST 엔드포인트",
+          "값": "32개 (컨트롤러 11개)",
+          "재현": "grep -rhcE '@(Get|Post|Put|Patch|Delete)Mapping' --include='*.java' api/src/main | awk '{s+=$1} END {print s}' → 32 · find . -name '*Controller.java' -path '*/src/main/*' | wc -l → 11"
+        },
+        {
+          "항목": "동시성 검증 테스트",
+          "값": "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증",
+          "재현": "grep -rln 'CountDownLatch\\|ExecutorService' --include='*.java' */src/test | grep -v build → ReservationConcurrencyTest, CreditConcurrencyTest, RefundConcurrencyTest, WebhookIdempotencyTest"
+        },
+        {
+          "항목": "전수 게이트 테스트 (규칙이 실제로 배선됐는지 소스를 훑어 판정)",
+          "값": "5개 — 보안 규칙·테넌트 격리·@Valid·프리셋 격리·PG 어댑터 계약",
+          "재현": "find . -name '*CoverageTest.java' -o -name '*ContractTest.java' | grep -v build → SecurityRuleCoverageTest, TenantGuardCoverageTest, ValidCoverageTest, TossPaymentGatewayContractTest, GolfPresetContractTest"
+        },
+        {
+          "항목": "코어/프리셋 분리 실증 (2차 프리셋 추가 시 코어 수정 없음)",
+          "값": "preset-golf는 자바 파일 3개(용어·정책·계약테스트)로 끝났고, api 모듈은 preset-fitness만 의존한다",
+          "재현": "find preset-golf -name '*.java' | grep -v build | wc -l → 3 · grep -n 'preset' api/build.gradle → runtimeOnly project(':preset-fitness') 한 줄뿐"
+        },
+        {
+          "항목": "제품 방향 결정에 쓴 도메인 조사 표본",
+          "값": "요구사항 1,300건 (두 개의 수집 경로: 1,000건 + 300건)",
+          "재현": "python3 -c \"import json; print(len(json.load(open('research/projects.json'))), len(json.load(open('research/projects_term.json'))))\" → 1000 300"
+        }
+      ],
+      "scale": "Java 21 · Spring Boot 4 · PostgreSQL 17 멀티모듈 · main 15,993줄 · 테스트 437건 · REST 32개 · 마이그레이션 14개"
+    },
+    {
+      "id": "qs-fe",
+      "tier": "detail",
+      "label": "장외 파생상품 견적 요청(RFQ) 운영 콘솔 — 프론트엔드",
+      "period": "2025.07 ~ 2025.12",
+      "domain": [
+        "금융",
+        "장외 파생상품",
+        "트레이딩",
+        "어드민",
+        "실시간(SSE)",
+        "대용량 테이블"
+      ],
+      "stack": [
+        "React 19",
+        "TypeScript 5.9 (strict)",
+        "Vite 7",
+        "TanStack Router (파일 기반 라우팅, 자동 코드 스플리팅)",
+        "TanStack Query 5",
+        "TanStack Table 8",
+        "TanStack Virtual 3",
+        "Zustand 5 (persist)",
+        "React Hook Form + Zod 4",
+        "ky",
+        "Tailwind CSS 4",
+        "shadcn/ui (Radix UI)",
+        "dnd-kit",
+        "date-fns",
+        "sonner",
+        "lottie-react",
+        "React Compiler (babel-plugin-react-compiler)",
+        "pnpm",
+        "Biome",
+        "Husky + lint-staged + commitlint",
+        "Commitizen"
+      ],
+      "role": "프론트엔드 단독 개발. 실제로 손댄 영역은 다음과 같다 — (1) TanStack Router 파일 기반 라우팅 구조 설계와 인증·메뉴 권한 이중 가드(beforeLoad에서 로그인 여부, loader에서 서버가 내려준 메뉴 목록으로 경로 접근 판정), (2) ky 기반 HTTP 클라이언트 3종(API/Auth/SSE) 구성과 전역 에러·세션 만료 처리, (3) 로그인·2FA·비밀번호 재설정 등 인증 플로우 UI와 요청 본문 AES-CBC 암호화 유틸, (4) TanStack Query 캐시 전략 설계(쿼리키 팩토리, 용도별 staleTime 프리셋 4종, 무한 쿼리 낙관적 업데이트/롤백), (5) 서버 메타데이터 응답으로 검색 필드와 RFQ 템플릿 폼을 그리는 동적 렌더링, (6) TanStack Table + Virtual 기반 가상화 무한 스크롤 테이블 공용 컴포넌트, (7) SSE 스트림을 직접 파싱하는 실시간 통계 바, (8) 데스크톱/모바일 분기 레이아웃과 모바일 허용 경로 제한, (9) Biome·Husky·lint-staged·commitlint 품질 게이트와 브랜치·커밋 컨벤션 문서화. 백엔드 API 스펙과 DB 스키마 설계, 배포·서버 인프라 구성에는 관여하지 않았다 — 전달받은 스펙에 맞춰 프론트엔드만 구현했다.",
+      "problem": "FCN·스텝다운 같은 장외 파생상품 견적 요청이 이메일로 오가면서, 상품 파라미터(기초자산, KO/KI 배리어, 쿠폰, 리자드 조건 등)를 사람이 옮겨 적고 진행 상태는 메일함에 흩어져 있었다. 수신 메일에서 뽑아낸 RFQ/오더를 한 화면에서 조회·검색하고, 템플릿으로 조건 조합을 만들어 다수 상대방에게 한 번에 발송하고, 회신된 호가를 비교(Price Discovery)하고, 운영자가 사용자·IP·발신 제어와 시스템 정지까지 관리할 수 있는 웹 콘솔을 만드는 것이 목표였다.",
+      "decisions": [
+        {
+          "선택": "검색 가능 필드와 RFQ 템플릿 폼을 서버 메타데이터 응답(`/v1/meta/...`)으로 런타임에 렌더링하고, 테이블 컬럼 헤더는 프론트 상수로 남기는 혼합 방식",
+          "대안": "모든 필드를 프론트에 하드코딩하거나, 반대로 컬럼 헤더까지 전부 서버 메타데이터로 내리는 방식",
+          "이유": "상품군(fcn/stepdown/common)마다 파라미터 구성이 다르고 운영 중에도 필드가 추가된다. 필드 하나 늘 때마다 프론트를 다시 배포하지 않으려고 폼과 검색 조건은 서버가 내려주는 `{key, label, type, options, range, required}` 스펙으로 그렸다. 반대로 테이블은 표시 순서·정렬 허용 여부·셀 렌더러(뱃지 색, 퍼센트, 날짜 포맷)가 화면마다 달라서 서버 스펙으로 표현하기 어려웠고, 상수 파일로 두는 편이 읽기 쉬웠다.",
+          "트레이드오프": "메타 스키마가 바뀌면 타입 체커가 못 잡고 런타임에 조용히 빈 폼이 된다. 라우트 loader에서 `Promise.allSettled`로 메타 실패를 격리하고 빈 배열 기본값을 두어 화면이 죽지는 않게 했지만, 실패해도 사용자에게는 '검색 조건이 없는 화면'으로만 보인다. 그리고 컬럼 상수(header-display-name.ts 460줄)와 서버 메타가 이원화되어, 필드 하나를 추가할 때 서버만 고치면 되는 경우와 양쪽을 같이 고쳐야 하는 경우가 섞여 있다."
+        },
+        {
+          "선택": "페이지네이션 대신 무한 스크롤 + 행 가상화를 적용한 공용 테이블 컴포넌트 하나로 통일 (TanStack Table + TanStack Virtual + IntersectionObserver)",
+          "대안": "서버 페이지네이션 + 페이지 번호 UI, 또는 화면마다 각자 테이블을 구현",
+          "이유": "RFQ·오더·메일·My RFQ·Price Discovery·설정 화면들이 전부 '컬럼 30여 개짜리 목록 + 검색 + 탭 + 상세 시트'라는 같은 형태였고, 트레이딩 화면 특성상 페이지를 끊지 않고 위아래로 훑는 사용 패턴이었다. 공용 컴포넌트(`InfiniteDataTable`)와 페이지 훅(`useDataTablePage`)으로 뽑아 화면별 코드를 컬럼 정의와 핸들러만 남겼다.",
+          "트레이드오프": "가상화 때문에 행 높이를 고정값으로 못 박아야 했고(가변 높이 실험 후 되돌림), IntersectionObserver와 스크롤 핸들러 두 경로가 동시에 `fetchNextPage`를 부르는 문제를 300ms 디바운스 + 500ms 재진입 플래그로 막았다. 타이밍에 의존하는 방어라 근본 해법은 아니다. 브라우저 Ctrl+F 검색, 특정 페이지 북마크, 인쇄는 포기했다."
+        },
+        {
+          "선택": "세션 만료·인증 실패를 각 호출부가 아니라 ky 훅(`afterResponse`/`beforeError`)에서 비즈니스 에러코드로 판정해 강제 로그아웃까지 한 곳에서 처리",
+          "대안": "각 쿼리/뮤테이션의 onError에서 개별 처리하거나, HTTP 401/403만 보고 판단",
+          "이유": "백엔드가 HTTP 200에 응답 본문 `code` 필드로 인증 실패를 내려주는 경로가 있어서 상태 코드만으로는 못 잡는다. 엔드포인트 51개에 같은 분기를 복붙하는 대신 클라이언트 공통 옵션 한 곳에 모아, 성공 응답과 에러 응답 양쪽에서 같은 코드 집합을 검사하도록 했다.",
+          "트레이드오프": "`shared/lib/api/client.ts`가 `features/auth`의 Zustand 스토어를 직접 import해서 의존 방향이 뒤집혔다(별도 문서에 참조 지점 15곳을 채증해 두었다). 로그아웃 후 이동을 라우터가 아니라 `window.location.href`로 하기 때문에 SPA 상태를 통째로 버린다 — 확실하다는 장점과 느리다는 단점을 맞바꾼 선택이다. 그리고 성공 응답마다 `response.clone()` 후 JSON을 한 번 더 파싱하는 비용이 붙는다."
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "실제 참여 기간 / 커밋 구간",
+          "값": "참여 2025-07 ~ 2025-12. 커밋은 283건이 2025-10-31 ~ 2025-12-10(41일)에 집중",
+          "재현": "git log --oneline | wc -l → 283 / git log --format='%ad' --date=short | sed -n '1p;$p' (참여 기간 자체는 git으로 확인 불가, 사용자 확인)"
+        },
+        {
+          "항목": "소스 규모",
+          "값": "TypeScript/TSX 411개 파일, 24,498줄 (자동 생성 routeTree.gen.ts 664줄 포함)",
+          "재현": "git ls-files 'src/**/*.ts' 'src/**/*.tsx' | wc -l; git ls-files 'src/**/*.ts' 'src/**/*.tsx' | xargs cat | wc -l"
+        },
+        {
+          "항목": "라우트 / feature 모듈 수",
+          "값": "라우트 파일 29개, feature 모듈 7개(auth/meta/operation/profile/settings/sse/tools)",
+          "재현": "git ls-files 'src/app/routes/*' | wc -l; git ls-files 'src/features/*' | awk -F/ '{print $3}' | sort -u | wc -l"
+        },
+        {
+          "항목": "연동한 API 엔드포인트 경로 수",
+          "값": "51개 (auth 14 / operation 9 / tools 11 / settings 11 / meta 4 / sse 2)",
+          "재현": "grep -rhoE \"'v1/[a-zA-Z0-9/_-]+'\" src/features/*/api/endpoint*.ts | sort -u | wc -l"
+        },
+        {
+          "항목": "Zod 스키마 / shadcn 컴포넌트 수",
+          "값": "Zod 스키마 18개, shadcn/ui 컴포넌트 35개",
+          "재현": "git ls-files | grep -c '\\.schema\\.ts'; git ls-files 'src/shared/components/ui/*.tsx' | wc -l"
+        },
+        {
+          "항목": "단독 개발 여부",
+          "값": "커밋 283건 중 282건이 본인 계정",
+          "재현": "git log --format='%ae' | sort | uniq -c | sort -rn"
+        }
+      ],
+      "scale": "소스 24,498줄 · 파일 411개 · 라우트 29개 · 연동 API 51개"
+    }
+  ],
+  "summary": [
+    {
+      "id": "payment-gateway-api",
+      "tier": "summary",
+      "label": "결제 대행 서비스 백엔드 — 카드 결제와 계좌 송금 사이의 상태·정합성 설계",
+      "period": "2026.07 ~ 2026.09 (운영 중)",
+      "domain": [
+        "결제",
+        "PG 연동",
+        "송금/정산",
+        "핀테크",
+        "백엔드",
+        "상태머신",
+        "멱등성",
+        "개인정보 암호화",
+        "규제 대응",
+        "관리자 심사"
+      ],
+      "stack": [
+        "TypeScript",
+        "NestJS",
+        "Prisma (pg adapter)",
+        "PostgreSQL",
+        "JWT",
+        "@nestjs/schedule",
+        "@nestjs/swagger",
+        "@nestjs/terminus",
+        "argon2",
+        "AES-256-GCM (node:crypto)",
+        "Redis",
+        "Jest (단위 + e2e)",
+        "Turborepo + pnpm workspace",
+        "Docker Compose",
+        "AWS S3 (증빙 파일 보관)",
+        "Husky + commitlint"
+      ]
+    },
+    {
+      "id": "game-crawler",
+      "tier": "summary",
+      "label": "게임 계정 거래 매물 통합 수집 데스크톱 앱",
+      "period": "2026.07 ~ 2026.07",
+      "domain": [
+        "데이터 수집",
+        "데스크톱 앱",
+        "자동화 도구",
+        "비교/집계",
+        "엑셀 내보내기"
+      ],
+      "stack": [
+        "Python 3.12",
+        "Tkinter / ttk",
+        "openpyxl (xlsx 내보내기)",
+        "asyncio",
+        "Playwright (Chromium, async API)",
+        "httpx",
+        "dataclasses 기반 도메인 모델",
+        "uv",
+        "PyInstaller",
+        "GitHub Actions (macos-latest / windows-latest 매트릭스)",
+        "GitHub Releases 자동 배포"
+      ]
+    },
+    {
+      "id": "cafe24-playbook",
+      "tier": "summary",
+      "label": "Cafe24 Playbook — 카페24 외주 지식 베이스와 개인통관고유부호(PCCC) 실시간 검증 시스템",
+      "period": "2026.05 ~ 2026.05 (운영 중)",
+      "domain": [
+        "커머스",
+        "카페24",
+        "쇼핑몰 구축",
+        "외주 지식베이스",
+        "공공 API 연동",
+        "관세/통관",
+        "보일러플레이트"
+      ],
+      "stack": [
+        "Vanilla JavaScript (ES5 호환, 의존성 없음)",
+        "Fetch API + AbortController",
+        "카페24 스마트디자인 스킨 템플릿 (Smarty 기반 {$var}, <!--@section-->)",
+        "CSS (카페24 전역 리셋 오버라이드 포함)",
+        "바닐라 JavaScript (카페24 주문서 스킨에 직접 삽입, 프레임워크·빌드 도구 없음)",
+        "Python 3.11+",
+        "FastAPI",
+        "httpx (async)",
+        "pydantic v2 / pydantic-settings",
+        "xmltodict",
+        "tenacity",
+        "pytest / pytest-asyncio / respx",
+        "uv",
+        "uvicorn",
+        "pydantic v2",
+        "pydantic-settings v2",
+        "pytest",
+        "pytest-asyncio",
+        "respx",
+        "Docker Compose",
+        "Cloudflare Tunnel + Cloudflare DNS",
+        "전용 VPS",
+        "카페24 파일 업로더 CDN (쿼리 파라미터 기반 캐시 버저닝)",
+        "Docker (멀티스테이지, python:3.12-slim)",
+        "docker compose",
+        "Vultr (운영 배포처)"
+      ]
+    },
+    {
+      "id": "flow-logistics-frontend",
+      "tier": "summary",
+      "label": "공장 물류 이동 관리 어드민",
+      "period": "2026.01 ~ 2026.06 (계약 종료)",
+      "domain": [
+        "물류",
+        "제조",
+        "스마트팩토리",
+        "사내툴",
+        "어드민",
+        "실시간 모니터링",
+        "노드 에디터"
+      ],
+      "stack": [
+        "Next.js 16 (App Router, output: standalone)",
+        "React 19 + React Compiler",
+        "TypeScript 5.9",
+        "TanStack React Query 5",
+        "TanStack React Table 8",
+        "Zustand 5",
+        "Ky",
+        "React Hook Form + Zod 3",
+        "React Aria Components",
+        "Tailwind CSS 4",
+        "@xyflow/react (React Flow) 12",
+        "Recharts 3",
+        "next-intl 4",
+        "Carbon Icons",
+        "sonner",
+        "Biome 2",
+        "Vitest 4 + Testing Library",
+        "Docker (multi-stage, node:22-alpine, Next.js standalone)",
+        "docker-compose (로컬 / stage / 운영 3벌 분리)",
+        "GitHub Actions (self-hosted runner, 릴리즈 태그 트리거 CD)",
+        "Keycloak",
+        "pnpm 10"
+      ]
+    },
+    {
+      "id": "past-satellite-saas",
+      "tier": "summary",
+      "label": "위성영상 B2B SaaS 플랫폼 — 9개 앱 Turborepo 모노레포",
+      "period": "2026.01 ~ 2026.03 (계약 종료)",
+      "domain": [
+        "B2B SaaS",
+        "지리공간",
+        "위성영상",
+        "지도",
+        "모노레포",
+        "SSO",
+        "결제 연동"
+      ],
+      "stack": [
+        "React 19",
+        "TypeScript",
+        "Vite 7",
+        "TanStack Router",
+        "TanStack Query",
+        "TanStack Table",
+        "TanStack Virtual",
+        "Zustand",
+        "Tailwind CSS",
+        "shadcn/ui",
+        "MapLibre GL",
+        "Biome",
+        "Turborepo (Remote Cache)",
+        "pnpm",
+        "Keycloak"
+      ]
+    },
+    {
+      "id": "past-backoffice-ds",
+      "tier": "summary",
+      "label": "대기업 백오피스 공통 컴포넌트·디자인 시스템",
+      "period": "2025.08 ~ 2025.12",
+      "domain": [
+        "디자인시스템",
+        "컴포넌트 라이브러리",
+        "백오피스",
+        "관리자",
+        "디자인 토큰",
+        "대용량 테이블",
+        "폼 검증",
+        "npm 패키지",
+        "사내 레지스트리",
+        "대기업 SI"
+      ],
+      "stack": [
+        "React",
+        "TypeScript",
+        "디자인 토큰",
+        "공통 컴포넌트 라이브러리",
+        "사내 npm 레지스트리 (패키지 배포)"
+      ]
+    }
+  ]
+}

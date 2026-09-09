@@ -1,0 +1,51 @@
+#!/bin/bash
+# 공개 검사 게이트. 이 저장소는 PUBLIC 이라 커밋이 곧 공개다.
+#
+# 텍스트 지시가 아니라 훅으로 막는다 — 지시는 다음 세션·다른 도구·압박 상황에서
+# 조용히 스킵되지만 훅은 그럴 수 없다.
+#
+# 설치: git config core.hooksPath .githooks
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+fail=0
+
+# 1) docs/ 와 .env 계열은 애초에 스테이지에 오르면 안 된다.
+#
+# ⚠️ `--name-only` 는 한글·비ASCII 파일명을 `"docs/\352\270\260..."` 처럼
+#    따옴표 + 8진 이스케이프로 내놓는다. 그대로 패턴 매칭하면 `docs/*` 가
+#    안 맞아 **기획서가 그냥 커밋된다**(실측 2026-09-09: 실제로 통과했다).
+#    `-z` 로 NUL 구분 원문 경로를 받는다.
+staged=$(git diff --cached --name-only --diff-filter=ACM -z | tr '\0' '\n')
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  case "$f" in
+    docs/*)
+      echo "🔴 docs/ 는 커밋하지 않는다 (개인 도메인이 언급된다): $f"; fail=1 ;;
+    .env|.env.*)
+      [ "$f" = ".env.example" ] || { echo "🔴 .env 계열은 커밋하지 않는다: $f"; fail=1; } ;;
+    .wip/*)
+      echo "🔴 .wip/ 는 커밋하지 않는다: $f"; fail=1 ;;
+  esac
+done <<< "$staged"
+
+# 2) 뮤테이션 잔재가 섞이지 않았는가.
+#    ⚠️ 어간으로 잡는다 — MUTANT|MUTATED 만 쓰면 MUTATION 을 놓친다(실측).
+#    ⚠️ 뮤테이션 도구 자신과 이 훅은 제외한다 — 거기 있는 MUTATION 은 잔재가
+#       아니라 검사 로직이다. 제외하지 않으면 훅이 자기 자신을 못 고치게 막는다.
+mutation_targets=$(echo "$staged" | grep -v -e '^scripts/verify-gates\.py$' -e '^\.githooks/' || true)
+if [ -n "$mutation_targets" ]; then
+  residue=$(git diff --cached -U0 -- $mutation_targets | grep -nE '^\+.*MUTAT' || true)
+  if [ -n "$residue" ]; then
+    echo "🔴 뮤테이션 잔재(MUTAT…)가 커밋에 섞였다:"
+    echo "$residue" | head -5
+    fail=1
+  fi
+fi
+
+# 3) 공개 데이터가 스테이지에 있으면 검사를 돌린다.
+if echo "$staged" | grep -q '^data/generated/'; then
+  node scripts/verify-disclosure.mjs || fail=1
+fi
+
+[ "$fail" -eq 0 ] || { echo ""; echo "커밋을 막았다. --no-verify 로 우회하지 않는다."; exit 1; }

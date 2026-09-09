@@ -38,3 +38,4 @@ pnpm-debug.log*
 # --- 로컬 전용 ---
 .turbo/
 *.local
+.wip/
