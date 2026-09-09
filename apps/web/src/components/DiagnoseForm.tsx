@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { DIAGNOSIS_KEY } from './ContactForm'
 import styles from './DiagnoseForm.module.css'
+import { DiagnoseResult } from './DiagnoseResult'
 
 const MIN = 20
 const MAX = 4000
@@ -24,6 +24,7 @@ export function DiagnoseForm() {
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [streaming, setStreaming] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const tooShort = text.trim().length < MIN
@@ -33,42 +34,80 @@ export function DiagnoseForm() {
     e.preventDefault()
     if (pending || tooShort || tooLong) return
     setPending(true)
+    setStreaming(true)
     setError(null)
-    setResult(null)
+    setResult('')
     try {
-      // 🔴 상대 경로다. api 주소가 브라우저로 나가지 않는다(app/api/diagnose/route.ts).
-      const res = await fetch('/api/diagnose', {
+      const res = await fetch('/api/diagnose/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requirement: text.trim() }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        // 서버가 보낸 안내를 그대로 쓴다 — 캡·게이트 안내가 이미 사람 말로 되어 있다.
+
+      // 캡에 걸렸거나 준비 중이면 api 가 JSON 으로 답한다.
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}))
         const msg = Array.isArray(data.message) ? data.message[0] : data.message
         setError(msg ?? '지금은 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.')
         return
       }
-      setResult(data.result)
+
+      // SSE 를 직접 읽는다. EventSource 는 GET 만 되므로 쓸 수 없다.
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let acc = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // 이벤트는 빈 줄로 구분된다. 마지막 조각은 아직 안 끝났을 수 있어 남긴다.
+        const events = buffer.split('\n\n')
+        buffer = events.pop() ?? ''
+
+        for (const chunk of events) {
+          const line = chunk.split('\n').find((l) => l.startsWith('data: '))
+          if (!line) continue
+          const payload = JSON.parse(line.slice(6))
+
+          if (typeof payload.text === 'string') {
+            acc += payload.text
+            setResult(acc)
+          } else if (payload.ok === false) {
+            // 🔴 게이트에 걸렸다. 이미 보여준 것을 지운다.
+            setResult(null)
+            setError(payload.message ?? '결과를 만들지 못했습니다.')
+          } else if (payload.message) {
+            setResult(null)
+            setError(payload.message)
+          }
+        }
+      }
     } catch {
       setError('연결하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setPending(false)
+      setStreaming(false)
     }
   }
 
   /**
-   * 결과를 문의로 넘긴다 (기획서 5절 "이 결과를 문의에 붙여넣기").
+   * 결과를 들고 문의로 간다.
    *
-   * 🔴 서버에 저장하지 않는다. sessionStorage 에 잠깐 두고 문의 화면이
-   *    집어간다 — 탭을 닫으면 사라진다.
+   * 🔴 결과를 **자동으로 실어 보내지 않는다**(2026-09-09 사용자 확정).
+   *    메일은 문의 정보만 담는다. 대신 클립보드에 담아 주고, 방문자가
+   *    필요하다고 판단하면 본문에 직접 붙여넣는다 — 무엇이 전달될지
+   *    방문자가 알고 고르게 한다.
    */
-  function sendToContact() {
-    if (!result) return
-    try {
-      sessionStorage.setItem(DIAGNOSIS_KEY, result)
-    } catch {
-      // 저장소가 막혔으면 그냥 문의 화면으로 간다. 결과는 복사로 옮기면 된다.
+  async function goToContact() {
+    if (result) {
+      try {
+        await navigator.clipboard.writeText(result)
+      } catch {
+        // 클립보드가 막힌 환경이 있다. 그래도 문의 화면으로는 간다.
+      }
     }
     router.push('/contact')
   }
@@ -118,17 +157,21 @@ export function DiagnoseForm() {
       {result ? (
         <div>
           <div className={styles.resultHead}>
-            <span className={styles.resultTitle}>[ 자가진단 결과 · 저장하지 않습니다 ]</span>
-            <span className={styles.actions}>
-              <button className={styles.copy} type="button" onClick={copy}>
-                {copied ? '복사됨' : '복사'}
-              </button>
-              <button className={styles.send} type="button" onClick={sendToContact}>
-                이 결과로 문의하기 →
-              </button>
+            <span className={styles.resultTitle}>
+              {streaming ? '[ 정리하는 중… ]' : '[ 자가진단 결과 · 저장하지 않습니다 ]'}
             </span>
+            {!streaming ? (
+              <span className={styles.actions}>
+                <button className={styles.copy} type="button" onClick={copy}>
+                  {copied ? '복사됨' : '복사'}
+                </button>
+                <button className={styles.send} type="button" onClick={goToContact}>
+                  복사해서 문의하기 →
+                </button>
+              </span>
+            ) : null}
           </div>
-          <div className={styles.result}>{result}</div>
+          <DiagnoseResult text={result} streaming={streaming} />
         </div>
       ) : null}
     </div>

@@ -1,0 +1,107 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.intro {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--fg-dim);
+  font-weight: 300;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--blue-line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+/* 지금 쓰이는 중인 카드 — 테두리가 앰버로 살아난다. */
+.card[data-streaming="true"] {
+  border-left-color: var(--amber);
+  background: linear-gradient(150deg, rgba(38, 28, 22, 0.4) 0%, rgba(14, 11, 10, 0.35) 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    animation: cardIn 0.28s ease-out;
+  }
+}
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+.no {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-ghost);
+  letter-spacing: 0.06em;
+}
+.card[data-streaming="true"] .no {
+  color: var(--amber-dim);
+}
+
+.title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--fg-strong);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.line {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.82;
+  color: var(--fg-muted);
+  font-weight: 300;
+  text-wrap: pretty;
+}
+/* 빈 줄은 간격만 만든다 — 문단 사이를 벌린다. */
+.line:empty {
+  height: 4px;
+}
+
+/* 커서 — 지금 쓰이는 중이라는 신호. */
+.cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background: var(--amber);
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cursor {
+    animation: blink 1s steps(2, start) infinite;
+  }
+}
+@keyframes blink {
+  to {
+    opacity: 0;
+  }
+}

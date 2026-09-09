@@ -91,6 +91,67 @@ export class DiagnoseService {
   }
 
   /**
+   * 진단을 스트리밍으로 만든다. 조각이 나오는 대로 `onDelta` 를 부른다.
+   *
+   * 🔴 **게이트가 늦게 온다.** 출력 검사는 전체 텍스트를 봐야 하는데
+   *    스트리밍은 조각으로 나간다 — 다 보낸 뒤에는 못 막는다.
+   *    그래서 끝에서 검사하고, 걸리면 `ok: false` 로 알려 화면이 지운다.
+   *    방문자가 잠깐 본 것을 되돌릴 수는 없지만, 남겨두지는 않는다.
+   *
+   * ⚠️ 이 타협을 받아들이는 이유: 게이트가 잡는 것은 "금액을 말했다" 같은
+   *    프롬프트 위반이고, 그건 드물다. 반대로 15초를 아무것도 없이 기다리게
+   *    하는 것은 매번이다. 드문 것을 막느라 매번을 나쁘게 만들지 않는다.
+   *
+   * @returns 전체 텍스트와 게이트 통과 여부
+   */
+  async diagnoseStream(
+    requirement: string,
+    onDelta: (text: string) => void,
+  ): Promise<{ ok: boolean; text: string }> {
+    if (!this.client) {
+      throw new ServiceUnavailableException('자가진단은 아직 준비 중입니다.')
+    }
+
+    let text = ''
+    try {
+      const stream = this.client.messages.stream({
+        model: this.model,
+        max_tokens: 2000,
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: buildUserMessage(requirement) }],
+      })
+
+      stream.on('text', (delta) => {
+        text += delta
+        onDelta(delta)
+      })
+
+      const final = await stream.finalMessage()
+      if (final.stop_reason === 'refusal') {
+        throw new ServiceUnavailableException(
+          '이 요청은 처리할 수 없습니다. 내용을 바꿔 다시 시도해 주세요.',
+        )
+      }
+    } catch (err) {
+      if (err instanceof ServiceUnavailableException) throw err
+      throw this.toFriendly(err)
+    }
+
+    if (text.trim().length === 0) {
+      throw new ServiceUnavailableException('결과를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    }
+
+    const guard = checkOutput(text)
+    if (!guard.ok) {
+      this.log.error(`AI 출력 게이트에 걸렸다: ${guard.violations.join(', ')} | ${guard.samples[0]}`)
+      return { ok: false, text }
+    }
+
+    this.log.log(`자가진단 1건 처리 (${text.length}자, 스트리밍)`)
+    return { ok: true, text }
+  }
+
+  /**
    * SDK 예외를 방문자에게 보여줄 수 있는 형태로 바꾼다.
    *
    * 🔴 원인은 로그에만 남긴다 — 인증 실패나 잔액 부족을 방문자가 알 이유가 없고,

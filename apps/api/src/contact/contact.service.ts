@@ -92,8 +92,5 @@ function buildBody(dto: ContactDto): string {
     '─────────────────────',
     dto.message,
   ]
-  if (dto.diagnosis) {
-    parts.push('', '─── 자가진단 결과를 함께 보냈습니다 ───', dto.diagnosis)
-  }
   return parts.join('\n')
 }

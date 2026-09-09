@@ -1,10 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import styles from './ContactForm.module.css'
-
-/** 자가진단 결과를 문의로 넘길 때 쓰는 열쇠. 화면 사이에서만 쓴다. */
-export const DIAGNOSIS_KEY = 'neighbor:diagnosis'
 
 const MIN_MESSAGE = 20
 const MAX_MESSAGE = 8000
@@ -22,20 +19,8 @@ export function ContactForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
-  const [diagnosis, setDiagnosis] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [result, setResult] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-
-  // 자가진단에서 넘어온 결과가 있으면 붙인다.
-  // sessionStorage 를 쓰는 이유: 탭을 닫으면 사라진다 — 남겨둘 이유가 없다.
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(DIAGNOSIS_KEY)
-      if (saved) setDiagnosis(saved)
-    } catch {
-      // 저장소가 막힌 환경이 있다. 없으면 없는 대로 동작한다.
-    }
-  }, [])
 
   const tooShort = message.trim().length < MIN_MESSAGE
   const tooLong = message.length > MAX_MESSAGE
@@ -54,7 +39,6 @@ export function ContactForm() {
           name: name.trim(),
           email: email.trim(),
           message: message.trim(),
-          ...(diagnosis ? { diagnosis } : {}),
         }),
       })
       const data = await res.json()
@@ -70,12 +54,6 @@ export function ContactForm() {
       setName('')
       setEmail('')
       setMessage('')
-      setDiagnosis(null)
-      try {
-        sessionStorage.removeItem(DIAGNOSIS_KEY)
-      } catch {
-        // 위와 같다.
-      }
     } catch {
       setResult({ kind: 'error', text: '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' })
     } finally {
@@ -132,15 +110,6 @@ export function ContactForm() {
           disabled={pending}
         />
       </div>
-
-      {diagnosis ? (
-        <div className={styles.attached}>
-          <span>자가진단 결과를 함께 보냅니다 ({diagnosis.length}자)</span>
-          <button type="button" className={styles.detach} onClick={() => setDiagnosis(null)}>
-            빼기
-          </button>
-        </div>
-      ) : null}
 
       {result ? (
         <p className={styles.message} data-kind={result.kind}>
