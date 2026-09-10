@@ -161,6 +161,32 @@ html {
  *    같은 이유로 `calc(100dvh - 152px)` 를 버렸다 — 실측 15px 넘쳤다).
  *    아래 기본값은 측정 전 한 프레임을 위한 것이고 실측값과 같다.
  */
+/*
+ * 🔴 **페이지 진입 애니메이션이 스크롤바를 만들던 것을 막는다** (이슈 #24).
+ *
+ *    `template.tsx` 의 `pageIn` 이 `y:10` 에서 0 으로 올라오는데, 홈은
+ *    `.page` 가 `height:100dvh` 라 그동안 문서가 **뷰포트+10px** 이 되어
+ *    스크롤바가 나타났다 사라졌다 — 실측 2026-09-10: 220~680ms 28프레임, 3회 재현.
+ *
+ *    3D 를 쓰는 화면(=한 화면에 담기는 화면)에서만 막는다. 본문이 긴 화면
+ *    (`/work` 등)은 스크롤이 필요하므로 건드리지 않는다.
+ *
+ * ⚠️ `overflow:hidden` 이 아니라 `clip` 이다 — `hidden` 은 스크롤 컨테이너를
+ *    만들어 `position:sticky` 나 스크롤 앵커링에 영향을 준다.
+ */
+/*
+ * ⚠️ **`data-canvas-mode` 로 걸면 늦다.** 그 속성은 하이드레이션 후에 붙는데
+ *    넘침은 216ms 부터 시작한다 — 실측: 그 조건으로는 28프레임 중 5프레임이
+ *    남았다(스크롤바가 실제로 보인 구간).
+ *    3D 가부와 같은 조건을 **미디어쿼리로** 써서 첫 페인트부터 적용한다.
+ *    값은 `lib/can-3d.ts` 의 `NARROW_QUERY`·`REDUCED_QUERY` 와 같아야 한다.
+ */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  body {
+    overflow-y: clip;
+  }
+}
+
 html[data-canvas-mode="room"] {
   --cv-top: var(--nav-h, 97px);
   --cv-bottom: var(--foot-h, 70px);
