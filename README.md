@@ -10,12 +10,50 @@ SI·웹에이전시 회사 홈페이지. **기술 쇼케이스가 목적**이고
 
 ```
 apps/
-  web/    Next.js  — 3D 쇼케이스 · 실적 · 문의
+  web/    Next.js  — 3D 쇼케이스 · 실적 · 문의  (구조는 FSD, CLAUDE.md 참고)
   api/    NestJS   — AI 자가진단 (API 키 보호)
 data/
   generated/       — 빌드 타임에 만들어지는 공개 데이터 (커밋 대상)
 scripts/           — 데이터 파이프라인과 공개 검사 게이트
+  probes/          — 브라우저 프로브. 정적 검사가 못 잡는 것을 잡는다
+TODO.md            — 남은 일
 ```
+
+## 검증
+
+```bash
+pnpm verify   # lint · typecheck · test · FSD · 방 검사 · 공개 데이터 검사
+pnpm probe    # 브라우저 프로브 11종 (api·web 이 떠 있어야 한다)
+```
+
+🔴 **`pnpm verify` 가 초록이어도 화면이 깨져 있을 수 있다.** 실제로 여러 번
+그랬다 — 3D 가 본문을 덮거나, 모바일에서 목록이 잘리거나, 카피가 3초 뒤에
+뜨거나. 전부 정적 검사는 통과한 상태였다. 그래서 `pnpm probe` 가 따로 있다.
+
+```bash
+# 프로브를 돌리려면 둘 다 떠 있어야 한다
+pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
+pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+pnpm probe
+```
+
+⚠️ 처음이면 브라우저를 받아야 한다: `pnpm exec playwright install chromium`
+
+**판정을 사람이 해야 하는 것도 있다** — `scripts/probes/verify-each-object.cjs`
+는 물건 7개를 촬영만 한다. "방이 보이는가" 는 자동 지표가 없어서(마커 수는 늘
+7/7 이고 캔버스 밝기는 WebGL 이라 못 읽는다) **스크린샷을 열어서 본다.**
+
+## 다른 환경으로 옮길 때
+
+`.gitignore` 때문에 **따라오지 않는 것들**이 있다:
+
+| 대상 | 내용 | 어떻게 |
+|---|---|---|
+| `docs/기획.md` | 기획 확정본 | 개인 도메인이 있어 의도적으로 제외. 로컬에서 직접 옮긴다 |
+| `.env.local` | API 키·SMTP·DB | `.env.example` 을 보고 새로 채운다 |
+| `.wip/` | 옛 조사 스크립트 | 쓸 것은 `scripts/probes/` 로 이미 옮겼다 |
+
+`docs/기획.md` 가 없으면 **왜 그렇게 만들었는지의 근거가 사라진다.** 먼저 챙긴다.
 
 ## 데이터 파이프라인
 

@@ -16,10 +16,12 @@
     "test": "pnpm --filter @neighbor/api test && pnpm --filter @neighbor/web test",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm fsd:verify && pnpm room:verify && pnpm data && pnpm data:verify",
     "fsd:verify": "node scripts/verify-fsd.mjs",
+    "probe": "node scripts/probes/run-all.mjs",
     "room:verify": "node scripts/verify-room.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
+    "playwright": "^1.63.0",
     "turbo": "^2.10.12",
     "typescript": "^7.0.2"
   }
