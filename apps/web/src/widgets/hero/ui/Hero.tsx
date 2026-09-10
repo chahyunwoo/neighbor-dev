@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { RoomList, RoomSteps } from '@/entities/room'
 import { Room, RoomPanel } from '@/features/room-3d'
-import { useCanRender3D } from '@/shared'
+import { useCanRender3D } from '@/shared/lib'
 import styles from './Hero.module.css'
 
 /**

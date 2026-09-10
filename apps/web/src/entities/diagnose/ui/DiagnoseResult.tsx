@@ -15,7 +15,7 @@ import {
 // 화면이 쓰던 이름을 그대로 다시 내보낸다 — 부르는 쪽을 고치지 않게.
 export { buildCopyText, type Section, splitSections } from '@/entities/diagnose/lib/diagnose-parse'
 
-import { RichText } from '@/shared'
+import { RichText } from '@/shared/ui'
 import styles from './DiagnoseResult.module.css'
 
 /**

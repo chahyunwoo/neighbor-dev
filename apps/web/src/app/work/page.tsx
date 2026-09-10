@@ -8,7 +8,7 @@ import {
   StackTags,
   type SummaryProject,
 } from '@/entities/project'
-import { RichText } from '@/shared'
+import { RichText } from '@/shared/ui'
 import styles from '@/shared/ui/styles/list-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'

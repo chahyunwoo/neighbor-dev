@@ -8,7 +8,7 @@ import {
   ProjectLens,
   StackTags,
 } from '@/entities/project'
-import { RichText } from '@/shared'
+import { RichText } from '@/shared/ui'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
