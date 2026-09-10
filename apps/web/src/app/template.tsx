@@ -17,6 +17,16 @@ import { pageIn } from '@/features/reveal'
  *
  * ⚠️ **레이아웃을 흔들지 않는다.** y 이동을 10px 로 작게 잡았다 — 크게 잡으면
  *    스크롤 위치가 튀고, 특히 3D 가 있는 화면에서 캔버스가 같이 흔들린다.
+ *
+ * 🔴 **그 10px 이 `100dvh` 화면에서는 스크롤바를 만든다** (이슈 #24).
+ *    홈은 `.page` 가 `height:100dvh` 라, 아래에서 10px 올라오는 동안 문서가
+ *    뷰포트보다 커져 **스크롤바가 나타났다 사라진다** — 실측 2026-09-10:
+ *    220~680ms 구간 28프레임, 3회 재현.
+ *
+ *    이동 자체를 없애지는 않는다(전환이 뚝 끊기면 공간감이 사라진다).
+ *    막는 것은 **`<body>` 쪽**이다 — `styles/tokens.css` 의 `overscroll` 규칙
+ *    참고. 여기(`motion.div`)에 `overflow:clip` 을 걸면 **자기 자신이 밀리는
+ *    것은 못 막는다**(자식만 잘린다). 실측으로 확인했다.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
   return (
