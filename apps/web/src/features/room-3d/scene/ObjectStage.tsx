@@ -5,7 +5,7 @@ import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
 import { CanvasMode } from '@/features/room-3d/canvas/CanvasMode'
 import { r3f } from '@/features/room-3d/canvas/tunnel'
-import { useCanRender3D } from '@/shared'
+import { useCanRender3D } from '@/shared/lib'
 import { DEFAULTS, DEG, METALNESS, PALETTE, ROUGHNESS } from './layout'
 
 /**
