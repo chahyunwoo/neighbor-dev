@@ -34,6 +34,8 @@ const EDGE_GAP = 34
  * ⚠️ 좁은 화면에서는 이 값이 화면 절반을 넘을 수 있어 `w*0.5` 로 한 번 접는다.
  */
 const UI_LEFT = 520
+/** 열린 패널이 덮는 폭. `RoomPanel` 의 `w-[480px]` 과 같아야 한다. */
+const PANEL_W = 480
 
 // 배치에 쓰는 모델을 미리 받아 둔다 — 하나씩 늦게 뜨면 방이 조립되는 것이 보인다.
 for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
@@ -338,11 +340,22 @@ function useEdgeClamp() {
     const root = document
 
     let raf = 0
+    /** 지금 적용 중인 패널 폭. 목표로 매 프레임 다가간다(아래 주석). */
+    let rightNow = 0
     const tick = () => {
       raf = requestAnimationFrame(tick)
       const w = canvas.clientWidth
       const h = canvas.clientHeight
       if (!w || !h) return
+
+      /*
+       * 🔴 **패널 폭을 한 번에 반영하지 않는다.** `0 → 480` 으로 즉시 바꾸면
+       *    접히는 마커가 **한 프레임에 232px** 튄다(실측 2026-09-16).
+       *    패널이 0.44s 에 걸쳐 들어오므로 여기도 같이 따라간다.
+       */
+      const wantRight = document.documentElement.dataset.panelOpen === 'true' ? PANEL_W : 0
+      rightNow += (wantRight - rightNow) * 0.12
+      if (Math.abs(wantRight - rightNow) < 0.5) rightNow = wantRight
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
       /**
@@ -376,7 +389,13 @@ function useEdgeClamp() {
          *    `UI_LEFT` 는 `CameraRig` 의 `UI_WIDTH` 와 같은 값이다.
          */
         const left = Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
-        const cx = Math.min(w - EDGE_PAD, Math.max(left, x))
+        /*
+         * 🔴 **오른쪽은 패널이 덮는 만큼 뺀다.** 캔버스는 이제 패널이 열려도
+         *    좁아지지 않으므로(리사이즈 진동을 없애려고 그렇게 했다),
+         *    가용 영역을 여기서 계산해야 마커가 패널 뒤로 안 숨는다.
+         */
+        const right = rightNow
+        const cx = Math.min(w - right - EDGE_PAD, Math.max(left, x))
         const cy = Math.min(h - EDGE_PAD, Math.max(EDGE_PAD, y))
         const clamped = cx !== x || cy !== y
 
