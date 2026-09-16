@@ -202,9 +202,23 @@ async function shotNow(pg) {
     const before = await shotNow(pg)
     await pg.$eval('button[class*="marker"]', (e) => e.click())
     await pg.waitForTimeout(1800)
+    /*
+     * 🔴 **양성 대조** — "마커가 실제로 열렸다" 를 단언한다. 없으면 클릭이
+     *    아무것도 안 해도 픽셀차 0.03 으로 **초록이 뜬다**(실측 2026-09-17).
+     *    검사기가 "안 잡혔다" 와 "아무 일도 안 일어났다" 를 못 가르면
+     *    그 게이트는 있으나 마나다.
+     */
+    const cntOpen = () =>
+      pg.evaluate(
+        () => document.querySelectorAll('button[class*="marker"][aria-expanded="true"]').length,
+      )
+    const opened = await cntOpen()
+    ok(opened === 1, '   (대조) 마커가 실제로 열렸다', `열린 마커 ${opened}개`)
     // 닫기 — 패널의 닫기 버튼, 없으면 Esc
     await pg.keyboard.press('Escape')
     await pg.waitForTimeout(2600)
+    const stillOpen = await cntOpen()
+    ok(stillOpen === 0, '   (대조) 마커가 실제로 닫혔다', `열린 마커 ${stillOpen}개`)
     const after = await shotNow(pg)
     const d = await pg.evaluate(DIFF, [before, after])
     await ctx.close()
@@ -245,11 +259,86 @@ async function shotNow(pg) {
     await pg.waitForTimeout(2500)
     const v = await pg.evaluate(() => window.__scrim)
     await ctx.close()
-    const min = v.length ? Math.min(...v) : 1
+    /*
+     * 🔴 **양성 대조** — 프레임을 하나도 못 읽었으면 실패다. 없으면 선택자가
+     *    안 맞아 `.scrim` 을 못 찾아도 **초록이 뜬다**(실측: `: 1` 폴백이라
+     *    0개면 그냥 통과했다). CSS Module 해시가 바뀌면 조용히 눈이 먼다.
+     */
+    ok(v.length >= 30, '   (대조) 어둠막을 실제로 읽었다', `프레임 ${v.length}개`)
+    const min = v.length ? Math.min(...v) : 0
     ok(
       min >= 0.95,
       '깊은 링크 → 홈 에서 어둠막이 안 옅어진다',
       `최소 불투명도 ${min.toFixed(2)} (프레임 ${v.length}개)`,
+    )
+  }
+
+  /*
+   * ── ⑥ 마커를 **연 채로** 방을 둘러볼 때 초점 제약이 실제로 쓰이는가.
+   *
+   *    `abort` 리스너가 `'start'`(= 모든 pointerdown)에 붙어 있어서, 되돌릴
+   *    비행이 없는데도 제약을 갈아치웠다. **마커를 연 채 드래그하는 첫
+   *    순간에 FOCUS(방위각 0.44~1.08π)가 ROOM(0.54~0.98π)으로 바뀌어**
+   *    마커를 닫을 때까지 그대로였다 — 실측 2026-09-17: 방위각 79.2° →
+   *    115.2°(36°·31% 손실). 깨지는 화면은 아니고 **의도한 자유도가
+   *    사라진 것**이라, 픽셀 비교로는 안 잡힌다.
+   *
+   * 🔴 판정은 **끝까지 돌렸을 때 닿는 각도**로 한다. 3D 마커의 화면 좌표가
+   *    카메라 방위각을 그대로 반영하므로, 좌우로 끝까지 끈 뒤의 **가로 이동
+   *    폭**을 본다. ROOM 제약이면 눈에 띄게 좁다.
+   */
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
+    const pg = await ctx.newPage()
+    await pg.goto(`${BASE}/`, { waitUntil: 'load' })
+    await pg.waitForFunction(() => document.documentElement.dataset.roomEntered === 'true', null, {
+      timeout: 25000,
+    })
+    await pg.waitForTimeout(1200)
+    await pg.$eval('button[class*="marker"]', (e) => e.click())
+    await pg.waitForTimeout(2600)
+    const opened = await pg.evaluate(
+      () => document.querySelectorAll('button[class*="marker"][aria-expanded="true"]').length,
+    )
+    ok(opened === 1, '   (대조) 둘러보기 전 마커가 열려 있다', `열린 마커 ${opened}개`)
+
+    /** 닫히지 않은 마커들의 가로 중심 평균. 방위각이 바뀌면 같이 움직인다. */
+    const cx = () =>
+      pg.evaluate(() => {
+        const m = [...document.querySelectorAll('button[class*="marker"]')].filter(
+          (e) => e.getAttribute('aria-expanded') !== 'true',
+        )
+        if (!m.length) return null
+        let s = 0
+        for (const e of m) {
+          const r = e.getBoundingClientRect()
+          s += r.x + r.width / 2
+        }
+        return s / m.length
+      })
+
+    const drag = async (dx) => {
+      await pg.mouse.move(480, 460)
+      await pg.mouse.down()
+      for (let i = 1; i <= 30; i++) await pg.mouse.move(480 + (dx * i) / 30, 460)
+      await pg.mouse.up()
+      await pg.waitForTimeout(500)
+    }
+    await drag(-900)
+    const left = await cx()
+    await drag(1800)
+    const right = await cx()
+    await ctx.close()
+    const span = left !== null && right !== null ? Math.round(Math.abs(right - left)) : 0
+    /*
+     * 실측 2026-09-17 (1440x900, 첫 마커를 연 채 좌우 끝까지):
+     *   FOCUS 제약 913px   vs   ROOM 제약 409px
+     * 두 배 넘게 갈리므로 기준은 그 사이에 넉넉히 둔다.
+     */
+    ok(
+      span >= 700,
+      '마커를 연 채 둘러볼 때 초점 제약이 쓰인다',
+      `좌우 끝까지 끌었을 때 이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
     )
   }
 
