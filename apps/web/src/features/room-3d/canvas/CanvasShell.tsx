@@ -49,6 +49,31 @@ export function CanvasShell() {
   const ref = useRef<HTMLDivElement>(null)
 
   /*
+   * 🔴 **캔버스는 페이드로 들어온다.**
+   *
+   *    `--cv-opacity` 가 모드별 값(홈이면 1)이라 캔버스가 붙는 순간 이미
+   *    불투명하다 — `transition` 이 있어도 시작값이 곧 끝값이라 아무 일도
+   *    안 일어난다. 실측 2026-09-16: 일반·강력 새로고침·첫 방문 **세 경우
+   *    모두** 등장 시 불투명도가 100 이었고 **100 미만인 프레임이 0개**였다.
+   *    3D 가 툭 튀어나온다.
+   *
+   *    강력 새로고침에서 특히 눈에 띈다 — 캐시가 없어 캔버스가 301ms 에야
+   *    붙는데(일반은 15ms), 글은 이미 다 읽히는 상태라 3D 만 뒤늦게 튄다.
+   *
+   * ⚠️ 한 프레임 뒤에 켠다. 같은 프레임에 붙이면 브라우저가 시작값을 못 잡아
+   *    transition 이 또 안 돈다.
+   */
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      document.documentElement.dataset.canvasReady = 'true'
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      delete document.documentElement.dataset.canvasReady
+    }
+  }, [])
+
+  /*
    * 홈에서 캔버스는 헤더 **아래**에서 시작한다(실측 y=97).
    *
    * 🔴 이 값을 상수로 박지 않는다. `nav` 높이가 바뀌면 조용히 어긋난다 —

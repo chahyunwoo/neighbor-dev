@@ -271,7 +271,12 @@ html[data-canvas-mode="off"] {
   bottom: var(--cv-bottom, 0px);
   left: var(--cv-left, 0px);
   z-index: 0;
-  opacity: var(--cv-opacity, 0);
+  /*
+   * 🔴 처음에는 투명하다. `CanvasShell` 이 한 프레임 뒤에 `data-canvas-ready`
+   *    를 붙이면 그때 모드별 값으로 올라간다 — 아래 transition 을 타고 페이드된다.
+   *    이게 없으면 3D 가 붙는 순간 이미 불투명해 툭 나타난다(실측 2026-09-16).
+   */
+  opacity: 0;
   pointer-events: var(--cv-pe, none);
   /* 패널이 열리면 오른쪽이 좁아진다. 시안 실측 .44s. */
   transition:
@@ -279,6 +284,10 @@ html[data-canvas-mode="off"] {
     left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
     opacity 0.4s ease-out,
     top 0.3s ease-out;
+}
+
+html[data-canvas-ready="true"] .canvas-shell {
+  opacity: var(--cv-opacity, 0);
 }
 
 .canvas-shell * {

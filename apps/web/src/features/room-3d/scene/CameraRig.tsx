@@ -46,6 +46,21 @@ export type OrbitControlsLike = NonNullable<React.ComponentRef<typeof DreiOrbitC
  *       3D 를 유지한 이유가 사라진다. 대상이 눈에 띄되 방이 보이는 선을 잡았다.
  */
 const FILL = 0.2
+/**
+ * 연출이 도는 동안만 쓰는 "제약 없음".
+ *
+ * 🔴 OrbitControls 는 `update()` 마다 카메라를 제약 안으로 되돌린다. 우리가
+ *    좌표를 직접 넣는 연출 구간에서는 그 보정이 **연출을 덮어쓴다.**
+ */
+const FREE_LIMITS = {
+  minDistance: 0.1,
+  maxDistance: 1000,
+  minPolarAngle: 0,
+  maxPolarAngle: Math.PI,
+  minAzimuthAngle: Number.NEGATIVE_INFINITY,
+  maxAzimuthAngle: Number.POSITIVE_INFINITY,
+} as const
+
 /** 물건 사이를 옮길 때의 비행 시간(ms). 시안 DUR. */
 const DUR = 900
 
@@ -258,6 +273,25 @@ export function CameraRig({
     ctl.target.copy(look)
     ctl.update()
 
+    /*
+     * 🔴 **입장 동안 OrbitControls 제약을 푼다.**
+     *
+     *    `CAMERA_LIMITS` 는 `minDistance 4.6` 과 방위각 범위
+     *    (`PI*0.54 ~ PI*0.98`)를 건다. 그런데 입장 시작 위치는 타깃에서
+     *    **3.96** 밖에 안 떨어져 있고 방위각도 그 범위 밖이다 —
+     *    `ctl.update()` 가 매 프레임 카메라를 제약 안으로 끌어당겨
+     *    **문 밖에서 시작하지도 못했다.**
+     *
+     *    실측 2026-09-16: 시작 위치가 `[-4.7, 1.35, -1.6]` 이어야 하는데
+     *    실제로는 `[3.53, 1.73, -0.77]`(이미 방 안)이었고, 비행 중간
+     *    (진행 0.45)에 제약 경계를 넘으면서 **한 프레임에 좌우각이 79.3°**
+     *    꺾였다. 사용자가 "갑자기 화면이 휙 돈다" 고 한 자리다.
+     *
+     * ⚠️ 비행이 끝나면 되돌린다 — 안 되돌리면 사용자가 방을 무한정 돌리거나
+     *    벽 밖으로 나갈 수 있다.
+     */
+    Object.assign(ctl, FREE_LIMITS)
+
     fly.current = {
       p0: from.clone(),
       t0: look.clone(),
@@ -412,6 +446,8 @@ export function CameraRig({
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
+        // 🔴 제약을 되돌린다(위 FREE_LIMITS 주석 참고). 안 하면 방 밖으로 나갈 수 있다.
+        Object.assign(ctl, CAMERA_LIMITS)
         landed.current = true
         onEntered()
       }
