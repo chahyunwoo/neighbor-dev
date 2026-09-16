@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { TransitionBody, TransitionTitle } from '@/features/page-transition'
-import { CanvasMode, ContentWidth, ObjectStage } from '@/features/room-3d'
+import { ContentWidth, RoomStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
 
 interface Props {
@@ -49,7 +49,11 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
        * 🔴 `from` 이 없어도 **모드를 선언한다**. 캔버스가 라우트를 넘어
        *    살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 남는다.
        */}
-      {from ? <ObjectStage objectId={from} /> : <CanvasMode mode="off" />}
+      {/*
+       * 🔴 3D 를 여기서 그리지 않는다 — **어느 물건을 보는지만 말한다.**
+       *    씬은 캔버스 안에 고정되어 라우트를 넘어 살아 있다.
+       */}
+      <RoomStage mode={from ? 'page' : 'off'} objectId={from ?? null} />
       <main className={styles.main}>
         <div className={styles.head}>
           <div className={styles.headText}>

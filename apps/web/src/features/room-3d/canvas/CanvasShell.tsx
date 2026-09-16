@@ -2,9 +2,23 @@
 
 import { Preload } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
+import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { useRoom } from '@/features/room-3d/model/room-state'
 import { r3f } from './tunnel'
+
+/*
+ * 🔴 **씬을 여기서 렌더한다. 화면 안에 두지 않는다.**
+ *
+ *    이것이 지속 캔버스의 요점이다 — 캔버스만 살려 두고 씬을 페이지에 두면
+ *    라우트가 바뀔 때마다 씬이 죽고 다시 산다. 실측 2026-09-16: 전환마다
+ *    **91ms 짜리 멈춤**이 났다(3회 전부 재현). GLTF 21개를 다시 세팅하는
+ *    비용이고, 사용자에게는 "뚜둑" 으로 보인다.
+ *
+ *    화면은 `RoomStage` 로 모드만 선언하고, 그리는 일은 계속 여기가 맡는다.
+ */
+const Scene = dynamic(() => import('../scene/Scene').then((m) => m.Scene), { ssr: false })
 
 /**
  * 지속 캔버스 — **앱 전체에서 단 하나뿐인 `<Canvas>`**.
@@ -161,9 +175,36 @@ export function CanvasShell() {
           toneMappingExposure: 0.88,
         }}
       >
+        <SceneSlot />
         <r3f.Out />
         <Preload all />
       </Canvas>
     </div>
+  )
+}
+
+/**
+ * 방을 그린다 — **라우트가 바뀌어도 이 컴포넌트는 안 죽는다.**
+ *
+ * 🔴 상태는 `RoomProvider` 가 쥔다. 화면은 `RoomStage` 로 모드만 선언하므로,
+ *    여기서는 그 값을 읽어 카메라를 어디에 둘지만 정하면 된다.
+ *
+ * ⚠️ `off` 일 때는 씬을 **언마운트하지 않는다.** 그러면 다시 켤 때 GLTF 를
+ *    다시 세팅해 멈춤이 생긴다 — 캔버스를 `visibility:hidden` 으로 감추는
+ *    것으로 충분하다(`tokens.css`). 이것이 `CanvasRoot` 의 sticky mount 와
+ *    같은 이유다.
+ */
+function SceneSlot() {
+  const { mode, openId, seen, open, markEntered } = useRoom()
+  return (
+    <Suspense fallback={null}>
+      <Scene
+        mode={mode === 'page' ? 'page' : 'room'}
+        openId={openId}
+        seen={seen}
+        onOpen={open}
+        onEntered={markEntered}
+      />
+    </Suspense>
   )
 }

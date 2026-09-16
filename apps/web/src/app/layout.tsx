@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { TransitionRoot } from '@/features/page-transition'
 import { MotionRoot } from '@/features/reveal'
-import { CanvasRoot } from '@/features/room-3d'
+import { CanvasRoot, RoomProvider } from '@/features/room-3d'
 import '@/shared/styles/tokens.css'
 
 export const metadata: Metadata = {
@@ -45,23 +45,29 @@ export default function RootLayout({ children }: { children: ReactNode }) {
          *    (다만 **대기 시간**은 Motion 이 안 지워서 `TransitionRoot` 가
          *    직접 건너뛴다 — 그 파일 주석 참고.)
          */}
-        <MotionRoot>
-          <TransitionRoot>{children}</TransitionRoot>
-        </MotionRoot>
         {/*
-         * 지속 캔버스 — 앱 전체에 하나. 라우트가 바뀌어도 살아 있다.
-         *
-         * 🔴 **`{children}` 밖에 둔다.** 안에 두면 `template.tsx` 의 전환
-         *    `transform` 이 `position:fixed` 의 기준을 바꿔, 라우트 전환
-         *    동안 캔버스가 같이 흔들린다.
-         *
-         * 🔴 **`children` 뒤에 둔다** — 히어로 텍스트가 먼저 파싱되어야 한다
-         *    (LCP 요소를 3D 로 만들지 않는다).
-         *
-         * 🔴 `MotionRoot` 밖이다. `MotionConfig` 는 DOM 모션 설정이고
-         *    R3F 의 `useFrame` 루프는 별개다.
+         * 🔴 `RoomProvider` 가 `{children}` 과 `<CanvasRoot />` 를 **둘 다**
+         *    감싼다. 화면이 선언한 모드를 캔버스가 읽어야 하기 때문이다.
          */}
-        <CanvasRoot />
+        <RoomProvider>
+          <MotionRoot>
+            <TransitionRoot>{children}</TransitionRoot>
+          </MotionRoot>
+          {/*
+           * 지속 캔버스 — 앱 전체에 하나. 라우트가 바뀌어도 살아 있다.
+           *
+           * 🔴 **`{children}` 밖에 둔다.** 안에 두면 `template.tsx` 의 전환
+           *    `transform` 이 `position:fixed` 의 기준을 바꿔, 라우트 전환
+           *    동안 캔버스가 같이 흔들린다.
+           *
+           * 🔴 **`children` 뒤에 둔다** — 히어로 텍스트가 먼저 파싱되어야 한다
+           *    (LCP 요소를 3D 로 만들지 않는다).
+           *
+           * 🔴 `MotionRoot` 밖이다. `MotionConfig` 는 DOM 모션 설정이고
+           *    R3F 의 `useFrame` 루프는 별개다.
+           */}
+          <CanvasRoot />
+        </RoomProvider>
       </body>
     </html>
   )

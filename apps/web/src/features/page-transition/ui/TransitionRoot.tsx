@@ -54,6 +54,12 @@ export function TransitionRoot({ children }: { children: ReactNode }) {
   // 빼면 VT 가 새 화면을 못 찍고 기다리다 타임아웃까지 간다.
   // biome-ignore lint/correctness/useExhaustiveDependencies: 경로 변경을 잡는 트리거다
   useEffect(() => {
+    /*
+     * ⚠️ **여기서 `requestAnimationFrame` 을 기다리면 안 된다.** VT 콜백이
+     *    끝날 때까지 브라우저가 렌더를 멈추므로 raf 가 영영 안 돌아 **데드락**이
+     *    된다 — 실측 2026-09-16: 콜백이 타임아웃(1200ms)까지 갔다.
+     *    `useEffect` 는 React 커밋 뒤라 DOM 은 이미 새 화면이다.
+     */
     settle.current?.()
     settle.current = null
   }, [pathname])

@@ -408,8 +408,13 @@ a:hover {
   /*
    * ⚠️ 곡선이 중요하다. ease-in(끝이 급한 것)으로 두면 한동안 그대로 있다가
    *    마지막에 훅 사라져 "툭" 끊긴 것처럼 보인다. 고르게 빠지는 곡선을 쓴다.
+   *
+   * 🔴 **새 화면이 들어올 때까지 버틴다.** 440ms 로 짧게 뒀더니 320ms 시점에
+   *    이전 화면은 이미 빠졌는데 새 화면이 아직 안 와서 **화면이 비었다**
+   *    (실측 스크린샷). `router.push` 가 끝나야 새 스냅샷이 찍히므로,
+   *    나가는 쪽이 그 시간을 덮어 줘야 한다.
    */
-  animation: 440ms cubic-bezier(0.4, 0, 0.2, 1) both vt-out;
+  animation: 640ms cubic-bezier(0.33, 0, 0.3, 1) both vt-out;
 }
 
 ::view-transition-new(root) {
@@ -422,7 +427,7 @@ a:hover {
    * ⚠️ 나가는 쪽(440ms)보다 길게(620ms) 둔다. 들어오는 것이 더 천천히
    *    자리잡아야 도착한 느낌이 난다.
    */
-  animation: 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both vt-in;
+  animation: 560ms cubic-bezier(0.22, 0.61, 0.36, 1) 60ms both vt-in;
 }
 
 @keyframes vt-out {

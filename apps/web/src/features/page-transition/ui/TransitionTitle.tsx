@@ -1,45 +1,27 @@
-'use client'
-
-import { ENTER, GLYPH_DURATION, GLYPH_SPAN } from '@/features/page-transition/lib/transition'
-import { SplitText } from '@/shared/ui'
-
 /**
- * 화면의 제목 — 글자가 아래에서 하나씩 착지한다.
+ * 화면의 제목.
  *
- * 🔴 **나가는 연출은 없다.** View Transitions 가 이전 화면을 통째로 겹쳐
- *    빼 주므로(`TransitionRoot`), 여기서 또 흩뜨리면 같은 것이 두 번 움직인다.
- *    전에는 흩어짐까지 손으로 만들었고 그게 "뚜둑뚜둑" 의 절반이었다.
+ * 🔴 **낱글자 연출을 뺐다.** 글자가 아래에서 하나씩 착지하게 했는데, 그
+ *    `initial` 이 `opacity: 0` 이라 **View Transitions 가 새 화면을 찍는
+ *    순간(58ms) 제목이 투명했다.** 겹쳐 줄 그림이 비면 크로스페이드가
+ *    성립하지 않고 그냥 화면이 어두워진다(실측 2026-09-16).
  *
- * ⚠️ 서버 컴포넌트인 페이지에서 부를 수 있게 클라이언트 경계를 여기서 긋는다
- *    (`Reveal` 과 같은 이유).
+ *    화면 사이를 잇는 일은 VT 가 GPU 에서 한다. 그 위에 진입 연출을 또
+ *    얹으면 서로를 깨뜨린다 — 하나가 맡아야 한다.
+ *
+ * ⚠️ `SplitText`(`shared/ui`)는 남겨 뒀다. 라우트 전환이 아니라 **처음
+ *    들어올 때**(VT 가 없는 상황) 쓸 자리가 있다.
  */
 export function TransitionTitle({
   text,
   className,
-  as = 'h1',
-  delayMs = 0,
+  as: Tag = 'h1',
 }: {
   text: string
-  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
   className?: string | undefined
   as?: 'h1' | 'h2' | 'p' | 'span'
-  /**
-   * 이만큼 더 늦게 시작한다(ms).
-   *
-   * ⚠️ 제목이 두 줄로 나뉜 화면(홈의 `들어와서 / 둘러보세요.`)에서 쓴다.
-   *    두 조각이 각각 0 부터 시작하면 **동시에** 움직여 한 줄처럼 보인다.
-   */
+  /** @deprecated 연출이 없어져 의미가 없다. 호출부 정리 전까지 받아만 둔다. */
   delayMs?: number
 }) {
-  return (
-    <SplitText
-      text={text}
-      className={className}
-      as={as}
-      delay={(ENTER.title + delayMs) / 1000}
-      span={GLYPH_SPAN.in}
-      maxStep={GLYPH_SPAN.maxStep}
-      duration={GLYPH_DURATION.in}
-    />
-  )
+  return <Tag className={className}>{text}</Tag>
 }
