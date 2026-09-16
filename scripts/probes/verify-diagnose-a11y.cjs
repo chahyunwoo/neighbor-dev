@@ -99,6 +99,19 @@ const sse = (o) => `data: ${JSON.stringify(o)}\n\n`
     ok(seen.alive > 0, `[${mode}] 끝난 뒤에도 라이브 영역이 남아 있다`, `${seen.alive}개`)
     if (mode === '실패') {
       ok(seen.alert.length > 0, '[실패] 실패를 role="alert" 로 알린다', seen.alert || '(없음)')
+      /*
+       * 🔴 **실패했는데 "결과" 를 말하면 안 된다.**
+       *    처음 이 검사기는 실패 쪽에서 `alert` 존재와 영역 개수만 봤다.
+       *    그래서 polite 영역이 `role="alert"` 직후에 **"결과를 아래에서 볼
+       *    수 있습니다"** 를 읽는 것을 통째로 놓쳤다 — 결과 영역은 없었다.
+       *    텍스트 단언이 **성공 쪽에만** 있으면 실패 쪽은 아무도 안 본다.
+       */
+      const last = texts.at(-1) ?? ''
+      ok(
+        !/결과|끝났습니다/.test(last),
+        '[실패] 안내가 "결과" 를 말하지 않는다',
+        last || '(비어 있음 — 정상)',
+      )
     } else {
       ok(
         texts.some((t) => t.includes('끝났습니다')),
