@@ -75,14 +75,12 @@ export interface FocusTarget {
  * 🔴 이 연출이 **통째로 빠져 있었다.** 방이 그냥 딱 떠 있었다 —
  *    "들어와서 둘러보세요" 라고 써 놓고 정작 들어오는 순간이 없었다.
  *
- * 🔴 **문 밖에서 시작한다.** 시안은 문 안쪽(-1.30)에서 출발했는데, 그러면
- *    이미 방에 있는 상태라 "들어왔다" 가 안 보이고 그냥 뒤로 줄어드는 것처럼
- *    보인다(사용자 지적). 현관문은 x = -2.89 에 있으므로 그보다 **바깥**인
- *    x = -4.6 에서 시작해 문틀을 지나 들어온다.
- *
- *   시작 위치 (-4.70, 1.35, -1.60) — 현관문 정면 바깥, **사람 눈높이**
- *   시작 시선 (-1.00, 1.15, -0.20) — 문틀 너머 방 안을 본다
- *   3.2초에 걸쳐 처음 구도로 물러난다
+ * 🔴 **문틀 바로 안쪽에서 시작한다.** 실제 값은 아래 `INTRO` 가 정본이다 —
+ *    이 머리 주석에는 숫자를 적지 않는다. 한때 여기에 "문 밖 (-4.70, 1.35,
+ *    -1.60) · 3.2초" 라고 적혀 있었는데 상수는 이미 문 안쪽 (-2.35, 1.35,
+ *    -1.15) · 4.2초 였다. CLAUDE.md 가 "값을 바꾸기 전에 주석을 읽는다" 를
+ *    규칙으로 걸어 둔 만큼, 어긋난 주석은 그 규칙을 정확히 해롭게 만든다.
+ *    문 밖에서 시작하지 않는 이유는 `INTRO.from` 주석에 있다.
  *
  * ⚠️ 높이를 낮게(1.35) 잡는 것이 핵심이다. 처음에 1.55 로 뒀더니 **왼쪽 벽
  *    (높이 3.0, x=-3.1)을 넘겨다봐서** 문 밖인데도 방이 통째로 보였다 —
@@ -122,8 +120,11 @@ export const INTRO = {
    *    (문 밖 → 문 안쪽) 같은 시간이면 더 느려지지만, 그것만으로는 모자랐다.
    */
   ms: 4200,
-  /** 문이 열리는 시각(ms). 들어가기 전에 열려 있어야 한다. */
-  doorOpenAt: 0,
+  /*
+   * ⚠️ `doorOpenAt` 은 없앴다. 참조가 0 이었다 — 문은 `onIntroDoor(true)` 로
+   *    **effect 에서 즉시** 연다(비행이 시작되기 전에 열려 있어야 한다).
+   *    값이 0 이라 "우연히 맞는" 상태였고, 고쳐도 아무 일도 안 일어났다.
+   */
   /** 문이 닫히는 시각(ms). 다 들어온 뒤다. */
   doorCloseAt: 2600,
 } as const
@@ -199,6 +200,7 @@ export function CameraRig({
   controls,
   onIntroDoor,
   onEntered,
+  onIntroStart,
   skipIntro = false,
   mode = 'room',
 }: {
@@ -209,6 +211,15 @@ export function CameraRig({
   onIntroDoor: (open: boolean) => void
   /** 입장이 끝났다 — 부모가 UI 를 올린다. */
   onEntered: () => void
+  /**
+   * 입장 비행이 **지금 시작한다** — 부모가 OrbitControls 제약을 풀어야 한다.
+   *
+   * 🔴 없으면 **깊은 링크로 들어온 사람에게 입장이 깨진다.** `Scene` 의
+   *    `entered` 는 `useState(mode === 'page')` 라, 첫 화면이 `/work` 였다면
+   *    이미 `true` 다. 그 상태로 홈에 오면 제약이 걸린 채 비행이 시작돼
+   *    카메라가 끌려간다(같은 파일 `FREE_LIMITS` 주석의 그 증상).
+   */
+  onIntroStart: () => void
   /**
    * 입장 연출을 건너뛴다.
    *
@@ -263,15 +274,44 @@ export function CameraRig({
   useEffect(() => {
     const ctl = controls.current
     if (!ctl || started.current) return
-    started.current = true
 
     // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
-    // 페이지 배경으로 쓸 때도 같은 경로로 건너뛴다.
-    if (skipIntro || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      started.current = true
       landed.current = true
       onEntered()
       return
     }
+
+    /*
+     * 🔴 **페이지 배경일 때는 `started` 를 세우지 않는다.**
+     *
+     *    캔버스가 라우트를 넘어 살아 있으므로 이 컴포넌트는 **세션당 한 번만**
+     *    마운트된다. 검색으로 `/work` 에 바로 들어온 사람은 첫 마운트가
+     *    `mode='page'` 라 여기서 건너뛰는데, 예전에는 그 자리에서
+     *    `started.current = true` 로 굳어 **그 뒤 홈에 와도 입장 effect 가
+     *    early-return** 했다. 문이 열리고 걸어 들어오는 연출을 그 방문자는
+     *    영영 못 봤고, `markIntroSeen()` 도 안 불려 나중에 홈을 새로고침하면
+     *    그때 뒤늦게 풀 길이가 재생됐다("이미 본 사람은 짧게" 와 반대 방향).
+     *
+     *    검색 유입이 곧 수주 경로라 `/work`·`/stack` 이 첫 화면이 되기 쉽다.
+     *    → 건너뛰기만 하고 **다음에 홈으로 오면 그때 입장한다.**
+     */
+    if (skipIntro) {
+      landed.current = true
+      onEntered()
+      return
+    }
+    started.current = true
+
+    /*
+     * ⚠️ 위 경로를 지나 왔다면 `landed` 가 이미 true 다. 그대로 두면 초점
+     *    effect 가 "이미 입장했다" 로 읽고 비행 중에 카메라를 덮어쓴다
+     *    (`landed` 선언부 주석의 그 사고). 비행 상태를 처음부터 다시 잡는다.
+     */
+    landed.current = false
+    doorClosed.current = false
+    onIntroStart()
 
     /*
      * 🔴 **전체 연출은 세션당 한 번이다.**
@@ -341,7 +381,7 @@ export function CameraRig({
      *    비행 진행도(`useFrame`)에 맞춰 부른다 — 그래야 보이는 것과 맞는다.
      */
     onIntroDoor(true)
-  }, [camera, controls, onEntered, onIntroDoor, skipIntro])
+  }, [camera, controls, onEntered, onIntroDoor, onIntroStart, skipIntro])
 
   useEffect(() => {
     const ctl = controls.current

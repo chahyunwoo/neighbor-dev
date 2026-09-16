@@ -1,4 +1,5 @@
 import type { Transition, Variants } from 'motion/react'
+import { EASE } from '@/shared/lib'
 
 /**
  * 모션 규격 — 이 사이트의 움직임은 전부 여기서 온다.
@@ -11,10 +12,12 @@ import type { Transition, Variants } from 'motion/react'
  * 통통 튀는 스프링을 쓰지 않는다. 감속 곡선으로 조용히 멈춘다.
  */
 
-/** 기본 감속 — 대부분의 등장·전환에 쓴다. */
-export const EASE = [0.22, 0.61, 0.36, 1] as const
-/** 들어오고 나가는 것이 대칭이어야 할 때. */
-export const EASE_IN_OUT = [0.65, 0, 0.35, 1] as const
+/*
+ * 🔴 감속 곡선은 `@/shared/lib` 에서 온다 — 여기서 선언하지 않는다.
+ *    `shared/ui/SplitText` 가 FSD 상 이 파일을 import 할 수 없어 같은 값을
+ *    리터럴로 다시 박아 쓰고 있었다. 근거는 `shared/lib/easing.ts` 주석.
+ *    `EASE_IN_OUT` 은 소비처가 0 이라 지웠다(필요해지면 easing.ts 에 넣는다).
+ */
 
 export const DURATION = {
   /** 눌렀을 때의 즉각 반응. */
@@ -54,23 +57,18 @@ export const stagger = (delay = 0): Variants => ({
   },
 })
 
-/** 페이드만. 위치가 바뀌면 안 되는 것(3D 위의 겹침 등)에 쓴다. */
-export const fade: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: transition(DURATION.quick) },
-}
-
-/**
- * 화면 전환 — 나가는 쪽과 들어오는 쪽.
+/*
+ * 🔴 **화면 전환용 variant(`pageIn`·`fade`)는 둘 다 없앴다.**
  *
- * 🔴 나갈 때를 들어올 때보다 짧게 잡는다. 같은 길이면 빈 화면이 길어져
- *    "느리다" 로 느껴진다.
+ *    `pageIn` 은 화면 전체를 y 10px 밀어 올렸다 — 피하려던 "허접한 슬라이딩"
+ *    이고, 100dvh 화면에서는 스크롤바까지 깜빡였다(이슈 #24).
+ *    `fade` 는 그 뒤 `template.tsx` 가 쓰다가 **서버 HTML 을 통째로
+ *    `opacity:0` 으로 만드는** 문제로 걷어냈다(그 파일 주석에 실측이 있다).
+ *
+ *    화면 사이를 잇는 일은 View Transitions 하나가 맡는다
+ *    (`shared/styles/tokens.css` 의 `::view-transition-*`).
+ *    여기 남은 것들은 **스크롤 등장**용이다 — 역할이 다르다.
  */
-export const pageIn: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: transition(DURATION.page) },
-  exit: { opacity: 0, y: -6, transition: transition(DURATION.quick) },
-}
 
 /**
  * 스크롤로 들어올 때 쓰는 공통 옵션.

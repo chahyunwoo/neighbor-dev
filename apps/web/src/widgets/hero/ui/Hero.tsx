@@ -122,10 +122,12 @@ export function Hero({ children }: { children: React.ReactNode }) {
          *    제목만 혼자 흩어졌다(스크린샷으로 발견 — 프레임률은 60fps 로
          *    멀쩡했다).
          *
-         * ⚠️ `enter={false}` — 홈에는 이미 입장 연출이 있다(`data-lit`).
-         *    들어올 때까지 얹으면 같은 것이 두 번 움직인다.
+         * ⚠️ 들어오는 연출은 여기 없다 — 홈에는 이미 입장 연출이 있고
+         *    (`data-lit`), 화면 전환의 겹침은 View Transitions 가 한다.
+         *    한때 `enter={false}` 를 넘겼는데 **컴포넌트가 그 값을 읽지 않아
+         *    no-op 이었다.** 뭔가를 막고 있는 것처럼 읽혀서 걷어냈다.
          */}
-        <TransitionBody enter={false}>
+        <TransitionBody>
           {children}
           {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
           {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
@@ -135,8 +137,13 @@ export function Hero({ children }: { children: React.ReactNode }) {
       {/*
        * ⚠️ 힌트는 `TransitionBody` 로 감싸지 않는다. `position:absolute` 라
        *    래퍼가 끼면 위치가 바뀌고, `data-hidden` CSS 도 이 요소에 직접
-       *    걸려 있다. 대신 아래 CSS 가 `data-transition` 을 보고 흐려지게 한다
-       *    (이미 `transition: opacity` 가 있다).
+       *    걸려 있다.
+       *
+       * ⚠️ **화면을 떠날 때 따로 흐리지 않는다.** `::view-transition-old(root)`
+       *    가 문서 전체를 한 장으로 찍어 함께 페이드하므로 힌트만 남는 일이
+       *    없다. 한때 `html[data-transition="exiting"] .hint` 규칙이 있었지만
+       *    **그 속성을 세우는 코드가 0건**이라 죽어 있었다
+       *    (`features/page-transition/lib/transition.ts` 주석 참고).
        */}
       {is3D ? (
         <p className={styles.hint} data-hidden={openId !== null}>

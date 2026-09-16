@@ -104,6 +104,12 @@ export function Scene({
     setEntered(true)
     onEntered()
   }, [onEntered])
+  /*
+   * 🔴 **입장이 시작되면 제약을 다시 푼다.** 초기값이 `mode === 'page'` 라,
+   *    검색으로 본문 화면에 먼저 들어온 사람은 `entered` 가 이미 `true` 다.
+   *    그 상태로 홈에 오면 제약이 걸린 채 비행이 시작돼 카메라가 끌려간다.
+   */
+  const handleIntroStart = useCallback(() => setEntered(false), [])
 
   // 🔴 캔버스 밖으로 나간 마커를 가장자리에 붙인다(이슈 #3).
   useEdgeClamp()
@@ -270,6 +276,7 @@ export function Scene({
         controls={controls}
         onIntroDoor={setIntroDoor}
         onEntered={handleEntered}
+        onIntroStart={handleIntroStart}
         skipIntro={mode === 'page'}
         mode={mode}
       />

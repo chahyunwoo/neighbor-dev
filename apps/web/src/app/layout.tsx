@@ -52,7 +52,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <style
             // biome-ignore lint/security/noDangerouslySetInnerHtml: noscript 안의 정적 CSS 다
             dangerouslySetInnerHTML={{
-              __html: '[style*="opacity:0"]{opacity:1!important;transform:none!important}',
+              /*
+               * 🔴 두 줄이다. **인라인 `opacity:0` 을 되돌리는 것만으로는
+               *    모자랐다.** `Hero.module.css` 는 데스크톱에서 방 목록을
+               *    `clip-path: inset(50%)` · `width:1px` 로 **순수 CSS 로** 접는다
+               *    ("어차피 JS 가 3D 를 가져온다" 는 전제다). JS 가 없으면
+               *    3D 도 안 오므로 **3D 도 목록도 없는 화면**이 된다 —
+               *    실측: `javaScriptEnabled:false` · 1440x900 에서 `roomW=1`,
+               *    보이는 링크가 `/work`·`/career`·`/contact` 뿐이었다.
+               *    `/stack`·`/diagnose`·`/team` 으로 갈 길이 화면에서 사라진다.
+               *
+               * ⚠️ `[data-mode]` 는 그 방 목록 하나뿐이다(전수 확인).
+               */
+              __html:
+                '[style*="opacity:0"]{opacity:1!important;transform:none!important}' +
+                '[data-mode]{position:static!important;width:auto!important;height:auto!important;clip-path:none!important;overflow:visible!important;white-space:normal!important}',
             }}
           />
         </noscript>
@@ -61,8 +75,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/*
          * 🔴 `TransitionRoot` 가 `MotionRoot` **안**이다. 전환도 모션이라
          *    `reducedMotion="user"` 의 적용 범위에 들어가야 한다.
-         *    (다만 **대기 시간**은 Motion 이 안 지워서 `TransitionRoot` 가
-         *    직접 건너뛴다 — 그 파일 주석 참고.)
+         *
+         * ⚠️ **`reducedMotion="user"` 가 지우는 것은 `transform` 뿐이다.**
+         *    `opacity`·`filter`·`delay` 는 그대로 남는다. 한때 이 주석이
+         *    "대기 시간은 `TransitionRoot` 가 직접 건너뛴다" 고 적혀 있었는데
+         *    **그런 코드가 없었다** — `reduced` 는 View Transitions 를 우회하는
+         *    데만 쓴다. 지연을 실제로 지우는 곳은 각 연출이다
+         *    (`SplitText` 가 `useReducedMotion()` 으로 직접 판단한다).
          */}
         {/*
          * 🔴 `RoomProvider` 가 `{children}` 과 `<CanvasRoot />` 를 **둘 다**

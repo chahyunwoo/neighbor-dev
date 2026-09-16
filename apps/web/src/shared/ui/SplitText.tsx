@@ -1,7 +1,8 @@
 'use client'
 
-import { motion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { EASE } from '@/shared/lib'
 
 /**
  * 글자를 낱개로 쪼개 하나씩 움직이게 한다.
@@ -24,12 +25,26 @@ import { useEffect, useState } from 'react'
  * ⚠️ `Array.from` 으로 쪼갠다. `split('')` 은 서로게이트 페어(이모지 등)를
  *    반쪽으로 자른다.
  *
- * ⚠️ 움직임을 끈 사람에게는 `MotionRoot` 의 `reducedMotion="user"` 가
- *    위치 변화를 지운다 — 여기서 다시 판단하지 않는다.
+ * 🔴 **움직임을 끈 사람에게는 아예 쪼개지 않는다.**
+ *    `MotionRoot` 의 `reducedMotion="user"` 는 **`transform` 만** 지운다 —
+ *    `filter: blur` 와 `delay` 는 그대로 남아서, 위치는 안 움직이는데 글자가
+ *    흐린 채로 대기하다 초점이 맞는 연출이 된다. 지우려던 것이 안 지워진다.
+ *    → `useReducedMotion()` 으로 여기서 직접 판단하고 원문을 그대로 둔다.
  */
 
 /**
  * 낱글자 하나의 움직임.
+ *
+ * 🔴 **`opacity` 를 건드리지 않는다. 이게 핵심이다.**
+ *
+ *    전에는 `opacity: 0` 에서 출발했다. 그런데 이 컴포넌트는 **서버에서 원문을
+ *    그대로 렌더한 뒤** 클라이언트에서 낱글자로 갈아끼운다 — 즉 갈아끼우는
+ *    순간 **이미 읽히고 있던 글자를 도로 감추게 된다.** 화면에서 제일 큰
+ *    글자가 구멍이 되고, 그게 대개 LCP 요소다. 검색 유입이 곧 수주 경로인
+ *    사이트에서 제목을 JS 뒤로 미루는 셈이다.
+ *
+ *    → 이동(`y`)과 초점(`blur`)만 움직인다. 잉크는 처음부터 끝까지 화면에
+ *      있고, "아래에서 올라오며 초점이 맞는다" 는 연출은 그대로 읽힌다.
  *
  * 🔴 **나가는 상태가 없다.** 화면을 떠나는 연출은 View Transitions 가 이전
  *    화면을 통째로 겹쳐 빼는 것으로 처리한다(`TransitionRoot`). 여기서 또
@@ -39,10 +54,10 @@ import { useEffect, useState } from 'react'
  *    "부드럽다" 가 아니라 "지저분하다" 로 읽힌다.
  */
 const glyph = {
-  /** 들어오기 전 — 아래에서 살짝 흐린 채로 대기한다. */
-  hidden: { opacity: 0, y: '0.36em', filter: 'blur(5px)' },
+  /** 들어오기 전 — 아래에서 초점이 안 맞은 채로 대기한다. **보이기는 한다.** */
+  hidden: { y: '0.36em', filter: 'blur(6px)' },
   /** 착지. */
-  show: { opacity: 1, y: '0em', filter: 'blur(0px)' },
+  show: { y: '0em', filter: 'blur(0px)' },
 }
 
 export function SplitText({
@@ -89,6 +104,7 @@ export function SplitText({
    * 서버 렌더 결과와 첫 클라이언트 렌더가 같아야 하이드레이션이 깨지지 않는다.
    */
   const [ready, setReady] = useState(false)
+  const reduced = useReducedMotion()
   useEffect(() => {
     if (!animate) return
     let alive = true
@@ -108,7 +124,7 @@ export function SplitText({
 
   const Tag = motion[as]
 
-  if (!animate || !ready) {
+  if (!animate || !ready || reduced) {
     // 쪼개기 전. 움직이지 않고 그냥 보인다 — 폰트를 기다리는 동안 글이 사라지면 안 된다.
     return <Tag className={className}>{text}</Tag>
   }
@@ -163,7 +179,7 @@ export function SplitText({
                   key={i}
                   initial={glyph.hidden}
                   animate={glyph.show}
-                  transition={{ duration, delay: d, ease: [0.22, 0.61, 0.36, 1] }}
+                  transition={{ duration, delay: d, ease: EASE }}
                   style={{ display: 'inline-block', willChange: 'transform, filter, opacity' }}
                 >
                   {ch}

@@ -8,7 +8,10 @@
  * 왜 features 인가: 백엔드 엔드포인트가 없고 UI·흐름만 다룬다
  *    (CLAUDE.md 의 판정 기준 — `reveal` 과 같은 층).
  */
-export { EASE, ENTER, GLYPH_DURATION, GLYPH_SPAN } from './lib/transition'
+/*
+ * ⚠️ 타이밍 상수(`ENTER`·`GLYPH_*`)는 내보내지 않는다 — 슬라이스 안에서만
+ *    쓴다. 안 쓰는 것을 배럴에 두면 "누가 쓰나" 를 매번 다시 세게 된다.
+ */
 export { TransitionBody } from './ui/TransitionBody'
-export { TransitionRoot } from './ui/TransitionRoot'
+export { TransitionRoot, useNavCount } from './ui/TransitionRoot'
 export { TransitionTitle } from './ui/TransitionTitle'

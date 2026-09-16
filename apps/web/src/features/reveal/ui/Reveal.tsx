@@ -20,17 +20,21 @@ import { inView, rise, stagger } from '@/features/reveal/lib/motion'
  * ⚠️ `transition` 을 `undefined` 로 넘기지 않고 값이 있을 때만 편다 —
  *    `exactOptionalPropertyTypes` 가 켜져 있어 거부한다(실측 TS2375).
  */
+/*
+ * ⚠️ **`delay` prop 은 없다.** 받아 두고 `transition={{ delay }}` 로 넘겼었는데
+ *    **먹지 않았다** — `rise.show` 가 자기 `transition` 을 들고 있어 Motion
+ *    우선순위상 variant 쪽이 이긴다. 넘기는 호출부도 0건이었다.
+ *    차례로 들여보내야 하면 `RevealGroup`(`stagger(delay)` → `delayChildren`)
+ *    을 쓴다. 그쪽은 실제로 동작한다.
+ */
 export function Reveal({
   children,
   className,
-  delay = 0,
   as = 'div',
 }: {
   children: ReactNode
   /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
   className?: string | undefined
-  /** 늦게 들어와야 할 때. 남용하면 기다리게 된다. */
-  delay?: number
   as?: 'div' | 'section' | 'li' | 'article'
 }) {
   const Tag = motion[as]
@@ -41,7 +45,6 @@ export function Reveal({
       whileInView="show"
       viewport={inView}
       variants={rise}
-      {...(delay ? { transition: { delay } } : {})}
     >
       {children}
     </Tag>

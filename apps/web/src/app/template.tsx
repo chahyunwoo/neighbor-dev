@@ -1,37 +1,33 @@
-'use client'
-
-import * as motion from 'motion/react-client'
-import { fade } from '@/features/reveal'
-
 /**
  * 화면 전환의 바닥 — Next 의 `template.tsx` 는 경로가 바뀔 때마다 **다시 마운트**된다.
- * `layout.tsx` 는 유지되므로 들어오는 연출을 걸 수 있는 자리가 여기다.
  *
- * 🔴 **여기서는 위치를 움직이지 않는다. 페이드만 한다.**
+ * 🔴 **여기서는 아무것도 하지 않는다. 그게 고친 결과다.**
  *
- *    전에는 `pageIn`(y 10px + opacity)으로 **화면 전체를 한 덩어리로** 밀어
- *    올렸다. 그게 우리가 피하려던 그 흔한 판때기 슬라이드였고, 글자 단위
- *    연출(`TransitionTitle`)과 겹쳐 같은 것이 두 번 움직였다.
+ *    한때 `motion.div` 로 페이지 전체를 페이드시켰는데, 그 대가가 컸다:
  *
- *    이제 움직이는 것은 **제목의 낱글자와 본문**이고(`features/page-transition`),
- *    이 바닥은 그 둘을 받쳐 주는 페이드만 맡는다. 시차가 있어야 글자가
- *    따로 논다는 것이 읽힌다.
+ *    ① **서버 HTML 의 `<body>` 첫 요소가 `<div style="opacity:0">` 이 된다.**
+ *       실측 2026-09-16(프로드 빌드): `/work` 의 본문 전체가 그 안에 들어가,
+ *       하이드레이션 전에는 **화면에 아무것도 안 보였다.** 제목이 처음 보이는
+ *       것이 363ms, 완전히 올라오는 것이 676ms 였다. 이 사이트는 검색 유입이
+ *       곧 수주 경로인데 LCP 요소를 JS 뒤로 미루고 있었던 셈이다.
+ *       (JS 를 **끈** 사람은 `layout.tsx` 의 noscript 가 구해 주지만,
+ *        JS 가 **느리거나 실패한** 사람은 아무도 안 구해 준다.)
  *
- * 🔴 부수 효과로 **#24(첫 페인트 스크롤바 깜빡임)의 원인이 사라진다.**
- *    100dvh 화면에서 아래 10px 에서 올라오는 동안 문서가 뷰포트보다 커져
- *    스크롤바가 나타났다 사라졌다(실측 2026-09-10: 220~680ms 28프레임, 3회 재현).
- *    이동이 없으면 그 일이 아예 안 생긴다.
- *    ⚠️ 그렇다고 `tokens.css` 의 `overscroll` 방어를 걷어내지 않는다 —
- *       다른 경로(본문 연출 등)로 같은 증상이 날 수 있고, 그 방어는 싸다.
+ *    ② **View Transitions 와 같은 것을 두 번 건다.** 라우트 전환에서는
+ *       `::view-transition-new(root)` 의 `vt-in`(560ms·지연 60ms)이 이미
+ *       opacity 를 0→1 로 돌리는데, 그 위에 0.28초짜리 페이드가 곱해졌다 —
+ *       실측: 라우트 커밋(119ms)에 이 래퍼가 0 에서 출발해 402ms 에 1.
+ *       `TransitionBody`·`TransitionTitle` 은 **정확히 이 이유로** 자기 연출을
+ *       걷어냈는데(각 파일 주석) 여기만 남아 있었다.
  *
- * ⚠️ 나가는 연출은 여기 없다. App Router 의 template 은 나가는 쪽을 붙잡아
- *    두지 않아 `AnimatePresence` 가 동작하지 않는다 — 대신 `TransitionRoot` 가
- *    **라우트를 바꾸기 전에** 연출을 재생하고 나서 이동한다.
+ * 🔴 **그래서 등장 연출은 "감췄다 보이기" 가 아니라 "보인 채로 움직이기" 다.**
+ *    제목은 `SplitText` 가 낱글자를 아래에서 올리며 초점을 맞춘다 —
+ *    `opacity` 는 건드리지 않는다(그 파일 주석). 화면이 비는 순간이 없다.
+ *
+ * ⚠️ 이 파일을 지우지 않고 남겨 둔 것은, App Router 에서 **경로마다 다시
+ *    마운트되는 유일한 자리**라는 사실이 곧 문서이기 때문이다. 다음에 전환
+ *    연출을 다시 붙일 일이 생기면 여기가 그 자리다 — 붙이기 전에 위 ①②를 읽는다.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div initial="hidden" animate="show" variants={fade}>
-      {children}
-    </motion.div>
-  )
+  return children
 }

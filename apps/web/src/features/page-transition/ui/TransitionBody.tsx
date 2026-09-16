@@ -25,8 +25,6 @@ export function TransitionBody({
   children: ReactNode
   className?: string | undefined
   as?: 'div' | 'p' | 'section'
-  /** @deprecated 연출이 없어져 의미가 없다. 호출부 정리 전까지 받아만 둔다. */
-  enter?: boolean
 }) {
   return <Tag className={className}>{children}</Tag>
 }
