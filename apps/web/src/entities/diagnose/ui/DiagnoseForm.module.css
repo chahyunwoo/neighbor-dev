@@ -140,3 +140,88 @@
   background: var(--amber-wash);
   border-color: var(--amber);
 }
+
+/* ─── 첫 응답 전 대기 연출 ───────────────────────────────────
+ *
+ * 🔴 모델이 첫 글자를 뱉기까지 몇 초가 빈다. 그동안 화면이 멈춰 있으면
+ *    "안 되는 건가" 로 읽힌다 — 무엇을 하고 있는지 보여준다.
+ */
+.analyzing {
+  position: relative;
+  margin-top: 18px;
+  padding: 26px 24px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--amber);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+/* 위에서 아래로 훑는 빛 — "읽고 있다" 를 표현한다. */
+.scan {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+  opacity: 0.55;
+}
+
+.analyzingText {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+}
+
+.analyzingNote {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--fg-faint);
+}
+
+/* 점 세 개가 차례로 찍힌다. */
+.dots::after {
+  content: "";
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scan {
+    animation: scanDown 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .dots::after {
+    animation: dots 1.4s steps(4, end) infinite;
+  }
+}
+
+@keyframes scanDown {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.55;
+  }
+  88% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(78px);
+    opacity: 0;
+  }
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+}

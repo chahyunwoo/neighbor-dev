@@ -196,3 +196,8 @@
 .hint[data-hidden="true"] {
   opacity: 0;
 }
+
+/* 화면을 떠날 때 같이 흐려진다 — 글이 다 나갔는데 힌트만 남아 있으면 어색하다. */
+:global(html[data-transition="exiting"]) .hint {
+  opacity: 0;
+}

@@ -15,10 +15,27 @@
 
 const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:3200'
 const NAMES = ['모니터', '화이트보드', '책장', '서랍', '노트북', '테이블', '현관문']
-/** 입장 연출 3.2초 + 여유. 이보다 일찍 재면 "연출이 안 돈다" 로 오진한다. */
-const ENTER_MS = 4200
+/**
+ * 입장 연출이 끝날 때까지 기다린다.
+ *
+ * 🔴 **시간으로 기다리지 않는다.** 고정 4200ms 로 버텼는데 입장 연출 자체가
+ *    4200ms 라 여유가 0 이 됐고, GLTF 로딩이 조금만 느려도 **첫 클릭이 비행
+ *    중에** 일어나 마커 좌표가 `(0,0)` 으로 잡혔다(실측 2026-09-16:
+ *    "클릭 실패: 서랍 (0,0)").
+ *
+ * ⚠️ 3D 가 없는 화면(모바일·reduced-motion·JS 비활성)에서는 이 플래그가 영영
+ *    안 붙는다 — 타임아웃을 삼키고 넘어간다.
+ */
+async function waitEntered(pg, quiet = 900) {
+  await pg
+    .waitForFunction(() => document.documentElement.dataset.roomEntered === 'true', {
+      timeout: 15000,
+    })
+    .catch(() => {})
+  await pg.waitForTimeout(quiet)
+}
 
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 
 let fail = 0
 const ok = (cond, label, detail) => {
@@ -30,7 +47,7 @@ async function markerHits(page) {
   return page.evaluate((names) => {
     const out = []
     for (const n of names) {
-      const b = [...document.querySelectorAll('button[aria-label]')].find((x) =>
+      const b = [...document.querySelectorAll('button[class*="marker"][aria-label]')].find((x) =>
         (x.getAttribute('aria-label') || '').startsWith(n),
       )
       if (!b) {
@@ -61,7 +78,7 @@ async function markerHits(page) {
 }
 
 ;(async () => {
-  const browser = await chromium.launch()
+  const browser = await chromium.launch(LAUNCH)
 
   // ── 1. 데스크톱: 캔버스 개수 · 마커 도달성 · 실제 클릭 ──────────────
   console.log('\n[1] 데스크톱 1440x900')
@@ -72,7 +89,7 @@ async function markerHits(page) {
     if (/webglcontextlost|context lost/i.test(m.text())) lost.push(m.text())
   })
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(ENTER_MS)
+  await waitEntered(page)
 
   const n1 = await page.evaluate(() => document.querySelectorAll('canvas').length)
   ok(n1 === 1, `캔버스 1개`, `실제 ${n1}`)
@@ -107,10 +124,28 @@ async function markerHits(page) {
    *    7/7 이었다). 카메라 이동은 의도된 동작이지 버그가 아니다.
    */
   let opened = 0
+  /*
+   * 🔴 **마커로 한정해서 집는다.** `button[aria-label]` 만 쓰면 **왼쪽 번호
+   *    목록**의 같은 라벨이 먼저 걸린다 — 3D 모드에서 그 목록은 `clip-path`
+   *    로 숨겨져 있어 `getBoundingClientRect` 가 `(0,0)` 이고, 프로브는
+   *    "클릭 실패: 서랍 (0,0)" 으로 읽는다(실측 2026-09-16).
+   *
+   *    씬을 캔버스(layout) 안으로 옮기면서 **문서 순서가 뒤바뀐 것**이
+   *    드러낸 함정이다 — 마커는 이제 body 끝쪽에, 목록은 main 안에 있다.
+   *    `verify-clamp` 는 원래 마커로 한정해서 이 문제가 없었다.
+   */
   for (const name of NAMES) {
     const fctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     const fresh = await fctx.newPage()
     await fresh.goto(`${BASE}/`, { waitUntil: 'networkidle' })
+    /*
+     * 🔴 **입장이 끝나야 마커가 제자리에 선다.** 입장 시작 위치가 문 안쪽이라
+     *    현관문·서랍이 **카메라 뒤**에 놓이는데, drei 의 `Html` 은 카메라 뒤
+     *    요소를 숨겨 `getBoundingClientRect` 가 `(0,0)` 이 된다. 아래 "좌표가
+     *    두 번 연속 같은가" 판정은 `(0,0)` 도 **안정된 값으로 읽어** 그대로
+     *    통과시킨다 — 그러면 화면 좌상단을 누른다(실측 2026-09-16).
+     */
+    await waitEntered(fresh)
     /*
      * ⚠️ 고정 대기로는 부족하다. GPU 가 붐비면 입장 연출이 늦게 끝나
      * 마커가 아직 DOM 에 없는데 **"마커 없음" 으로 오진한다**(실측).
@@ -119,7 +154,7 @@ async function markerHits(page) {
     await fresh
       .waitForFunction(
         (n) =>
-          [...document.querySelectorAll('button[aria-label]')].some((x) =>
+          [...document.querySelectorAll('button[class*="marker"][aria-label]')].some((x) =>
             (x.getAttribute('aria-label') || '').startsWith(n),
           ),
         name,
@@ -135,11 +170,13 @@ async function markerHits(page) {
     await fresh
       .waitForFunction(
         (n) => {
-          const b = [...document.querySelectorAll('button[aria-label]')].find((x) =>
-            (x.getAttribute('aria-label') || '').startsWith(n),
+          const b = [...document.querySelectorAll('button[class*="marker"][aria-label]')].find(
+            (x) => (x.getAttribute('aria-label') || '').startsWith(n),
           )
           if (!b) return false
           const q = b.getBoundingClientRect()
+          // 🔴 (0,0)·크기 0 은 "아직 안 그려짐" 이지 "제자리" 가 아니다.
+          if (q.width === 0 || q.height === 0 || (q.x === 0 && q.y === 0)) return false
           const now = `${Math.round(q.x)},${Math.round(q.y)}`
           const w = window
           const same = w.__last === now
@@ -151,7 +188,7 @@ async function markerHits(page) {
       )
       .catch(() => {})
     const pt = await fresh.evaluate((n) => {
-      const b = [...document.querySelectorAll('button[aria-label]')].find((x) =>
+      const b = [...document.querySelectorAll('button[class*="marker"][aria-label]')].find((x) =>
         (x.getAttribute('aria-label') || '').startsWith(n),
       )
       if (!b) return null
@@ -162,7 +199,7 @@ async function markerHits(page) {
       await fresh.mouse.click(pt[0], pt[1])
       await fresh.waitForTimeout(900)
       const isOpen = await fresh.evaluate((n) => {
-        const b = [...document.querySelectorAll('button[aria-label]')].find((x) =>
+        const b = [...document.querySelectorAll('button[class*="marker"][aria-label]')].find((x) =>
           (x.getAttribute('aria-label') || '').startsWith(n),
         )
         return b ? b.getAttribute('aria-expanded') === 'true' : false
@@ -179,7 +216,7 @@ async function markerHits(page) {
   // ── 2. 캔버스가 라우트를 넘어 사는가 (이 작업의 성공 조건) ───────────
   console.log('\n[2] 라우트 이동 후 캔버스 생존')
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(ENTER_MS)
+  await waitEntered(page)
   await page.evaluate(() => {
     const c = document.querySelector('canvas')
     if (c) c.dataset.probe = 'p1'
@@ -199,7 +236,7 @@ async function markerHits(page) {
 
   // 홈 복귀 후에도 마커가 눌리는가
   await page.click('a[href="/"]')
-  await page.waitForTimeout(ENTER_MS)
+  await waitEntered(page)
   const back = await markerHits(page)
   const backReach = back.filter((h) => h.reachable).length
   ok(backReach === NAMES.length, '홈 복귀 후 마커 도달', `${backReach}/${NAMES.length}`)
@@ -222,7 +259,8 @@ async function markerHits(page) {
     const c = await browser.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await c.newPage()
     await pg.goto(BASE + path, { waitUntil: 'networkidle' })
-    await pg.waitForTimeout(path === '/' ? ENTER_MS : 1500)
+    if (path === '/') await waitEntered(pg)
+    else await pg.waitForTimeout(1500)
     const dead = await pg.evaluate(() => {
       const out = []
       for (const el of document.querySelectorAll('a,button,input,textarea,select,summary')) {
@@ -276,7 +314,8 @@ async function markerHits(page) {
     const c = await browser.newContext(opts)
     const p = await c.newPage()
     await p.goto(`${BASE}/`, { waitUntil: 'load' })
-    await p.waitForTimeout(opts.javaScriptEnabled === false ? 400 : ENTER_MS)
+    if (opts.javaScriptEnabled === false) await p.waitForTimeout(400)
+    else await waitEntered(p, 400)
     const r = await p.evaluate(() => ({
       canvas: document.querySelectorAll('canvas').length,
       links: document.querySelectorAll(

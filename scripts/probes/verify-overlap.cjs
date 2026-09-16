@@ -8,12 +8,12 @@
  * 🔴 `verify-clamp.cjs` 로는 이 버그가 **안 잡힌다**(방어를 지워도 7/7 이 나왔다).
  *    그쪽은 "캔버스 밖으로 나갔는가" 를 보고, 이쪽은 "서로 덮는가" 를 본다.
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 const RUNS = Number(process.env.RUNS || 5)
 const VP = { width: 1440, height: 900 }
 
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch(LAUNCH)
   let fail = 0
   for (let run = 1; run <= RUNS; run++) {
     const pg = await (await b.newContext({ viewport: VP })).newPage()

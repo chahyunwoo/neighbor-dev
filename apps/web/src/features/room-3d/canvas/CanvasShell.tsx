@@ -2,9 +2,23 @@
 
 import { Preload } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
+import { Suspense, useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { useRoom } from '@/features/room-3d/model/room-state'
 import { r3f } from './tunnel'
+
+/*
+ * 🔴 **씬을 여기서 렌더한다. 화면 안에 두지 않는다.**
+ *
+ *    이것이 지속 캔버스의 요점이다 — 캔버스만 살려 두고 씬을 페이지에 두면
+ *    라우트가 바뀔 때마다 씬이 죽고 다시 산다. 실측 2026-09-16: 전환마다
+ *    **91ms 짜리 멈춤**이 났다(3회 전부 재현). GLTF 21개를 다시 세팅하는
+ *    비용이고, 사용자에게는 "뚜둑" 으로 보인다.
+ *
+ *    화면은 `RoomStage` 로 모드만 선언하고, 그리는 일은 계속 여기가 맡는다.
+ */
+const Scene = dynamic(() => import('../scene/Scene').then((m) => m.Scene), { ssr: false })
 
 /**
  * 지속 캔버스 — **앱 전체에서 단 하나뿐인 `<Canvas>`**.
@@ -33,6 +47,31 @@ import { r3f } from './tunnel'
  */
 export function CanvasShell() {
   const ref = useRef<HTMLDivElement>(null)
+
+  /*
+   * 🔴 **캔버스는 페이드로 들어온다.**
+   *
+   *    `--cv-opacity` 가 모드별 값(홈이면 1)이라 캔버스가 붙는 순간 이미
+   *    불투명하다 — `transition` 이 있어도 시작값이 곧 끝값이라 아무 일도
+   *    안 일어난다. 실측 2026-09-16: 일반·강력 새로고침·첫 방문 **세 경우
+   *    모두** 등장 시 불투명도가 100 이었고 **100 미만인 프레임이 0개**였다.
+   *    3D 가 툭 튀어나온다.
+   *
+   *    강력 새로고침에서 특히 눈에 띈다 — 캐시가 없어 캔버스가 301ms 에야
+   *    붙는데(일반은 15ms), 글은 이미 다 읽히는 상태라 3D 만 뒤늦게 튄다.
+   *
+   * ⚠️ 한 프레임 뒤에 켠다. 같은 프레임에 붙이면 브라우저가 시작값을 못 잡아
+   *    transition 이 또 안 돈다.
+   */
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      document.documentElement.dataset.canvasReady = 'true'
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      delete document.documentElement.dataset.canvasReady
+    }
+  }, [])
 
   /*
    * 홈에서 캔버스는 헤더 **아래**에서 시작한다(실측 y=97).
@@ -151,6 +190,18 @@ export function CanvasShell() {
         shadows
         dpr={[1, 2]}
         /*
+         * 🔴 **리사이즈를 미루지 않는다.**
+         *
+         *    패널이 열리면 캔버스가 0.44s 에 걸쳐 1440 → 960 으로 좁아지는데,
+         *    R3F 는 기본적으로 크기 변화를 **debounce** 해서 드로잉 버퍼를
+         *    한 번에 바꾼다 — 실측 2026-09-16: CSS 폭은 **27단계**로 부드럽게
+         *    줄어드는 동안 버퍼는 **614ms 에 한 번** 1440 → 960 으로 튀었다.
+         *    그 순간 3D 내용이 확 어긋나 보인다(사용자 지적: "뚜둑뚜둑").
+         *
+         *    → 0 으로 두면 CSS 전환을 따라 같이 줄어든다.
+         */
+        resize={{ debounce: 0 }}
+        /*
          * 🔴 톤매핑이 조명의 절반이다. 프로토타입과 같은 조명값을 넣어도
          *    이 설정이 없으면 전혀 다르게 나온다 — 가구가 갈색으로 뭉개진다
          *    (실측 2026-09-09, 프로토타입 스크린샷과 대조해 발견).
@@ -161,9 +212,36 @@ export function CanvasShell() {
           toneMappingExposure: 0.88,
         }}
       >
+        <SceneSlot />
         <r3f.Out />
         <Preload all />
       </Canvas>
     </div>
+  )
+}
+
+/**
+ * 방을 그린다 — **라우트가 바뀌어도 이 컴포넌트는 안 죽는다.**
+ *
+ * 🔴 상태는 `RoomProvider` 가 쥔다. 화면은 `RoomStage` 로 모드만 선언하므로,
+ *    여기서는 그 값을 읽어 카메라를 어디에 둘지만 정하면 된다.
+ *
+ * ⚠️ `off` 일 때는 씬을 **언마운트하지 않는다.** 그러면 다시 켤 때 GLTF 를
+ *    다시 세팅해 멈춤이 생긴다 — 캔버스를 `visibility:hidden` 으로 감추는
+ *    것으로 충분하다(`tokens.css`). 이것이 `CanvasRoot` 의 sticky mount 와
+ *    같은 이유다.
+ */
+function SceneSlot() {
+  const { mode, openId, seen, open, markEntered } = useRoom()
+  return (
+    <Suspense fallback={null}>
+      <Scene
+        mode={mode === 'page' ? 'page' : 'room'}
+        openId={openId}
+        seen={seen}
+        onOpen={open}
+        onEntered={markEntered}
+      />
+    </Suspense>
   )
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { OBJECT_MODEL } from '@/entities/room'
-import { CanvasMode, ContentWidth, ObjectStage } from '@/features/room-3d'
+import { TransitionBody, TransitionTitle } from '@/features/page-transition'
+import { ContentWidth, RoomStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
 
 interface Props {
@@ -41,8 +41,6 @@ interface Props {
  *    홈(`app/page.tsx`)이 이미 그렇게 하고 있어서 방식도 통일된다.
  */
 export function PageShell({ fig, crumb, title, lede, from, wide, children }: Props) {
-  const stage = from ? OBJECT_MODEL[from] : undefined
-
   return (
     <div className={styles.page}>
       {/* 본문 폭을 <html> 에 알린다 — 캔버스 폭과 같은 곳에서 갈리도록. */}
@@ -51,25 +49,40 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
        * 🔴 `from` 이 없어도 **모드를 선언한다**. 캔버스가 라우트를 넘어
        *    살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 남는다.
        */}
-      {stage ? (
-        <ObjectStage model={stage.model} rotationY={stage.rotationY} scale={stage.scale} />
-      ) : (
-        <CanvasMode mode="off" />
-      )}
+      {/*
+       * 🔴 3D 를 여기서 그리지 않는다 — **어느 물건을 보는지만 말한다.**
+       *    씬은 캔버스 안에 고정되어 라우트를 넘어 살아 있다.
+       */}
+      <RoomStage mode={from ? 'page' : 'off'} objectId={from ?? null} />
       <main className={styles.main}>
         <div className={styles.head}>
           <div className={styles.headText}>
-            <div className={styles.crumb}>
+            {/*
+             * 🔴 빵부스러기와 아래 캡션도 같이 나간다. 처음엔 제목·본문만
+             *    감쌌더니 **이 둘만 선명하게 남아 혼자 떠 있었다** — 화면이
+             *    비었는데 라벨만 공중에 뜬 꼴이다(스크린샷으로 발견).
+             */}
+            <TransitionBody className={styles.crumb}>
               <Link href="/">← 작업실로</Link>
               <span aria-hidden="true">/</span>
               <span>{crumb}</span>
-            </div>
-            <h1 className={styles.title}>{title}</h1>
-            {lede ? <p className={styles.lede}>{lede}</p> : null}
+            </TransitionBody>
+            {/*
+             * 🔴 제목만 낱글자로 움직인다. 이 한 줄이 화면 전환의 주인공이라
+             *    나머지는 시차를 두고 따라붙는다(`lib/transition.ts` 의 시계).
+             */}
+            <TransitionTitle text={title} className={styles.title} />
+            {lede ? (
+              <TransitionBody>
+                <p className={styles.lede}>{lede}</p>
+              </TransitionBody>
+            ) : null}
           </div>
-          <p className={styles.fig}>{fig}</p>
+          <TransitionBody as="p" className={styles.fig}>
+            {fig}
+          </TransitionBody>
         </div>
-        {children}
+        <TransitionBody>{children}</TransitionBody>
       </main>
     </div>
   )

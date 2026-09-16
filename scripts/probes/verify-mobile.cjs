@@ -4,7 +4,7 @@
  * 🔴 3D 가 꺼지는 구간에서 번호 목록은 **유일한 이동 수단**이다.
  *    잘리면 그 물건으로 갈 방법이 아예 없어진다.
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 const VPS = [
   [390, 844],
   [430, 932],
@@ -15,7 +15,7 @@ const VPS = [
   [1440, 900],
 ]
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch(LAUNCH)
   let fail = 0
   for (const [w, h] of VPS) {
     const ctx = await b.newContext({

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getAllProjects, getStackFrequency } from '@/entities/project'
+import { Reveal } from '@/features/reveal'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
@@ -69,10 +70,15 @@ function Group({
   if (items.length === 0) return null
   return (
     <section className={styles.group}>
-      <div className={styles.groupHead}>
+      <Reveal className={styles.groupHead}>
         <h2 className={styles.groupTitle}>{title}</h2>
         <span className={styles.groupNote}>{note}</span>
-      </div>
+      </Reveal>
+      {/*
+       * ⚠️ 태그 하나하나에는 연출을 걸지 않는다. 이 화면은 태그가 수십 개라
+       *    stagger 가 끝없이 길어지고, `RevealItem` 은 `data-weight` 를 받지
+       *    않아 굵기 스타일도 사라진다. **그룹 단위**로만 들어온다.
+       */}
       <div className={styles.items}>
         {items.map((f) => (
           <span key={f.name} className={styles.item} data-weight={weight}>

@@ -14,6 +14,33 @@ const { createRequire } = require('node:module')
 const { existsSync } = require('node:fs')
 const { join } = require('node:path')
 
+/**
+ * 프로브 공통 실행 옵션 — **headless 로 열되 진짜 GPU 를 쓴다.**
+ *
+ * 🔴 headless 의 기본 렌더러는 SwiftShader(소프트웨어)라 **11fps** 로 떨어진다.
+ *    그 상태로 3D 모션을 재면 **없는 증상이 만들어진다**(CLAUDE.md) —
+ *    `verify-clamp` 가 5회 중 3회 실패했고 실패 해상도도 매번 달랐다.
+ *
+ *    그래서 한동안 `headless: false` 로 돌렸는데, 그러면 **진짜 창이 뜬다.**
+ *    `canvas-probe` 는 마커마다 새 컨텍스트를 열어 창이 연달아 튀어나오고,
+ *    그게 작업을 방해했다(사용자 지적). `--window-position` 으로 화면 밖에
+ *    보내려 했지만 macOS 는 그 좌표를 무시했다.
+ *
+ * 🔴 **답은 `--use-angle`.** 실측 2026-09-16:
+ *
+ *      headless 기본            11fps   ANGLE (SwiftShader)
+ *      headless + angle=metal   61fps   ANGLE (Apple M3 GPU)
+ *
+ *    창을 안 띄우고도 실제 GPU 로 돈다. headed 가 애초에 필요 없었다.
+ */
+const GPU_ARGS =
+  process.platform === 'darwin'
+    ? ['--use-angle=metal', '--enable-gpu']
+    : ['--enable-gpu', '--use-gl=angle']
+
+/** 모든 프로브가 쓰는 실행 옵션. `chromium.launch(LAUNCH)` */
+const LAUNCH = { headless: true, args: GPU_ARGS }
+
 function load() {
   const tries = []
 
@@ -45,4 +72,4 @@ function load() {
   process.exit(2)
 }
 
-module.exports = load()
+module.exports = { ...load(), LAUNCH }

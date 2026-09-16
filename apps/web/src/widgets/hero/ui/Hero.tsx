@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RoomList, RoomSteps } from '@/entities/room'
-import { Room, RoomPanel } from '@/features/room-3d'
+import { TransitionBody } from '@/features/page-transition'
+import { RoomPanel, RoomStage, useRoom } from '@/features/room-3d'
 import { useCanRender3D } from '@/shared/lib'
 import styles from './Hero.module.css'
 
@@ -38,6 +39,15 @@ export function Hero({ children }: { children: React.ReactNode }) {
   // null(SSR·첫 페인트)이면 false — 서버 HTML 은 항상 목록을 내보낸다.
   const is3D = useCanRender3D() === true
 
+  /*
+   * 🔴 **열린 물건과 입장 완료는 `RoomProvider` 가 쥔다.**
+   *
+   *    씬이 캔버스 안에 고정되어 라우트를 넘어 살아 있으므로, 그 상태도
+   *    화면보다 오래 살아야 한다. 여기서 `useState` 로 들고 있으면 홈을
+   *    떠날 때 같이 사라져 씬과 어긋난다.
+   */
+  const { openId, seen, entered, open, close } = useRoom()
+
   /**
    * 입장 연출이 끝났는가.
    *
@@ -45,8 +55,9 @@ export function Hero({ children }: { children: React.ReactNode }) {
    *    3초 동안 카피와 목록이 이미 떠 있으면 "들어왔다" 가 아니라
    *    "화면이 로딩됐다" 로 읽힌다 — 연출이 있으나 마나가 된다.
    */
-  const [lit, setLit] = useState(false)
-  const onEntered = useCallback(() => setLit(true), [])
+  const [deadline, setDeadline] = useState(false)
+  /** 입장 연출이 끝났거나(씬이 알려준다) 기다림이 한계에 닿았거나. */
+  const lit = entered || deadline
 
   /*
    * 🔴 **카피를 3D 로딩에 묶어두지 않는다** (이슈 #10).
@@ -61,7 +72,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
    *    없어야 한다. 3D 가 그 전에 준비되면 `onEntered` 가 먼저 켠다.
    */
   useEffect(() => {
-    const t = setTimeout(() => setLit(true), COPY_DEADLINE_MS)
+    const t = setTimeout(() => setDeadline(true), COPY_DEADLINE_MS)
     return () => clearTimeout(t)
   }, [])
 
@@ -71,18 +82,13 @@ export function Hero({ children }: { children: React.ReactNode }) {
     if (!is3D || lit) setShown(true)
   }, [is3D, lit])
 
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set())
-
-  const open = useCallback((id: string) => {
-    setOpenId(id)
-    setSeen((prev) => new Set(prev).add(id))
-  }, [])
-  const close = useCallback(() => setOpenId(null), [])
-
   return (
     <div className={styles.stage}>
-      <Room active={is3D} openId={openId} seen={seen} onOpen={open} onEntered={onEntered} />
+      {/*
+       * 🔴 3D 를 여기서 그리지 않는다 — **모드만 선언한다.** 씬은 캔버스 안에
+       *    고정되어 라우트를 넘어 살아 있다(`CanvasShell` 의 `SceneSlot`).
+       */}
+      <RoomStage mode="room" />
 
       {/*
        * 좌측 어둠막 — 시안 `.scrim`.
@@ -110,11 +116,28 @@ export function Hero({ children }: { children: React.ReactNode }) {
        *    보이고 있었다면 그대로 둔다.
        */}
       <div className={styles.copyLayer} data-lit={!is3D || lit || shown}>
-        {children}
-        {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
-        {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
+        {/*
+         * 🔴 화면을 떠날 때 **왼쪽 글 전체가 같이 나간다.** 처음엔 제목만
+         *    연출을 붙였더니 캡션·본문·번호 목록이 **선명하게 그대로 남아**
+         *    제목만 혼자 흩어졌다(스크린샷으로 발견 — 프레임률은 60fps 로
+         *    멀쩡했다).
+         *
+         * ⚠️ `enter={false}` — 홈에는 이미 입장 연출이 있다(`data-lit`).
+         *    들어올 때까지 얹으면 같은 것이 두 번 움직인다.
+         */}
+        <TransitionBody enter={false}>
+          {children}
+          {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
+          {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
+        </TransitionBody>
       </div>
 
+      {/*
+       * ⚠️ 힌트는 `TransitionBody` 로 감싸지 않는다. `position:absolute` 라
+       *    래퍼가 끼면 위치가 바뀌고, `data-hidden` CSS 도 이 요소에 직접
+       *    걸려 있다. 대신 아래 CSS 가 `data-transition` 을 보고 흐려지게 한다
+       *    (이미 `transition: opacity` 가 있다).
+       */}
       {is3D ? (
         <p className={styles.hint} data-hidden={openId !== null}>
           드래그해서 둘러보기 · 눌러서 열기

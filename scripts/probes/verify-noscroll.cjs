@@ -5,10 +5,10 @@
  *    구간에만 나타났다 사라진다.
  * 🔴 headed 로 돈다(headless 는 3D 가 안 그려져 조건 자체가 달라진다).
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 const RUNS = Number(process.env.RUNS || 3)
 ;(async () => {
-  const b = await chromium.launch({ headless: false })
+  const b = await chromium.launch(LAUNCH)
   let fail = 0
   for (let run = 1; run <= RUNS; run++) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()

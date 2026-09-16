@@ -46,6 +46,21 @@ export type OrbitControlsLike = NonNullable<React.ComponentRef<typeof DreiOrbitC
  *       3D 를 유지한 이유가 사라진다. 대상이 눈에 띄되 방이 보이는 선을 잡았다.
  */
 const FILL = 0.2
+/**
+ * 연출이 도는 동안만 쓰는 "제약 없음".
+ *
+ * 🔴 OrbitControls 는 `update()` 마다 카메라를 제약 안으로 되돌린다. 우리가
+ *    좌표를 직접 넣는 연출 구간에서는 그 보정이 **연출을 덮어쓴다.**
+ */
+export const FREE_LIMITS = {
+  minDistance: 0.1,
+  maxDistance: 1000,
+  minPolarAngle: 0,
+  maxPolarAngle: Math.PI,
+  minAzimuthAngle: Number.NEGATIVE_INFINITY,
+  maxAzimuthAngle: Number.POSITIVE_INFINITY,
+} as const
+
 /** 물건 사이를 옮길 때의 비행 시간(ms). 시안 DUR. */
 const DUR = 900
 
@@ -82,9 +97,31 @@ export interface FocusTarget {
  *    3초짜리 카메라 비행은 그 자체가 장벽이다.
  */
 export const INTRO = {
-  from: [-4.7, 1.35, -1.6] as [number, number, number],
-  lookAt: [-1.0, 1.15, -0.2] as [number, number, number],
-  ms: 3200,
+  /**
+   * 시작 위치 — **문틀 바로 안쪽, 사람 눈높이.**
+   *
+   * 🔴 문 **밖**(x -4.7)에서 시작하지 않는다. 그렇게 했더니 카메라가 문에서
+   *    1.88 밖에 안 떨어져 문이 잘렸고, 거리를 벌리면 벽 밖으로 나가 화면이
+   *    통째로 검어졌다(실측 2026-09-16: 거리 3.6 에서 문틀조차 안 보임).
+   *    화각을 58° 로 넓혀 우겨넣어 봤지만 **그 광각 자체가 어색했다**
+   *    (사용자 지적: "시야각이 이상하게 나오잖음").
+   *
+   *    → 필요한 것은 "문 밖에서 걸어온다" 가 아니라 **"문 열고 들어선다"** 다.
+   *      문틀을 막 지난 자리에서 시작하면 그 느낌이 나면서 화각도 정상이다.
+   *
+   * ⚠️ 너무 안쪽(시안의 x -1.30)은 안 된다 — 이미 방 한가운데라 "들어왔다" 가
+   *    아니라 그냥 뒤로 줄어드는 것처럼 보인다(예전 사용자 지적).
+   *    현관문이 x -2.89 이므로 그 바로 안쪽을 쓴다.
+   */
+  from: [-2.35, 1.35, -1.15] as [number, number, number],
+  lookAt: [-0.4, 1.15, 0.1] as [number, number, number],
+  /**
+   * 입장에 쓰는 시간(ms).
+   *
+   * ⚠️ 3200 이었는데 **"확 들어온다"** 는 말을 들었다. 이동 거리가 줄어든 만큼
+   *    (문 밖 → 문 안쪽) 같은 시간이면 더 느려지지만, 그것만으로는 모자랐다.
+   */
+  ms: 4200,
   /** 문이 열리는 시각(ms). 들어가기 전에 열려 있어야 한다. */
   doorOpenAt: 0,
   /** 문이 닫히는 시각(ms). 다 들어온 뒤다. */
@@ -143,11 +180,27 @@ const UI_WIDTH = 520
 /** 열렸을 때 오른쪽 패널이 먹는 폭. `RoomPanel` 과 같아야 한다. */
 const PANEL_WIDTH = 480
 
+/**
+ * 페이지에서 본문이 차지하는 폭. `PageShell` 의 본문 최대폭과 맞춘다.
+ * 3D 는 그 오른쪽 여백에 선다.
+ */
+const PAGE_UI_WIDTH = 980
+
+/**
+ * 페이지에서 물건에 다가가는 거리의 하한.
+ *
+ * 🔴 홈(4.8)보다 멀다. 배경이라 물건만 크게 보이면 "작업실 안" 이 사라지고
+ *    그냥 큰 3D 오브젝트가 된다 — 홈의 처음 구도가 9.5 이므로 그 사이를 쓴다.
+ */
+const PAGE_MIN_DISTANCE = 7.4
+
 export function CameraRig({
   focus,
   controls,
   onIntroDoor,
   onEntered,
+  skipIntro = false,
+  mode = 'room',
 }: {
   /** 열린 물건의 초점. `null` 이면 처음 구도로 돌아간다. */
   focus: FocusTarget | null
@@ -156,6 +209,26 @@ export function CameraRig({
   onIntroDoor: (open: boolean) => void
   /** 입장이 끝났다 — 부모가 UI 를 올린다. */
   onEntered: () => void
+  /**
+   * 입장 연출을 건너뛴다.
+   *
+   * 🔴 페이지에서 쓴다. 거기서는 방이 **배경**이고 이미 그 물건 앞에 와 있는
+   *    상태여야 한다 — 문 밖에서 3.2초 걸어 들어오면 본문을 읽으러 온 사람을
+   *    기다리게 한다.
+   */
+  skipIntro?: boolean
+  /**
+   * 이 방을 어떻게 쓰는가. 구도가 다르다.
+   *
+   * - `room` — 홈. 패널이 열리면 오른쪽 480px 이 가려지므로 그만큼 보정한다.
+   * - `page` — 본문 배경. **패널이 없고** 왼쪽 본문이 더 넓다. 그리고 물건에
+   *   바짝 붙으면 안 된다 — 배경이라 방이 보여야 "작업실 안" 이 유지된다.
+   *
+   * 🔴 실측 2026-09-16: 홈 값을 그대로 썼더니 물건이 화면을 꽉 채우고 방이
+   *    사라졌다가, viewOffset 이 패널 폭만큼 밀려 **3D 가 오른쪽 구석으로
+   *    빠져나갔다**(스크린샷으로 확인).
+   */
+  mode?: 'room' | 'page'
 }) {
   const { camera, size } = useThree()
   const fly = useRef<{
@@ -193,7 +266,8 @@ export function CameraRig({
     started.current = true
 
     // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // 페이지 배경으로 쓸 때도 같은 경로로 건너뛴다.
+    if (skipIntro || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       landed.current = true
       onEntered()
       return
@@ -221,6 +295,32 @@ export function CameraRig({
     ctl.target.copy(look)
     ctl.update()
 
+    /*
+     * 🔴 **입장 동안 OrbitControls 제약을 푼다.**
+     *
+     *    `CAMERA_LIMITS` 는 `minDistance 4.6` 과 방위각 범위
+     *    (`PI*0.54 ~ PI*0.98`)를 건다. 그런데 입장 시작 위치는 타깃에서
+     *    **3.96** 밖에 안 떨어져 있고 방위각도 그 범위 밖이다 —
+     *    `ctl.update()` 가 매 프레임 카메라를 제약 안으로 끌어당겨
+     *    **문 밖에서 시작하지도 못했다.**
+     *
+     *    실측 2026-09-16: 시작 위치가 `[-4.7, 1.35, -1.6]` 이어야 하는데
+     *    실제로는 `[3.53, 1.73, -0.77]`(이미 방 안)이었고, 비행 중간
+     *    (진행 0.45)에 제약 경계를 넘으면서 **한 프레임에 좌우각이 79.3°**
+     *    꺾였다. 사용자가 "갑자기 화면이 휙 돈다" 고 한 자리다.
+     *
+     * ⚠️ 비행이 끝나면 되돌린다 — 안 되돌리면 사용자가 방을 무한정 돌리거나
+     *    벽 밖으로 나갈 수 있다.
+     */
+    /*
+     * ⚠️ **여기서 `Object.assign(ctl, FREE_LIMITS)` 를 하면 안 된다.**
+     *    `Scene` 이 `<OrbitControls {...CAMERA_LIMITS}>` 로 **prop 을 넘기므로**,
+     *    리렌더될 때마다 drei 가 그 값을 다시 설정해 인스턴스 조작을 덮어쓴다.
+     *    그리고 `Scene` 은 마커 실측 보고(`measured`)로 여러 번 리렌더된다 —
+     *    실측 2026-09-16: 제약을 풀었는데도 600ms 시점에 이미 방 안이었다.
+     *    → 제약은 **`Scene` 이 prop 으로** 바꾼다(`entered` 상태).
+     */
+
     fly.current = {
       p0: from.clone(),
       t0: look.clone(),
@@ -241,7 +341,7 @@ export function CameraRig({
      *    비행 진행도(`useFrame`)에 맞춰 부른다 — 그래야 보이는 것과 맞는다.
      */
     onIntroDoor(true)
-  }, [camera, controls, onEntered, onIntroDoor])
+  }, [camera, controls, onEntered, onIntroDoor, skipIntro])
 
   useEffect(() => {
     const ctl = controls.current
@@ -268,7 +368,9 @@ export function CameraRig({
       // 🔴 하한을 넉넉히 잡는다. 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로
       //    읽혀 3D 를 유지한 뜻이 사라진다 — 방이 보이는 선을 지킨다.
       //    처음 구도가 9.5 이므로 그 절반 언저리가 "다가갔지만 방은 보이는" 거리다.
-      const dist = Math.min(CAMERA_LIMITS_FOCUS.maxDistance, Math.max(4.8, raw))
+      // 🔴 페이지는 배경이라 더 멀리 선다 — 물건이 보이되 방이 남아야 한다.
+      const floor = mode === 'page' ? PAGE_MIN_DISTANCE : 4.8
+      const dist = Math.min(CAMERA_LIMITS_FOCUS.maxDistance, Math.max(floor, raw))
       // 지금 보는 방향을 유지한 채 거리만 바꾼다 — 갑자기 반대편으로 돌지 않게.
       const dir = camera.position.clone().sub(ctl.target).normalize()
       position = target.clone().add(dir.multiplyScalar(dist))
@@ -300,7 +402,7 @@ export function CameraRig({
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
-  }, [focus, camera, controls, size.width, size.height])
+  }, [focus, camera, controls, size.width, size.height, mode])
 
   /*
    * 🔴 **투영을 민다. 카메라를 옮기지 않는다** (시안 `setFrameShift`).
@@ -315,24 +417,77 @@ export function CameraRig({
    *    ⚠️ 홈에서도 보정한다. 시안 주석: "홈에서도 방이 왼쪽에 몰려 오른쪽이
    *       빈다" — 실제로 그랬다(스크린샷으로 확인).
    */
+  /**
+   * 지금 걸어야 할 투영 보정량(px). `useFrame` 도 읽는다.
+   *
+   * 🔴 입장 연출 동안에는 이 값을 **0 에서부터 서서히 올린다.** 문 밖에서
+   *    시작할 때 카메라가 문에서 **1.88** 밖에 안 떨어져 있어 문이 화면을 크게
+   *    차지하는데, 여기에 260px 보정이 그대로 걸리면 **문이 잘려 나간다**
+   *    (사용자 지적: "시야가 이상하게 돼서 문이 좀 짤려서 나옴").
+   *
+   *    끝에서 한 번에 켜면 화면이 툭 움직이므로 비행 진행도에 맞춰 보간한다.
+   */
+  const shiftRef = useRef(0)
+  /**
+   * 지금 실제로 걸려 있는 보정량. 목표(`shiftRef`)로 **매 프레임 다가간다.**
+   *
+   * 🔴 패널이 열리면 목표가 `0 → 240`(PANEL_WIDTH/2)으로 바뀌는데, 그걸
+   *    그대로 걸면 **화면이 한 프레임에 212px 튄다**(실측 2026-09-16:
+   *    마커 클릭 직후 첫 프레임 이동 212.7px, 그 다음부터는 0.5px 씩).
+   *    캔버스는 CSS 로 0.44s 걸쳐 좁아지는데 투영만 즉시 바뀌어 어긋난다.
+   *    사용자가 "뚜둑뚜둑 끊긴다" 고 한 자리다.
+   */
+  const shiftNow = useRef(0)
+
   useEffect(() => {
     const persp = camera as THREE.PerspectiveCamera
     const w = size.width
     const h = size.height
-    // 좁은 화면에서는 3D 를 띄우지 않으므로(폴백 3단) 가로 보정만 한다.
-    const right = focus ? PANEL_WIDTH : 0
-    const shift = (UI_WIDTH + (w - right)) / 2 - w / 2
-    persp.setViewOffset(w, h, -shift, 0, w, h)
-    persp.updateProjectionMatrix()
+    /*
+     * 좁은 화면에서는 3D 를 띄우지 않으므로(폴백 3단) 가로 보정만 한다.
+     *
+     * 🔴 **페이지에는 패널이 없다.** 홈의 `PANEL_WIDTH` 를 그대로 빼면 3D 가
+     *    오른쪽으로 그만큼 더 밀려 화면 밖으로 빠진다(실측 스크린샷).
+     *    대신 왼쪽 본문이 홈의 카피보다 넓으므로 그 값을 쓴다.
+     */
+    const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
+    const left = mode === 'page' ? PAGE_UI_WIDTH : UI_WIDTH
+    const shift = (left + (w - right)) / 2 - w / 2
+    shiftRef.current = shift
+    /*
+     * 🔴 **여기서 즉시 걸지 않는다.** `useFrame` 이 매 프레임 목표로 다가간다
+     *    (위 `shiftNow` 주석). 처음 마운트될 때만 맞춰 둔다 — 그때는 비교할
+     *    이전 값이 없어 보간할 것도 없다.
+     */
+    if (shiftNow.current === 0 && !fly.current) {
+      shiftNow.current = shift
+      persp.setViewOffset(w, h, -shift, 0, w, h)
+      persp.updateProjectionMatrix()
+    }
     return () => {
       persp.clearViewOffset()
       persp.updateProjectionMatrix()
     }
-  }, [camera, focus, size.width, size.height])
+  }, [camera, focus, size.width, size.height, mode])
 
   useFrame(() => {
-    const f = fly.current
     const ctl = controls.current
+
+    /*
+     * 🔴 **투영 보정을 목표로 서서히 옮긴다.** 비행 중이 아니어도 돌아야 한다 —
+     *    패널을 여닫는 것만으로 목표가 바뀌기 때문이다.
+     *
+     * ⚠️ 0.12 는 캔버스 CSS 전환(0.44s)과 눈으로 맞춘 값이다. 크게 잡으면
+     *    다시 툭 튀고, 작게 잡으면 3D 만 뒤늦게 따라온다.
+     */
+    if (ctl && Math.abs(shiftNow.current - shiftRef.current) > 0.3) {
+      shiftNow.current += (shiftRef.current - shiftNow.current) * 0.12
+      const persp = camera as THREE.PerspectiveCamera
+      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
+      persp.updateProjectionMatrix()
+    }
+
+    const f = fly.current
     if (!f || !ctl) return
 
     /*
@@ -354,6 +509,21 @@ export function CameraRig({
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
+
+    /*
+     * 🔴 입장 중에는 투영 보정을 **0 에서부터 올린다**(위 `shiftRef` 주석).
+     *    문 앞에서는 보정이 없어야 문이 프레임 안에 들어온다.
+     *
+     * ⚠️ 뒤쪽 절반에서 올린다 — 앞에서 같이 올리면 문을 통과하는 동안 화면이
+     *    옆으로 흐르는 것처럼 보인다.
+     */
+    if (f.intro) {
+      const persp = camera as THREE.PerspectiveCamera
+      const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
+      shiftNow.current = shiftRef.current * ramp
+      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
+      persp.updateProjectionMatrix()
+    }
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
     if (f.intro) {
       const closeAt = INTRO.doorCloseAt / INTRO.ms
@@ -366,6 +536,12 @@ export function CameraRig({
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
+        // 보정을 최종값으로 확정한다(보간이 끝났다).
+        const persp = camera as THREE.PerspectiveCamera
+        shiftNow.current = shiftRef.current
+        persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
+        persp.updateProjectionMatrix()
+        // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true
         onEntered()
       }

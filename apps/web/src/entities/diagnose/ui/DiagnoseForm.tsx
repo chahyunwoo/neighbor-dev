@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './DiagnoseForm.module.css'
 import { buildCopyText, DiagnoseResult } from './DiagnoseResult'
 
@@ -174,6 +174,8 @@ export function DiagnoseForm() {
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
+      {/* 🔴 첫 글자가 오기 전 — 멈춘 것처럼 보이지 않게 한다. */}
+      {pending && !result ? <Analyzing /> : null}
       {result ? (
         <div>
           <div className={styles.resultHead}>
@@ -199,6 +201,57 @@ export function DiagnoseForm() {
           />
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * 첫 응답이 오기 전의 대기 — **"돌고 있다" 를 보여준다.**
+ *
+ * 🔴 전에는 버튼 라벨만 "정리하는 중…" 으로 바뀌고 화면은 그대로였다.
+ *    모델이 첫 글자를 뱉기까지 몇 초가 걸리는데 그 동안 아무 일도 안 일어나
+ *    **멈춘 것처럼 보인다**(사용자 지적: "분석중입니다 같은 그런 인터랙션한
+ *    뭔가 나와야 될 거 아니야").
+ *
+ * ⚠️ 문구는 **하는 일을 순서대로** 적는다. 지어낸 단계가 아니라 프롬프트가
+ *    실제로 시키는 순서다(기획서 5절: 범위 → 기술 → 기간 → 위험).
+ */
+const STEPS = [
+  '적어주신 내용을 읽는 중',
+  '범위를 나누는 중',
+  '기술과 기간을 보는 중',
+  '위험한 곳을 찾는 중',
+]
+
+function Analyzing() {
+  const [i, setI] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % STEPS.length), 1800)
+    return () => clearInterval(t)
+  }, [])
+
+  /*
+   * 🔴 **결과가 생기는 자리로 따라간다.** 폼이 길어서 제출 버튼을 누르면
+   *    대기 카드가 **화면 밖 아래**에 생긴다 — 아무 일도 안 일어난 것처럼
+   *    보인다(스크린샷으로 확인).
+   *
+   * ⚠️ `block: 'center'` — 카드를 화면 가운데에 둔다. `start` 로 하면
+   *    nav 아래에 딱 붙어 답답하다.
+   */
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
+
+  return (
+    <div ref={ref} className={styles.analyzing} aria-live="polite">
+      <div className={styles.scan} aria-hidden="true" />
+      <p className={styles.analyzingText}>
+        {STEPS[i]}
+        <span className={styles.dots} aria-hidden="true" />
+      </p>
+      <p className={styles.analyzingNote}>저장하지 않습니다 · 금액은 말하지 않습니다</p>
     </div>
   )
 }

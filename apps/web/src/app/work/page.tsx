@@ -8,6 +8,7 @@ import {
   StackTags,
   type SummaryProject,
 } from '@/entities/project'
+import { Reveal, RevealGroup, RevealItem } from '@/features/reveal'
 import { RichText } from '@/shared/ui'
 import styles from '@/shared/ui/styles/list-page.module.css'
 import { Nav } from '@/widgets/nav'
@@ -42,31 +43,49 @@ export default function WorkPage() {
         title="그동안 만든 것"
         lede="클라이언트사명은 전부 익명으로 씁니다. 수치는 지금도 다시 돌려볼 수 있는 것만 실었습니다."
       >
+        {/*
+         * 🔴 **등장 연출을 실제로 건다.** `features/reveal` 이 만들어져 있었는데
+         *    **어느 화면에도 붙어 있지 않았다**(실측 2026-09-16: `<Reveal` 사용
+         *    0건, main 도 동일). 만들어만 두고 배선을 안 한 것이라 화면은 계속
+         *    정지 상태였다 — `panelIn` 키프레임이 정의 없이 죽어 있던 것과
+         *    같은 형태다.
+         */}
+        {/*
+         * ⚠️ **섹션을 통째로 `Reveal` 로 감싸지 않는다.** 그러면 섹션이 화면에
+         *    걸치는 순간 `show` 가 되고, 안의 카드가 **variants 상속으로 전부
+         *    같이** 보여 버린다 — 화면 밖 카드까지 opacity 100 이었다(실측
+         *    2026-09-16). 각 묶음이 **자기 뷰포트를 따로 봐야** 순서가 산다.
+         */}
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
+          <Reveal className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>사례</h2>
             <span className={styles.sectionNote}>
               {detail.length}건 · 문제와 그때 내린 판단까지
             </span>
-          </div>
-          <div className={styles.cards}>
+          </Reveal>
+          {/* 카드는 하나씩 차례로 들어온다(`RevealGroup` 의 stagger). */}
+          <RevealGroup className={styles.cards}>
             {detail.map((p) => (
-              <DetailCard key={p.id} project={p} />
+              <RevealItem key={p.id} as="article">
+                <DetailCard project={p} />
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </section>
 
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
+          <Reveal className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>경력</h2>
             <span className={styles.sectionNote}>{summary.length}건 · 도메인과 기술만</span>
-          </div>
-          <div className={styles.rows}>
+          </Reveal>
+          <RevealGroup className={styles.rows}>
             {summary.map((p) => (
               // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
-              <SummaryRow key={`${p.label}${p.period}`} project={p} />
+              <RevealItem key={`${p.label}${p.period}`}>
+                <SummaryRow project={p} />
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
           <p className={styles.note}>
             위 {summary.length}건은 계약상 화면과 세부 판단을 공개할 수 없습니다.
             <br />

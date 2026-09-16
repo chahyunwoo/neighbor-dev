@@ -6,14 +6,14 @@
  * (ProjectLens 에서 실측된 함정). 그래서 innerText 로 잰다 —
  * innerText 는 보이는 것만 준다.
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 
 const PAT =
   /NestJS|Next\.js|Spring Boot|PostgreSQL|Docker|TypeScript|React|SSE|API|CRUD|JSONL|ProcessBuilder|NIO|RandomAccessFile|DTO|SwiftUI|launchd|멱등|상태 전이|스키마|파싱|캐시|쿼리/g
 const BASE = { '/': 3, '/work': 50, '/work/claude-board': 30, '/career': 18, '/stack': 11 }
 
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch(LAUNCH)
   let totVis = 0,
     totBase = 0
   console.log('화면                     보이는글자   기술용어 기준선→보이는것   HTML안(크롤러)')

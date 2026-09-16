@@ -7,12 +7,12 @@
  *
  * 🔴 정지 스크린샷·200ms 샘플링으로는 못 잡는다. 매 프레임(rAF) 기록한다.
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 /** 카메라가 나는 동안 마커가 갱신돼야 하는 최소 프레임 비율. */
 const MIN_RATIO = 0.5
 
 ;(async () => {
-  const b = await chromium.launch({ headless: false })
+  const b = await chromium.launch(LAUNCH)
   const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
   let fail = 0
 
