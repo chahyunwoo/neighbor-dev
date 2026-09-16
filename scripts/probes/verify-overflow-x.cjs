@@ -51,7 +51,16 @@ const READ = () => {
   const over = []
   for (const el of document.querySelectorAll('body *')) {
     const r = el.getBoundingClientRect()
-    if (r.width <= 0 || r.right <= d.clientWidth + 1) continue
+    /*
+     * 🔴 **왼쪽도 본다.** 오른쪽만 보다가 **글이 화면 왼쪽 밖으로 다 나가도
+     *    초록**이 떴다(실측 2026-09-17: `-1200px` 로 밀어도 통과).
+     *    이 검사가 잡겠다고 적어 둔 사고가 정확히 "제목과 카드의 **왼쪽이
+     *    전부 잘린다**" 인데, 원 사고는 좁은 화면에서 오른쪽으로도 삐져나와
+     *    우연히 잡힌 것이었다. `scrollWidth` 는 왼쪽으로 안 늘어나서
+     *    대체 신호도 없다.
+     */
+    if (r.width <= 0) continue
+    if (r.right <= d.clientWidth + 1 && r.left >= -1) continue
     // 자식이 이미 잡혔으면 조상까지 중복으로 세지 않는다.
     const text = (el.textContent ?? '').trim()
     if (!text) continue
@@ -66,11 +75,14 @@ const READ = () => {
     if (el.closest('.canvas-shell')) continue
     if (
       el.querySelector('*') &&
-      [...el.children].some((c) => c.getBoundingClientRect().right > d.clientWidth + 1)
+      [...el.children].some((c) => {
+        const cb = c.getBoundingClientRect()
+        return cb.right > d.clientWidth + 1 || cb.left < -1
+      })
     )
       continue
     over.push(
-      `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0].slice(-18)}(${Math.round(r.right)}) "${text.slice(0, 18)}"`,
+      `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0].slice(-18)}[${Math.round(r.left)}..${Math.round(r.right)}] "${text.slice(0, 18)}"`,
     )
   }
   const sw = d.scrollWidth

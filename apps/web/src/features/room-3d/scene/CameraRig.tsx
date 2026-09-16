@@ -61,6 +61,30 @@ export const FREE_LIMITS = {
   maxAzimuthAngle: Number.POSITIVE_INFINITY,
 } as const
 
+/**
+ * **비행 동안** 거는 제약 — `CAMERA_LIMITS` 와 `CAMERA_LIMITS_FOCUS` 의 합집합.
+ *
+ * 🔴 출발(개요, 거리 9.36)과 도착(초점, 6.5 이하)이 **서로 다른 제약** 아래
+ *    있다. 어느 한쪽을 비행 내내 걸면 반대 방향이 잘린다:
+ *    - 도착 것(FOCUS 상한 6.5)을 시작에 걸면 **들어가는** 비행이 첫 프레임에
+ *      30.6% 당겨진다(202px 점프)
+ *    - 출발 것(ROOM 상한 12)을 끝까지 두면 **나오는** 비행이 6.5 에서 잘려
+ *      **영영 안 돌아온다**(205px)
+ *    둘 다 실제로 났다. 합집합이면 경로 전체가 안에 들어간다.
+ *
+ * ⚠️ 제약을 아예 푸는 것(`FREE_LIMITS`)과 다르다 — 그러면 사용자가 그 창에
+ *    드래그해 방을 뚫을 수 있다. 여기서는 **합법 범위의 합집합**이라
+ *    최악이어도 둘 중 하나의 경계 안이다.
+ */
+const FLIGHT_LIMITS = {
+  minDistance: Math.min(CAMERA_LIMITS.minDistance, CAMERA_LIMITS_FOCUS.minDistance),
+  maxDistance: Math.max(CAMERA_LIMITS.maxDistance, CAMERA_LIMITS_FOCUS.maxDistance),
+  minPolarAngle: Math.min(CAMERA_LIMITS.minPolarAngle, CAMERA_LIMITS_FOCUS.minPolarAngle),
+  maxPolarAngle: Math.max(CAMERA_LIMITS.maxPolarAngle, CAMERA_LIMITS_FOCUS.maxPolarAngle),
+  minAzimuthAngle: Math.min(CAMERA_LIMITS.minAzimuthAngle, CAMERA_LIMITS_FOCUS.minAzimuthAngle),
+  maxAzimuthAngle: Math.max(CAMERA_LIMITS.maxAzimuthAngle, CAMERA_LIMITS_FOCUS.maxAzimuthAngle),
+} as const
+
 /** 물건 사이를 옮길 때의 비행 시간(ms). 시안 DUR. */
 const DUR = 900
 
@@ -556,21 +580,35 @@ export function CameraRig({
      * ⚠️ 시작에 걸어도 안 된다 — 그러면 들어가는 비행이 첫 프레임에
      *    30.6% 당겨진다(그것이 202px 점프였다). **양쪽 다 필요하다.**
      */
-    Object.assign(ctl, FREE_LIMITS)
+    /*
+     * ⚠️ **`FREE_LIMITS` 를 쓰지 않는다.** 한때 비행 동안 통째로 풀었는데,
+     *    캔버스가 0.44초 걸쳐 좁아지는 동안 이 effect 가 **여러 번 다시 돌아**
+     *    그때마다 FREE 를 다시 걸었다. 사용자가 이미 포인터를 누르고 있으면
+     *    새 `'start'` 가 안 와서 `abort` 가 다시 걸릴 길이 없다 —
+     *    실측 2026-09-17: 되돌린 제약이 **14ms** 만에 FREE 로 돌아갔고
+     *    누른 채로 212프레임이 ROOM 밖(극각 10.8° 초과)에 있었다.
+     *
+     *    필요한 것은 "제약 없음" 이 아니라 **비행 경로를 담는 범위**다.
+     *    합집합이면 창이 아예 안 생긴다.
+     */
+    Object.assign(ctl, FLIGHT_LIMITS)
     limitsAfterFly.current = focus ? CAMERA_LIMITS_FOCUS : CAMERA_LIMITS
 
     // 🔴 사용자가 손대면 비행을 포기한다. 카메라가 고집부리지 않게(시안과 같다).
     const abort = () => {
-      fly.current = null
-      limitsAfterFly.current = null
       /*
-       * 🔴 **중단되면 그 자리에서 제약을 되돌린다.** 비행 동안 풀어 뒀으므로
-       *    그대로 두면 사용자가 방을 뚫고 나갈 수 있다.
-       *    `CAMERA_LIMITS`(4.6~12)를 거는 이유: 비행 경로(4.8~9.36)를 통째로
-       *    담아서 **중단 지점이 어디든 튀지 않는다.** FOCUS(상한 6.5)를 걸면
-       *    개요 쪽에서 중단했을 때 그 자리에서 또 당겨진다.
+       * 🔴 **비행이 있을 때만 손댄다.** 이 리스너는 `'start'`(= 모든
+       *    pointerdown)에 붙어 있다. 되돌릴 비행이 없는데도 제약을 갈아치우면,
+       *    **마커를 연 채 방을 둘러보려고 드래그하는 첫 순간에 FOCUS 제약이
+       *    ROOM 으로 바뀌어** 그 상태가 마커를 닫을 때까지 간다 —
+       *    실측 2026-09-17: 방위각 79.2° → 115.2°(36°·31% 손실),
+       *    극각 16.2° 손실. 초점 제약이 **한 번도 안 쓰인다.**
        */
-      Object.assign(ctl, CAMERA_LIMITS)
+      if (!fly.current) return
+      fly.current = null
+      // 중단 지점의 제약은 **목적지 것**으로 확정한다. 합집합 안이라 안 튄다.
+      if (limitsAfterFly.current) Object.assign(ctl, limitsAfterFly.current)
+      limitsAfterFly.current = null
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
