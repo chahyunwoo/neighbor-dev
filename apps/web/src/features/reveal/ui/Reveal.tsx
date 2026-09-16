@@ -27,7 +27,8 @@ export function Reveal({
   as = 'div',
 }: {
   children: ReactNode
-  className?: string
+  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  className?: string | undefined
   /** 늦게 들어와야 할 때. 남용하면 기다리게 된다. */
   delay?: number
   as?: 'div' | 'section' | 'li' | 'article'
@@ -60,7 +61,8 @@ export function RevealGroup({
   as = 'div',
 }: {
   children: ReactNode
-  className?: string
+  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  className?: string | undefined
   delay?: number
   as?: 'div' | 'section' | 'ul' | 'ol'
 }) {
@@ -85,7 +87,8 @@ export function RevealItem({
   as = 'div',
 }: {
   children: ReactNode
-  className?: string
+  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  className?: string | undefined
   as?: 'div' | 'li' | 'article' | 'section'
 }) {
   const Tag = motion[as]

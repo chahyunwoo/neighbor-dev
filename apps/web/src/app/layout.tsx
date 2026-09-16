@@ -37,6 +37,25 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap"
         />
+        {/*
+         * 🔴 **JS 가 없으면 등장 연출을 통째로 무효화한다.**
+         *
+         *    Motion 은 `initial` 을 **서버 HTML 의 인라인 스타일**로 내보낸다
+         *    (실측 2026-09-16: `<article style="opacity:0;transform:translateY(14px)">`).
+         *    JS 가 켜지면 애니메이션이 그걸 풀지만, **꺼져 있으면 영영 투명한
+         *    채로 남는다** — 글이 있는데 안 보이는 최악의 상태다.
+         *
+         *    기획서 4절의 폴백 3단(3D → 목록 → 서버 HTML)이 지켜지려면
+         *    마지막 단에서 글이 읽혀야 한다.
+         */}
+        <noscript>
+          <style
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: noscript 안의 정적 CSS 다
+            dangerouslySetInnerHTML={{
+              __html: '[style*="opacity:0"]{opacity:1!important;transform:none!important}',
+            }}
+          />
+        </noscript>
       </head>
       <body>
         {/*
