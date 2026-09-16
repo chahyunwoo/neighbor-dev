@@ -48,12 +48,13 @@ export default async function DiagnosePage() {
       <Nav />
       <PageShell
         from="laptop"
+        wide
         fig={usable ? '[ fig. 5 · 노트북 ]' : '[ fig. 5 · 노트북 · 준비 중 ]'}
         crumb="노트북"
         title="내 프로젝트 미리 진단해보기"
         lede="만들고 싶은 것을 적으면 어떤 기술이 필요한지, 대략 얼마나 걸릴지, 어디가 위험한지를 정리해드립니다."
       >
-        <div className={styles.wrap}>
+        <div className={styles.wrapWide}>
           <ul className={styles.points}>
             <li className={styles.point}>
               <span className={styles.pointNo}>합니다</span>
