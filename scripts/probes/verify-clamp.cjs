@@ -2,7 +2,7 @@
  * 이슈 #3 — **한 페이지 안에서 연속으로** 마커를 눌러도 전부 열리는가.
  * 마커마다 새 컨텍스트로 재면 이 이슈를 못 본다(프롬프트가 경고한 함정).
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 let fail = 0
 const ok = (c, l, d) => {
   if (!c) fail++
@@ -23,7 +23,7 @@ const ok = (c, l, d) => {
     { width: 1920, height: 1080 },
   ]) {
     const pg = await (await b.newContext({ viewport: vp })).newPage()
-    await pg.goto('http://localhost:3200/', { waitUntil: 'networkidle' })
+    await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' })
     /*
      * 🔴 **시간이 아니라 상태로 기다린다.** 고정 5000ms 로 버텼는데 입장
      *    연출이 4200ms 라 GLTF 로딩이 느린 날엔 **첫 클릭이 비행 중에**

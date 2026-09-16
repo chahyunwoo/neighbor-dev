@@ -20,8 +20,7 @@
  * ⚠️ 시각은 **네비게이션 시작 기준**이다. `evaluate` 시점을 0 으로 잡으면
  *    앞쪽 200ms 가 통째로 빠져 짧게 나온다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const PATHS = ['/', '/work', '/career', '/stack']
 
 const INIT = () => {

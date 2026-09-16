@@ -6,21 +6,22 @@
  * (ProjectLens 에서 실측된 함정). 그래서 innerText 로 잰다 —
  * innerText 는 보이는 것만 준다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const PAT =
   /NestJS|Next\.js|Spring Boot|PostgreSQL|Docker|TypeScript|React|SSE|API|CRUD|JSONL|ProcessBuilder|NIO|RandomAccessFile|DTO|SwiftUI|launchd|멱등|상태 전이|스키마|파싱|캐시|쿼리/g
-const BASE = { '/': 3, '/work': 50, '/work/claude-board': 30, '/career': 18, '/stack': 11 }
+/** 화면별 기준선(기술용어 수). ⚠️ 서버 주소인 `BASE` 와 헷갈리지 않게 이름을 가른다. */
+const BASELINE = { '/': 3, '/work': 50, '/work/claude-board': 30, '/career': 18, '/stack': 11 }
 
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
   let totVis = 0,
     totBase = 0
   console.log('화면                     보이는글자   기술용어 기준선→보이는것   HTML안(크롤러)')
-  for (const [p, base] of Object.entries(BASE)) {
+  for (const [p, base] of Object.entries(BASELINE)) {
     const ctx = await b.newContext()
     const pg = await ctx.newPage()
-    await pg.goto(`http://localhost:3200${p}`, { waitUntil: 'networkidle' })
+    await pg.goto(`${BASE}${p}`, { waitUntil: 'networkidle' })
     const vis = await pg.evaluate(() => document.body.innerText)
     const html = await pg.content()
     const raw = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')

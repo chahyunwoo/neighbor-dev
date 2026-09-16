@@ -5,7 +5,7 @@
  *    걸려 있어도 **본문 폭이 안 줄면** 3D 가 글씨 위에 얹힌다.
  *    화면을 열어 두 영역이 실제로 겹치는지 잰다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const PAGES = ['/work', '/work/claude-board', '/career', '/stack', '/team', '/contact', '/diagnose']
 /** 캔버스 왼쪽 가장자리에서 이만큼은 본문이 들어와도 봐준다(마스크가 투명한 구간). */
 const SLACK = 40
@@ -19,7 +19,7 @@ const SLACK = 40
   ]) {
     const pg = await (await b.newContext({ viewport: vp })).newPage()
     for (const p of PAGES) {
-      await pg.goto(`http://localhost:3200${p}`, { waitUntil: 'networkidle' })
+      await pg.goto(`${BASE}${p}`, { waitUntil: 'networkidle' })
       await pg.waitForTimeout(2600)
       const r = await pg.evaluate((slack) => {
         const c = document.querySelector('canvas')

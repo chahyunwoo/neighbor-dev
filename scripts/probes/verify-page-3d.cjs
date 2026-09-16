@@ -12,8 +12,7 @@
  * ⚠️ 본문을 숨기고 캔버스만 남긴다. 안 그러면 글자 픽셀이 "3D 가 보인다" 로
  *    잘못 세어진다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 /** 방이 배경으로 깔리는 화면들. `data-canvas-mode="object"` 인 곳이다. */
 const PAGES = ['/work', '/stack', '/career', '/team']
 /** 이보다 어두우면 "사실상 검은 화면" 으로 본다. 홈은 max 255 가 나온다. */

@@ -4,8 +4,7 @@
  * 🔴 셋 다 기존 프로브가 못 잡았다 — 전부 "홈에 들어가 가만히 둔다" 만
  *    보기 때문이다. 사람은 연출이 끝나기를 기다려 주지 않는다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 let fail = 0
 const ok = (c, label, detail) => {
@@ -303,33 +302,48 @@ async function shotNow(pg) {
     ok(opened === 1, '   (대조) 둘러보기 전 마커가 열려 있다', `열린 마커 ${opened}개`)
 
     /** 닫히지 않은 마커들의 가로 중심 평균. 방위각이 바뀌면 같이 움직인다. */
-    const cx = () =>
+    /**
+     * 닫히지 않은 마커들의 중심 평균. 방위각·극각이 바뀌면 같이 움직인다.
+     *
+     * ⚠️ **가로만 보면 극각을 못 잡는다.** 초점 제약이 잃는 것에는
+     *    방위각 36° 말고 **극각 16.2°** 도 있는데(FOCUS 0.14~0.52π vs
+     *    ROOM 0.17~0.46π), 가로 중심만 재면 그쪽만 되돌려 놔도 초록이 뜬다.
+     */
+    const center = () =>
       pg.evaluate(() => {
         const m = [...document.querySelectorAll('button[class*="marker"]')].filter(
           (e) => e.getAttribute('aria-expanded') !== 'true',
         )
         if (!m.length) return null
-        let s = 0
+        let x = 0
+        let y = 0
         for (const e of m) {
           const r = e.getBoundingClientRect()
-          s += r.x + r.width / 2
+          x += r.x + r.width / 2
+          y += r.y + r.height / 2
         }
-        return s / m.length
+        return { x: x / m.length, y: y / m.length }
       })
 
-    const drag = async (dx) => {
+    const drag = async (dx, dy = 0) => {
       await pg.mouse.move(480, 460)
       await pg.mouse.down()
-      for (let i = 1; i <= 30; i++) await pg.mouse.move(480 + (dx * i) / 30, 460)
+      for (let i = 1; i <= 30; i++) await pg.mouse.move(480 + (dx * i) / 30, 460 + (dy * i) / 30)
       await pg.mouse.up()
       await pg.waitForTimeout(500)
     }
     await drag(-900)
-    const left = await cx()
+    const left = await center()
     await drag(1800)
-    const right = await cx()
+    const right = await center()
+    // 세로도 끝까지 — 극각 범위를 본다.
+    await drag(0, -700)
+    const up = await center()
+    await drag(0, 1400)
+    const down = await center()
     await ctx.close()
-    const span = left !== null && right !== null ? Math.round(Math.abs(right - left)) : 0
+    const span = left && right ? Math.round(Math.abs(right.x - left.x)) : 0
+    const vspan = up && down ? Math.round(Math.abs(down.y - up.y)) : 0
     /*
      * 실측 2026-09-17 (1440x900, 첫 마커를 연 채 좌우 끝까지):
      *   FOCUS 제약 913px   vs   ROOM 제약 409px
@@ -337,8 +351,143 @@ async function shotNow(pg) {
      */
     ok(
       span >= 700,
-      '마커를 연 채 둘러볼 때 초점 제약이 쓰인다',
-      `좌우 끝까지 끌었을 때 이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
+      '마커를 연 채 좌우로 둘러볼 때 초점 제약이 쓰인다',
+      `이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
+    )
+    ok(vspan >= 1, '   (대조) 세로 드래그가 실제로 구도를 바꿨다', `세로 이동 폭 ${vspan}px`)
+  }
+
+  /*
+   * ── ⑦ **비행 도중** 드래그해서 중단시켜도 한 프레임에 튀지 않는가.
+   *
+   *    중단 지점에는 **목적지 제약도 출발 제약도 안전하지 않다** — 둘 다
+   *    실제로 사고를 냈다:
+   *      · 목적지(FOCUS 상한 6.5) → **들어가는** 비행을 개요 거리(9.36)에서
+   *        중단하면 한 프레임에 30.6% 당겨진다(마커 111px)
+   *      · 출발(ROOM 방위각) → FOCUS 범위까지 돌려 둔 채 **나오는** 비행을
+   *        중단하면 한 프레임에 97° 꺾인다(마커 6756px)
+   *    CLAUDE.md 가 "한 프레임에 79.3° 꺾였다 — 갑자기 화면이 휙 돈다" 로
+   *    적어 둔 그 사고와 같은 형태다.
+   *
+   * 🔴 **기존 프로브는 비행이 끝난 뒤에만 드래그한다.** 그래서 이 경로를
+   *    아무도 안 봤다 — 그런데 "손대면 비행을 포기한다" 는 설계상 의도된 조작이다.
+   */
+  /**
+   * ⚠️ **절대값으로 판정하면 위양성이 난다.** 닫는 비행은 원래 크게 쓸어
+   *    내려오므로(방위각을 끝까지 돌려 둔 상태면 더) 한 프레임 이동이
+   *    **562px** 까지 나온다 — 드래그가 없어도 그렇다(실측 2026-09-17).
+   *    그래서 같은 시나리오를 **드래그 있음/없음으로 두 번** 돌려 그 **차이**
+   *    를 본다. 제약이 튀면 드래그 쪽만 커진다.
+   */
+  const run = async (phase, withDrag) => {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
+    const pg = await ctx.newPage()
+    await pg.goto(`${BASE}/`, { waitUntil: 'load' })
+    await pg.waitForFunction(() => document.documentElement.dataset.roomEntered === 'true', null, {
+      timeout: 25000,
+    })
+    await pg.waitForTimeout(1200)
+
+    /**
+     * **매 프레임 캔버스 픽셀 변화**의 최댓값을 기록한다.
+     *
+     * 🔴 마커 좌표로 재면 F2(방위각 97° 스냅)를 못 잡는다 — 닫는 비행은
+     *    자체 쓸어내림이 커서 스냅이 그 안에 묻히고, 화면 밖으로 발산한
+     *    마커를 빼면 신호가 사라진다. **그림 자체의 변화**가 더 곧다.
+     *
+     * 🔴 R3F 의 렌더 콜백보다 **뒤**에서 읽어야 한다 — 앞에서 읽으면
+     *    drawingBuffer 가 비어 전부 0 이다(CLAUDE.md). 0 이 연속 읽히면
+     *    `setTimeout` 을 한 번 거쳐 줄 맨 뒤로 다시 선다.
+     */
+    const watch = () =>
+      pg.evaluate(
+        () =>
+          new Promise((res) => {
+            const W = 64
+            const H = 40
+            const c = document.createElement('canvas')
+            c.width = W
+            c.height = H
+            const g = c.getContext('2d', { willReadFrequently: true })
+            let prev = null
+            let max = 0
+            let zeros = 0
+            const t0 = performance.now()
+            const tick = () => {
+              const gl = document.querySelector('canvas')
+              if (gl) {
+                g.clearRect(0, 0, W, H)
+                try {
+                  g.drawImage(gl, 0, 0, W, H)
+                } catch {}
+                const d = g.getImageData(0, 0, W, H).data
+                let sum = 0
+                let diff = 0
+                const cur = new Float32Array(W * H)
+                for (let i = 0, k = 0; i < d.length; i += 4, k++) {
+                  const v = d[i] + d[i + 1] + d[i + 2]
+                  cur[k] = v
+                  sum += v
+                  if (prev) diff += Math.abs(v - prev[k])
+                }
+                if (sum === 0) {
+                  zeros++
+                  if (zeros > 3) {
+                    zeros = 0
+                    setTimeout(() => requestAnimationFrame(tick), 0)
+                    return
+                  }
+                } else {
+                  zeros = 0
+                  if (prev) {
+                    const m = diff / (W * H) / 3
+                    if (m > max) max = m
+                  }
+                  prev = cur
+                }
+              }
+              if (performance.now() - t0 < 1500) requestAnimationFrame(tick)
+              else res(+max.toFixed(1))
+            }
+            requestAnimationFrame(tick)
+          }),
+      )
+
+    if (phase === '여는 비행') {
+      await pg.$eval('button[class*="marker"]', (e) => e.click())
+    } else {
+      // 먼저 열고, FOCUS 범위 끝까지 돌려 둔 뒤 닫는다 — 방위각 판을 만든다.
+      await pg.$eval('button[class*="marker"]', (e) => e.click())
+      await pg.waitForTimeout(2600)
+      await pg.mouse.move(480, 460)
+      await pg.mouse.down()
+      for (let i = 1; i <= 30; i++) await pg.mouse.move(480 - (900 * i) / 30, 460)
+      await pg.mouse.up()
+      await pg.waitForTimeout(600)
+      await pg.keyboard.press('Escape')
+    }
+    // 비행이 도는 중(200ms)에 손을 댄다.
+    const rec = watch()
+    await pg.waitForTimeout(200)
+    if (withDrag) {
+      await pg.mouse.move(480, 460)
+      await pg.mouse.down()
+      await pg.waitForTimeout(120)
+      await pg.mouse.up()
+    }
+    const worst = await rec
+    await ctx.close()
+    return worst
+  }
+
+  for (const phase of ['여는 비행', '닫는 비행']) {
+    const base = await run(phase, false)
+    const dragged = await run(phase, true)
+    const extra = dragged - base
+    ok(
+      extra <= 6,
+      `${phase} 도중 드래그해도 한 프레임에 안 튄다`,
+      `한 프레임 그림 변화 — 드래그 없음 ${base} · 있음 ${dragged} → 차이 ${extra.toFixed(1)} (기준 6 이하)`,
     )
   }
 

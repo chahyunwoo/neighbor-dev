@@ -1,4 +1,4 @@
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 let fail = 0
 const ok = (c, l, d) => {
   if (!c) fail++
@@ -7,7 +7,7 @@ const ok = (c, l, d) => {
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
   const pg = await (await b.newContext({ viewport: { width: 1440, height: 1000 } })).newPage()
-  await pg.goto('http://localhost:3200/work', { waitUntil: 'networkidle' })
+  await pg.goto(`${BASE}/work`, { waitUntil: 'networkidle' })
   await pg.waitForTimeout(4500)
 
   // 1. 접힌 태그가 실제로 안 보이는가 (display:contents 함정)

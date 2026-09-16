@@ -4,7 +4,7 @@
  * 🔴 3D 가 꺼지는 구간에서 번호 목록은 **유일한 이동 수단**이다.
  *    잘리면 그 물건으로 갈 방법이 아예 없어진다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const VPS = [
   [390, 844],
   [430, 932],
@@ -24,7 +24,7 @@ const VPS = [
       hasTouch: w < 800,
     })
     const pg = await ctx.newPage()
-    await pg.goto('http://localhost:3200/', { waitUntil: 'networkidle' })
+    await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' })
     await pg.waitForTimeout(3200)
     const r = await pg.evaluate(() => {
       const p = document.querySelector('[class*="page-module"]')

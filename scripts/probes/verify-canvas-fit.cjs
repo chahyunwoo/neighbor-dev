@@ -13,8 +13,7 @@
  *    실측 2026-09-17(관찰을 꺼서 확인): 홈 복귀 시 `--foot-h` 가 `0px` 로
  *    남고 캔버스가 733 → **803** 이 되어 **3D 가 푸터를 70px 덮었다.**
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const READ = () => {
   const cs = getComputedStyle(document.documentElement)

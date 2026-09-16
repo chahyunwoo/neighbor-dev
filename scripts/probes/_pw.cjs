@@ -41,6 +41,20 @@ const GPU_ARGS =
 /** 모든 프로브가 쓰는 실행 옵션. `chromium.launch(LAUNCH)` */
 const LAUNCH = { headless: true, args: GPU_ARGS }
 
+/**
+ * 검사할 서버 주소 — **여기 한 곳에서 준다.**
+ *
+ * 🔴 프로브 22개 중 **11개가 `http://localhost:3200` 을 박아 두고**
+ *    `WEB_BASE_URL` 을 안 봤다. 그래서 다른 포트로 띄우고 검사하면
+ *    **조용히 다른 서버를 검사했다** — 실측 2026-09-17: 죽은 포트를
+ *    지정했는데 `verify-clamp` 가 `7/7 열림 · 전부 통과` 를 냈다
+ *    (3200 의 옛 서버를 보고 있었다).
+ *
+ *    "검사기가 초록인데 화면이 깨져 있다" 중 제일 나쁜 형태다 —
+ *    **검사기가 아예 다른 것을 보고 있다.**
+ */
+const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+
 function load() {
   const tries = []
 
@@ -72,4 +86,4 @@ function load() {
   process.exit(2)
 }
 
-module.exports = { ...load(), LAUNCH }
+module.exports = { ...load(), LAUNCH, BASE }

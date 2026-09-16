@@ -75,6 +75,13 @@ export const FREE_LIMITS = {
  * ⚠️ 제약을 아예 푸는 것(`FREE_LIMITS`)과 다르다 — 그러면 사용자가 그 창에
  *    드래그해 방을 뚫을 수 있다. 여기서는 **합법 범위의 합집합**이라
  *    최악이어도 둘 중 하나의 경계 안이다.
+ *
+ * 🔴 **입장 비행에는 이것을 걸지 마라.** 합집합이 입장 경로를 **못 담는다** —
+ *    시작 방위각이 **237.3°** 인데 합집합 상한이 194.4° 다(거리·극각은 들어간다).
+ *    걸면 첫 프레임에 방위각이 꺾인다. 입장 동안의 제약은 `Scene` 이
+ *    `{...(entered ? CAMERA_LIMITS : FREE_LIMITS)}` 로 **`FREE_LIMITS`** 를
+ *    건다 — 그래서 `FREE_LIMITS` 는 죽은 코드가 아니다.
+ *    여기서 말하는 "비행" 은 **초점 비행**(물건 사이 이동)뿐이다.
  */
 const FLIGHT_LIMITS = {
   minDistance: Math.min(CAMERA_LIMITS.minDistance, CAMERA_LIMITS_FOCUS.minDistance),
@@ -606,9 +613,30 @@ export function CameraRig({
        */
       if (!fly.current) return
       fly.current = null
-      // 중단 지점의 제약은 **목적지 것**으로 확정한다. 합집합 안이라 안 튄다.
-      if (limitsAfterFly.current) Object.assign(ctl, limitsAfterFly.current)
       limitsAfterFly.current = null
+      /*
+       * 🔴 **여기서 제약을 바꾸지 않는다. 바꾸면 그 자리에서 튄다.**
+       *
+       *    중단 지점에는 **목적지 것도 출발 것도 안전하지 않다** — 둘 다
+       *    실제로 사고를 냈다:
+       *
+       *    · 목적지(FOCUS 상한 6.5)를 걸었더니, **들어가는** 비행을 개요
+       *      거리(9.36)에서 중단했을 때 한 프레임에 **30.6%** 당겨졌다
+       *      (마커 화면좌표 111px).
+       *    · 출발(ROOM 방위각 97.2~176.4°)을 걸었더니, FOCUS 범위까지
+       *      돌려 둔 상태에서 **나오는** 비행을 중단했을 때 한 프레임에
+       *      **97°** 꺾였다(마커 6756px). CLAUDE.md 가 사고로 적어 둔
+       *      "한 프레임에 79.3° 꺾였다 — 갑자기 화면이 휙 돈다" 와 같은
+       *      형태이고 더 크다.
+       *
+       *    안전한 것은 **그 시점 카메라를 확실히 담는 범위**이고, 그건 비행
+       *    동안 이미 걸려 있는 `FLIGHT_LIMITS`(합집합)다. 그대로 두면 된다.
+       *    합집합은 두 **합법** 범위의 합이라 벽을 뚫지 않는다(무제한인
+       *    `FREE_LIMITS` 와 다르다). 다음 비행이 착지하며 정확한 것을 건다.
+       *
+       * ⚠️ 이 자리는 **세 번 틀렸다.** 고치려는 사람은 먼저
+       *    `verify-intro-state` 의 ⑦(비행 도중 드래그)을 돌려 보라.
+       */
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)

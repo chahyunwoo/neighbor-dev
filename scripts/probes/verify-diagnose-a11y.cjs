@@ -14,8 +14,7 @@
  *    타이밍도 제어해야 한다 — 위 ①은 **응답이 느릴 때만** 드러난다.
  *    `page.route` 로 SSE 를 직접 만들어 8초 끌고 답한다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const sse = (o) => `data: ${JSON.stringify(o)}\n\n`
 
