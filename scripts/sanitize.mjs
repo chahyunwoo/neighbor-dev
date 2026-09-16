@@ -18,6 +18,31 @@ const PERSONAL_DOMAIN = ['hyunwoo', 'dev'].join('.')
  * ⚠️ `hyunwoo-dev-web` 은 이력서 PDF 생성을 라벨에서 뺀다.
  *    CLAUDE.md 4번: 실명·연락처가 들어가는 기능이라 옮기지 않는다.
  */
+/**
+ * 공개 URL 에 쓰는 id. **저장소명을 그대로 내보내지 않는다.**
+ *
+ * 🔴 라벨은 익명화하면서 `id` 는 저장소명 그대로 두고 있었다. 그 id 가
+ *    `/work/<id>` 라는 **주소**와 RSC 페이로드에 실려, 화면에는 "개인 기술
+ *    사이트" 라고 쓰면서 주소창에는 저장소명이 떴다(실측 2026-09-16:
+ *    `/work/hyunwoo-dev-admin` 등 4건 전부 200).
+ *
+ *    CLAUDE.md 3번: 기존 개인 사이트의 도메인과 저장소 링크를 적지 않는다.
+ *    하이픈 형태(`hyunwoo-dev-`)는 도메인(`hyunwoo.dev`)을 그대로 읽히게 한다.
+ *
+ * ⚠️ 여기 없는 id 는 그대로 쓴다 — 드러낼 것이 없는 이름이다.
+ */
+const PUBLIC_IDS = {
+  'hyunwoo-dev-admin': 'personal-site-admin',
+  'hyunwoo-dev-blog': 'personal-blog',
+  'hyunwoo-dev-monorepo': 'personal-site-monorepo',
+  'hyunwoo-dev-web': 'personal-site-web',
+}
+
+/** 공개용 id. 매핑이 없으면 원본을 그대로 쓴다. */
+export function publicIdFor(id) {
+  return PUBLIC_IDS[id] ?? id
+}
+
 const ANONYMOUS_LABELS = {
   // 기획서 11절이 표기를 이미 정해뒀다: "커머스 플랫폼 주문 검증 시스템".
   // 원본 라벨에는 플랫폼 실명이 들어 있다 — 실측(2026-09-09) 화면에서 발견.
