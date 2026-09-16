@@ -9,7 +9,11 @@ const { chromium } = require('./_pw.cjs')
 /** 카피가 이 시각 안에는 읽혀야 한다(ms). */
 const BUDGET = 1200
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch({
+    headless: false,
+    args: ['--window-position=-3000,0'],
+  }) /* 🔴 headed — GPU 없이 12fps 로 떨어지면
+    없는 증상이 만들어진다(CLAUDE.md). 카피가 언제 읽히는지 본다 — 3D 로딩·입장 연출과 얽혀 있다. */
   let fail = 0
   for (const label of ['첫 진입', '복귀']) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()

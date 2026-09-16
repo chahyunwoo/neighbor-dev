@@ -14,6 +14,22 @@ const { createRequire } = require('node:module')
 const { existsSync } = require('node:fs')
 const { join } = require('node:path')
 
+/*
+ * 🔴 **headed 로 열되 창은 화면 밖에 둔다.**
+ *
+ *    3D 를 재는 프로브는 headless 로 돌리면 안 된다 — GPU 가 없어 12fps 로
+ *    떨어지고 **없는 증상이 만들어진다**(CLAUDE.md). 실측 2026-09-16:
+ *    `verify-clamp` 가 headless 로 5회 중 3회 실패했는데 headed 로는 5회
+ *    전부 통과했다.
+ *
+ *    그런데 headed 는 **진짜 창이 뜬다.** `canvas-probe` 는 마커 7개마다 새
+ *    컨텍스트를 열어 창이 연속으로 튀어나오고, 그게 작업을 방해한다
+ *    (사용자 지적: "왜 자꾸 브라우저를 여러 개 키는 거야").
+ *
+ *    → `--window-position=-3000,0` 으로 화면 밖에 띄운다. GPU 는 그대로 쓰고
+ *      눈에는 안 보인다. 각 프로브의 `chromium.launch` 에 들어 있다.
+ */
+
 function load() {
   const tries = []
 

@@ -21,7 +21,7 @@ const { chromium } = require('./_pw.cjs')
 const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
 
 async function main() {
-  const browser = await chromium.launch({ headless: false })
+  const browser = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const problems = []
   const note = (s) => process.stdout.write(`${s}\n`)

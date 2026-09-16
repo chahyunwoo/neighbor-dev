@@ -10,7 +10,7 @@ const { chromium } = require('./_pw.cjs')
 const OUT = process.argv[2] || '.'
 const NAMES = ['모니터', '화이트보드', '책장', '서랍', '노트북', '테이블', '현관문']
 ;(async () => {
-  const b = await chromium.launch({ headless: false })
+  const b = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
   for (const nm of NAMES) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
     await pg.goto('http://localhost:3200/', { waitUntil: 'networkidle' })

@@ -8,7 +8,7 @@
 const { chromium } = require('./_pw.cjs')
 const RUNS = Number(process.env.RUNS || 3)
 ;(async () => {
-  const b = await chromium.launch({ headless: false })
+  const b = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
   let fail = 0
   for (let run = 1; run <= RUNS; run++) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()

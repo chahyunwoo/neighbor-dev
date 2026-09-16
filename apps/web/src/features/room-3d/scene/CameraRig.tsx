@@ -428,6 +428,16 @@ export function CameraRig({
    *    끝에서 한 번에 켜면 화면이 툭 움직이므로 비행 진행도에 맞춰 보간한다.
    */
   const shiftRef = useRef(0)
+  /**
+   * 지금 실제로 걸려 있는 보정량. 목표(`shiftRef`)로 **매 프레임 다가간다.**
+   *
+   * 🔴 패널이 열리면 목표가 `0 → 240`(PANEL_WIDTH/2)으로 바뀌는데, 그걸
+   *    그대로 걸면 **화면이 한 프레임에 212px 튄다**(실측 2026-09-16:
+   *    마커 클릭 직후 첫 프레임 이동 212.7px, 그 다음부터는 0.5px 씩).
+   *    캔버스는 CSS 로 0.44s 걸쳐 좁아지는데 투영만 즉시 바뀌어 어긋난다.
+   *    사용자가 "뚜둑뚜둑 끊긴다" 고 한 자리다.
+   */
+  const shiftNow = useRef(0)
 
   useEffect(() => {
     const persp = camera as THREE.PerspectiveCamera
@@ -444,8 +454,13 @@ export function CameraRig({
     const left = mode === 'page' ? PAGE_UI_WIDTH : UI_WIDTH
     const shift = (left + (w - right)) / 2 - w / 2
     shiftRef.current = shift
-    // 입장 비행 중이면 그 쪽이 매 프레임 다시 건다 — 여기서 최종값을 박지 않는다.
-    if (!fly.current?.intro) {
+    /*
+     * 🔴 **여기서 즉시 걸지 않는다.** `useFrame` 이 매 프레임 목표로 다가간다
+     *    (위 `shiftNow` 주석). 처음 마운트될 때만 맞춰 둔다 — 그때는 비교할
+     *    이전 값이 없어 보간할 것도 없다.
+     */
+    if (shiftNow.current === 0 && !fly.current) {
+      shiftNow.current = shift
       persp.setViewOffset(w, h, -shift, 0, w, h)
       persp.updateProjectionMatrix()
     }
@@ -456,8 +471,23 @@ export function CameraRig({
   }, [camera, focus, size.width, size.height, mode])
 
   useFrame(() => {
-    const f = fly.current
     const ctl = controls.current
+
+    /*
+     * 🔴 **투영 보정을 목표로 서서히 옮긴다.** 비행 중이 아니어도 돌아야 한다 —
+     *    패널을 여닫는 것만으로 목표가 바뀌기 때문이다.
+     *
+     * ⚠️ 0.12 는 캔버스 CSS 전환(0.44s)과 눈으로 맞춘 값이다. 크게 잡으면
+     *    다시 툭 튀고, 작게 잡으면 3D 만 뒤늦게 따라온다.
+     */
+    if (ctl && Math.abs(shiftNow.current - shiftRef.current) > 0.3) {
+      shiftNow.current += (shiftRef.current - shiftNow.current) * 0.12
+      const persp = camera as THREE.PerspectiveCamera
+      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
+      persp.updateProjectionMatrix()
+    }
+
+    const f = fly.current
     if (!f || !ctl) return
 
     /*
@@ -490,14 +520,8 @@ export function CameraRig({
     if (f.intro) {
       const persp = camera as THREE.PerspectiveCamera
       const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
-      persp.setViewOffset(
-        size.width,
-        size.height,
-        -shiftRef.current * ramp,
-        0,
-        size.width,
-        size.height,
-      )
+      shiftNow.current = shiftRef.current * ramp
+      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
       persp.updateProjectionMatrix()
     }
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
@@ -514,7 +538,8 @@ export function CameraRig({
       if (f.intro) {
         // 보정을 최종값으로 확정한다(보간이 끝났다).
         const persp = camera as THREE.PerspectiveCamera
-        persp.setViewOffset(size.width, size.height, -shiftRef.current, 0, size.width, size.height)
+        shiftNow.current = shiftRef.current
+        persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
         persp.updateProjectionMatrix()
         // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true

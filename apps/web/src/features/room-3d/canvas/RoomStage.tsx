@@ -27,7 +27,7 @@ export function RoomStage({
   /** `page` 일 때 카메라가 바라볼 물건. */
   objectId?: string | null
 }) {
-  const { declare, openId } = useRoom()
+  const { declare, openId, entered } = useRoom()
   const can = useCanRender3D() === true
   const effective: RoomMode = can ? mode : 'off'
 
@@ -55,6 +55,25 @@ export function RoomStage({
       delete document.documentElement.dataset.panelOpen
     }
   }, [panelOpen])
+
+  /*
+   * 🔴 **입장 연출이 끝났음을 DOM 에 남긴다.**
+   *
+   *    브라우저 프로브가 "이제 마커를 눌러도 된다" 를 알 방법이 이것뿐이다.
+   *    전에는 고정 대기(5000ms)로 버텼는데, 입장 시간을 4200ms 로 늘리자
+   *    GLTF 로딩이 조금만 느려도 **첫 클릭이 비행 중에 일어나** 마커가
+   *    빗나갔다 — `verify-clamp` 가 4회 중 2회 실패했고 실패 해상도도
+   *    매번 달랐다(실측 2026-09-16).
+   *
+   *    시간으로 기다리지 말고 **상태로 기다린다.**
+   */
+  useEffect(() => {
+    if (effective === 'off' || !entered) return
+    document.documentElement.dataset.roomEntered = 'true'
+    return () => {
+      delete document.documentElement.dataset.roomEntered
+    }
+  }, [effective, entered])
 
   useEffect(() => {
     document.documentElement.dataset.canvasMode = effective === 'page' ? 'object' : effective

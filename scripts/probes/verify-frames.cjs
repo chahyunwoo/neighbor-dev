@@ -12,7 +12,7 @@ const { chromium } = require('./_pw.cjs')
 const MIN_RATIO = 0.5
 
 ;(async () => {
-  const b = await chromium.launch({ headless: false })
+  const b = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
   const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
   let fail = 0
 

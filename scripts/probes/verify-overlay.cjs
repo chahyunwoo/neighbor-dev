@@ -11,7 +11,11 @@ const PAGES = ['/work', '/work/claude-board', '/career', '/stack', '/team', '/co
 const SLACK = 40
 
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch({
+    headless: false,
+    args: ['--window-position=-3000,0'],
+  }) /* 🔴 headed — GPU 없이 12fps 로 떨어지면
+    없는 증상이 만들어진다(CLAUDE.md). 3D 가 본문을 덮는지 본다 — 캔버스가 실제로 그려져야 한다. */
   let fail = 0
   for (const vp of [
     { width: 1440, height: 900 },
