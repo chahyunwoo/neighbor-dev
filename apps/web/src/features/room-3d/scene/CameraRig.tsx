@@ -182,18 +182,38 @@ const UI_WIDTH = 520
 const PANEL_WIDTH = 480
 
 /**
- * 페이지에서 본문이 차지하는 폭. `PageShell` 의 본문 최대폭과 맞춘다.
- * 3D 는 그 오른쪽 여백에 선다.
+ * 페이지에서 **캔버스 왼쪽이 마스크로 지워지는 비율.**
+ *
+ * 🔴 `tokens.css` 의 `html[data-canvas-mode="object"] .canvas-shell` 이 거는
+ *    `mask-image: linear-gradient(90deg, transparent 0%, #000 42%, …)` 과
+ *    **같은 값이어야 한다.** 어긋나면 3D 가 지워진 영역 뒤로 들어간다.
+ *
+ * 🔴 **본문 폭(980px)을 쓰면 안 된다.** 그렇게 계산하다 하위 화면의 3D 가
+ *    통째로 프레임 밖으로 밀려났다 — 실측 2026-09-16(`/work`, 프로드 빌드):
+ *    캔버스 340x900 인데 보정량이 **490px**(캔버스 폭의 1.44배)이라
+ *    최대 휘도가 20 이었다(홈은 255). 사실상 검은 화면이다.
+ *
+ *    원인은 단위가 섞인 것이다. 홈에서는 캔버스가 뷰포트를 다 쓰므로
+ *    "왼쪽 UI 520px" 이 곧 "캔버스를 덮는 520px" 이다. 그런데 하위 화면은
+ *    `--cv-left` 로 캔버스 자체가 오른쪽 띠에 들어가 있어 **본문이 캔버스를
+ *    아예 안 덮는다.** 덮는 것은 마스크뿐이다.
  */
-const PAGE_UI_WIDTH = 980
+const PAGE_MASK_LEFT = 0.42
 
 /**
  * 페이지에서 물건에 다가가는 거리의 하한.
  *
  * 🔴 홈(4.8)보다 멀다. 배경이라 물건만 크게 보이면 "작업실 안" 이 사라지고
- *    그냥 큰 3D 오브젝트가 된다 — 홈의 처음 구도가 9.5 이므로 그 사이를 쓴다.
+ *    그냥 큰 3D 오브젝트가 된다.
+ *
+ * ⚠️ **`CAMERA_LIMITS_FOCUS.maxDistance` 를 넘길 수 없다.** 거리는
+ *    `min(maxDistance, max(floor, raw))` 로 잡히므로, 하한이 상한보다 크면
+ *    **그 식이 늘 상한 하나를 뱉는 죽은 설정**이 된다 — 한때 7.4 였는데
+ *    상한이 6.5 라, raw 가 무엇이든 결과가 6.5 였다. 고쳐도 아무 일도
+ *    안 일어나는 자리였다(CLAUDE.md 의 `max(base, 설정)` 함정 그대로).
+ *    더 멀리 세우려면 **상한부터** 올려야 한다.
  */
-const PAGE_MIN_DISTANCE = 7.4
+const PAGE_MIN_DISTANCE = CAMERA_LIMITS_FOCUS.maxDistance
 
 export function CameraRig({
   focus,
@@ -298,6 +318,23 @@ export function CameraRig({
      *    → 건너뛰기만 하고 **다음에 홈으로 오면 그때 입장한다.**
      */
     if (skipIntro) {
+      /*
+       * 🔴 **카메라를 처음 구도에 세우고 나간다.**
+       *
+       *    `Scene` 의 `<PerspectiveCamera makeDefault fov={...} />` 에는
+       *    `position` 이 없다 — 자리를 잡는 것은 이 입장 effect 다. 홈을
+       *    거쳐 온 사람은 입장 비행이 이미 세워 놨지만, **주소로 바로 들어온
+       *    사람은 카메라가 기본 위치(원점 근처)에 있다.** 그 상태로 초점
+       *    비행이 `dir = camera.position - target` 을 잡으면 방향이 엉뚱해져
+       *    같은 주소인데 다른 화면이 나온다.
+       *
+       *    실측 2026-09-16(캔버스 평균 휘도): 홈경유 26.5 / 직접 5.7(`/work`),
+       *    29.9 / 4.4(`/stack`). 검색·공유 링크가 곧 수주 경로인 사이트라
+       *    **직접 진입이 오히려 기본 경로**다.
+       */
+      camera.position.set(...CAMERA_POSITION)
+      ctl.target.set(...ROOM_CENTER)
+      ctl.update()
       landed.current = true
       onEntered()
       return
@@ -490,20 +527,40 @@ export function CameraRig({
      *    오른쪽으로 그만큼 더 밀려 화면 밖으로 빠진다(실측 스크린샷).
      *    대신 왼쪽 본문이 홈의 카피보다 넓으므로 그 값을 쓴다.
      */
+    /*
+     * 🔴 **둘 다 "캔버스 픽셀" 로 잰다.** 뷰포트 기준 값을 섞으면 캔버스가
+     *    뷰포트보다 좁은 화면(하위 화면)에서 보정이 폭을 넘어선다.
+     *
+     * - 홈: 캔버스가 뷰포트를 다 쓰므로 왼쪽 UI 520px 이 그대로 덮는 폭이다.
+     *       패널이 열리면 오른쪽 480px 이 덮인다.
+     * - 페이지: 본문은 캔버스 **밖**에 있다. 덮는 것은 왼쪽 마스크뿐이다.
+     */
     const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
-    const left = mode === 'page' ? PAGE_UI_WIDTH : UI_WIDTH
-    const shift = (left + (w - right)) / 2 - w / 2
+    const left = mode === 'page' ? w * PAGE_MASK_LEFT : UI_WIDTH
+    // `(left + (w - right)) / 2 - w / 2` 를 약분한 것이다 — `w` 는 상쇄된다.
+    const shift = (left - right) / 2
     shiftRef.current = shift
     /*
      * 🔴 **여기서 즉시 걸지 않는다.** `useFrame` 이 매 프레임 목표로 다가간다
      *    (위 `shiftNow` 주석). 처음 마운트될 때만 맞춰 둔다 — 그때는 비교할
      *    이전 값이 없어 보간할 것도 없다.
      */
-    if (shiftNow.current === 0 && !fly.current) {
-      shiftNow.current = shift
-      persp.setViewOffset(w, h, -shift, 0, w, h)
-      persp.updateProjectionMatrix()
-    }
+    // 처음 마운트면 보간할 이전 값이 없다 — 바로 맞춘다.
+    if (shiftNow.current === 0 && !fly.current) shiftNow.current = shift
+    /*
+     * 🔴 **매번 다시 건다.** 아래 cleanup 이 재실행마다 보정을 지우는데,
+     *    재적용을 "처음 마운트일 때만" 으로 두면 **높이만 바뀌어도 보정이
+     *    영영 사라진다** — `shift` 는 폭에만 의존하므로 값이 그대로라
+     *    `useFrame` 의 `|shiftNow - shiftRef| > 0.3` 가 영영 거짓이 되고,
+     *    다시 걸 기회가 없다.
+     *
+     *    실측 2026-09-16(홈, 폭 1440 고정): 높이 900→820 에서 마커 7개가
+     *    한꺼번에 ~260px 왼쪽으로 밀렸고 **820→900 으로 되돌려도 안 돌아왔다.**
+     *    개발자도구를 여닫거나, 홈→하위 전환에서 푸터가 사라져 캔버스 높이가
+     *    733→803→900 으로 바뀌는 것만으로도 걸린다(실측).
+     */
+    persp.setViewOffset(w, h, -shiftNow.current, 0, w, h)
+    persp.updateProjectionMatrix()
     return () => {
       persp.clearViewOffset()
       persp.updateProjectionMatrix()
