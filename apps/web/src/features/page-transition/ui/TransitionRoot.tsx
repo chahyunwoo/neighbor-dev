@@ -104,12 +104,30 @@ export function TransitionRoot({ children }: { children: ReactNode }) {
       document.startViewTransition(() => {
         router.push(href)
         return new Promise<void>((resolve) => {
-          settle.current = resolve
+          /*
+           * 🔴 **타이머 손잡이를 잡아 두고 풀릴 때 지운다.**
+           *
+           *    전에는 `setTimeout(() => settle.current?.(), 1200)` 만 걸어 두고
+           *    치우지 않았다. 그 콜백은 값을 캡처하지 않고 **발화 시점의**
+           *    `settle.current` 를 읽는다 — 실제 라우트 커밋은 30ms 쯤이고
+           *    타이머는 1200ms 를 꽉 채우고 살아남으므로, 그 사이에 링크를
+           *    한 번 더 누르면 **낡은 타이머가 다음 전환의 resolve 를 당겨
+           *    쓴다.** `router.push` 가 아직 커밋 전이면 브라우저가 바뀌기
+           *    전 DOM 을 "새 화면" 으로 찍어 겹침이 성립하지 않고, 내용이
+           *    전환 끝에 툭 나타난다 — 고치려던 "뚜둑" 그 자체다.
+           *
+           * ⚠️ `settle.current === done` 을 확인하고서만 비운다. 이미 다음
+           *    전환이 자기 것을 꽂아 놨다면 남의 손잡이를 지우면 안 된다.
+           */
+          let timer: ReturnType<typeof setTimeout> | undefined
+          const done = () => {
+            if (timer !== undefined) clearTimeout(timer)
+            if (settle.current === done) settle.current = null
+            resolve()
+          }
+          settle.current = done
           // 경로 변경을 못 받는 경우에도 영원히 매달리지 않는다.
-          setTimeout(() => {
-            settle.current?.()
-            settle.current = null
-          }, 1200)
+          timer = setTimeout(done, 1200)
         })
       })
     },
