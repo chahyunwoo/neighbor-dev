@@ -4,7 +4,13 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
+import {
+  CAMERA_FOV,
+  CAMERA_LIMITS,
+  CAMERA_LIMITS_FOCUS,
+  CAMERA_POSITION,
+  ROOM_CENTER,
+} from './layout'
 
 /**
  * OrbitControls 인스턴스 타입.
@@ -98,6 +104,19 @@ export interface FocusTarget {
  */
 export const INTRO = {
   from: [-4.7, 1.35, -1.6] as [number, number, number],
+  /**
+   * 입장 시작 시야각. 최종(`CAMERA_FOV` 37)보다 **넓다.**
+   *
+   * 🔴 문 앞에서는 카메라가 문에서 **1.88** 밖에 안 떨어져 있어, 37° 로는
+   *    문(높이 2.1)이 화면을 넘어가 **잘린다**(사용자 지적: "시야가 이상하게
+   *    돼서 문이 좀 짤려서 나옴"). 37° 로 문 전체를 담으려면 거리 3.14 가
+   *    필요한데, **그만큼 벌리면 벽 밖으로 나가 화면이 통째로 검어진다**
+   *    (실측 2026-09-16: 거리 3.6 에서 문틀조차 안 보였다).
+   *
+   *    → 좌표는 그대로 두고 **시야만 넓힌다.** 광각이라 문틀이 프레임으로
+   *      들어오고, 들어오는 동안 37° 로 좁혀지며 최종 구도에 자연스럽게 앉는다.
+   */
+  fov: 58,
   lookAt: [-1.0, 1.15, -0.2] as [number, number, number],
   ms: 3200,
   /** 문이 열리는 시각(ms). 들어가기 전에 열려 있어야 한다. */
@@ -395,6 +414,18 @@ export function CameraRig({
    *    ⚠️ 홈에서도 보정한다. 시안 주석: "홈에서도 방이 왼쪽에 몰려 오른쪽이
    *       빈다" — 실제로 그랬다(스크린샷으로 확인).
    */
+  /**
+   * 지금 걸어야 할 투영 보정량(px). `useFrame` 도 읽는다.
+   *
+   * 🔴 입장 연출 동안에는 이 값을 **0 에서부터 서서히 올린다.** 문 밖에서
+   *    시작할 때 카메라가 문에서 **1.88** 밖에 안 떨어져 있어 문이 화면을 크게
+   *    차지하는데, 여기에 260px 보정이 그대로 걸리면 **문이 잘려 나간다**
+   *    (사용자 지적: "시야가 이상하게 돼서 문이 좀 짤려서 나옴").
+   *
+   *    끝에서 한 번에 켜면 화면이 툭 움직이므로 비행 진행도에 맞춰 보간한다.
+   */
+  const shiftRef = useRef(0)
+
   useEffect(() => {
     const persp = camera as THREE.PerspectiveCamera
     const w = size.width
@@ -409,8 +440,12 @@ export function CameraRig({
     const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
     const left = mode === 'page' ? PAGE_UI_WIDTH : UI_WIDTH
     const shift = (left + (w - right)) / 2 - w / 2
-    persp.setViewOffset(w, h, -shift, 0, w, h)
-    persp.updateProjectionMatrix()
+    shiftRef.current = shift
+    // 입장 비행 중이면 그 쪽이 매 프레임 다시 건다 — 여기서 최종값을 박지 않는다.
+    if (!fly.current?.intro) {
+      persp.setViewOffset(w, h, -shift, 0, w, h)
+      persp.updateProjectionMatrix()
+    }
     return () => {
       persp.clearViewOffset()
       persp.updateProjectionMatrix()
@@ -441,6 +476,29 @@ export function CameraRig({
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
+
+    /*
+     * 🔴 입장 중에는 투영 보정을 **0 에서부터 올린다**(위 `shiftRef` 주석).
+     *    문 앞에서는 보정이 없어야 문이 프레임 안에 들어온다.
+     *
+     * ⚠️ 뒤쪽 절반에서 올린다 — 앞에서 같이 올리면 문을 통과하는 동안 화면이
+     *    옆으로 흐르는 것처럼 보인다.
+     */
+    if (f.intro) {
+      const persp = camera as THREE.PerspectiveCamera
+      const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
+      persp.setViewOffset(
+        size.width,
+        size.height,
+        -shiftRef.current * ramp,
+        0,
+        size.width,
+        size.height,
+      )
+      // 넓은 시야에서 시작해 최종 화각으로 좁혀진다(위 `INTRO.fov` 주석).
+      persp.fov = INTRO.fov + (CAMERA_FOV - INTRO.fov) * e
+      persp.updateProjectionMatrix()
+    }
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
     if (f.intro) {
       const closeAt = INTRO.doorCloseAt / INTRO.ms
@@ -453,6 +511,11 @@ export function CameraRig({
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
+        // 보정을 최종값으로 확정한다(보간이 끝났다).
+        const persp = camera as THREE.PerspectiveCamera
+        persp.setViewOffset(size.width, size.height, -shiftRef.current, 0, size.width, size.height)
+        persp.fov = CAMERA_FOV
+        persp.updateProjectionMatrix()
         // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true
         onEntered()
