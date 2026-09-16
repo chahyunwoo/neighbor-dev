@@ -180,6 +180,79 @@ async function shotNow(pg) {
     ok(after === 'true', '입장이 끝나면 다시 켜진다', `끝난 뒤 ${after}`)
   }
 
+  /*
+   * ── ④ 마커를 **열었다 닫으면** 개요 구도가 제자리로 오는가.
+   *
+   *    제약을 비행 **끝**에만 걸었더니, **나오는 비행**(초점 → 개요 9.36)이
+   *    비행 내내 옛 FOCUS 상한(6.5)에 잘렸다. 끝나서 상한을 12 로 돌려놔도
+   *    **카메라를 도로 밀어내 주는 것이 없다** — 영영 30.6% 당겨진 채 남는다.
+   *    실측: 마커 화면좌표 최대 편차 205px, scale 0.703 → 0.959.
+   *
+   * 🔴 **`verify-clamp` 는 마커를 열기만 하고 닫지 않아서** 이것을 못 봤다.
+   *    여는 방향은 전부 FOCUS 제약 안이라 증상이 안 난다.
+   */
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
+    const pg = await ctx.newPage()
+    await pg.goto(`${BASE}/`, { waitUntil: 'load' })
+    await pg.waitForFunction(() => document.documentElement.dataset.roomEntered === 'true', null, {
+      timeout: 25000,
+    })
+    await pg.waitForTimeout(1200)
+    const before = await shotNow(pg)
+    await pg.$eval('button[class*="marker"]', (e) => e.click())
+    await pg.waitForTimeout(1800)
+    // 닫기 — 패널의 닫기 버튼, 없으면 Esc
+    await pg.keyboard.press('Escape')
+    await pg.waitForTimeout(2600)
+    const after = await shotNow(pg)
+    const d = await pg.evaluate(DIFF, [before, after])
+    await ctx.close()
+    ok(
+      d <= 4,
+      '마커를 열었다 닫으면 개요 구도가 제자리로 온다',
+      `열기 전 vs 닫은 뒤 픽셀차 ${d} (기준 4 이하)`,
+    )
+  }
+
+  /*
+   * ── ⑤ 깊은 링크로 들어와 홈에 올 때 **어둠막이 옅어졌다 돌아오지** 않는가.
+   *
+   *    `entered` 를 되돌리게 만들면서(프로브 게이트 용도) `.scrim` 의
+   *    `data-lit` 이 날것 `lit` 을 보고 있어 한 번 꺼졌다 켜졌다.
+   *    실측: 최소 불투명도 0.58~0.61 @324ms, `data-lit=false` 프레임 15개.
+   *    글은 그대로 있는데 그 뒤 어둠막만 빠져 대비가 약해진다.
+   */
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
+    const pg = await ctx.newPage()
+    await pg.addInitScript(() => {
+      window.__scrim = []
+      const tick = () => {
+        const s = document.querySelector('[class*="scrim"]')
+        if (s) window.__scrim.push(Number.parseFloat(getComputedStyle(s).opacity))
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
+    await pg.goto(`${BASE}/work`, { waitUntil: 'load' })
+    await pg.waitForTimeout(5000)
+    await pg.evaluate(() => {
+      window.__scrim.length = 0
+    })
+    await pg.$eval('a[href="/"]', (e) => e.click())
+    await pg.waitForURL((u) => new URL(u).pathname === '/')
+    await pg.waitForTimeout(2500)
+    const v = await pg.evaluate(() => window.__scrim)
+    await ctx.close()
+    const min = v.length ? Math.min(...v) : 1
+    ok(
+      min >= 0.95,
+      '깊은 링크 → 홈 에서 어둠막이 안 옅어진다',
+      `최소 불투명도 ${min.toFixed(2)} (프레임 ${v.length}개)`,
+    )
+  }
+
   await b.close()
   console.log(fail ? `\n실패 ${fail}건` : '\n입장·초점 상태 전이가 전부 제때 일어난다')
   process.exit(fail ? 1 : 0)
