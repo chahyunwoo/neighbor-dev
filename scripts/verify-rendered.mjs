@@ -45,9 +45,47 @@ const paths = [
 ]
 
 const companies = realCompanyNames()
+
+/**
+ * dev 서버에 대고 돌면 **멈춘다.**
+ *
+ * 🔴 `next dev` 는 HTML 에 `node_modules` 경로를 그대로 싣는다. 그 경로가
+ *    이메일 정규식에 걸려 **16개 화면 전부가 빨갛게** 나왔다(이슈 #32):
+ *
+ *        🔴 /
+ *             이메일: next@16.3.4_, types+node@26.5.0_react, -dom@19.2.8_react
+ *
+ *    prod 빌드에서는 같은 검사가 통과한다. 즉 **전부 오탐**이다.
+ *
+ * 🔴 **오탐을 걸러내는 쪽으로 고치지 않는다.** 이메일 정규식에 예외를 파면
+ *    진짜 이메일을 놓칠 길이 같이 생긴다. 공개 검사기가 내는 빨강은 심각도가
+ *    높아서, 오탐이 섞이면 진짜 유출과 구별이 안 되고 결국 사람이 이 검사기를
+ *    안 믿게 된다 — **그게 제일 나쁜 결말이다.**
+ *    → 잘못된 대상에 돌리고 있다는 것을 **그 자리에서 말하고 멈춘다.**
+ */
+function assertProd(html) {
+  // dev 에만 나오는 두 가지. 둘 다 prod 빌드에는 0건이다(실측 2026-09-17).
+  const devMark = html.includes('next-devtools') || html.includes('/node_modules/')
+  if (!devMark) return
+  console.error(`🔴 ${BASE} 는 dev 서버다. 이 검사는 **prod 빌드**에 대고 돌린다.`)
+  console.error('')
+  console.error('   dev 는 HTML 에 node_modules 경로를 싣고, 그것이 이메일 검사에 걸려')
+  console.error('   모든 화면이 오탐으로 빨개진다(이슈 #32). 결과를 믿을 수 없다.')
+  console.error('')
+  console.error('   pnpm --filter @neighbor/web build')
+  console.error('   pnpm --filter @neighbor/web start &')
+  console.error('   node scripts/verify-rendered.mjs')
+  process.exit(2)
+}
+
 let bad = 0
+let checkedProd = false
 for (const p of paths) {
   const html = await fetch(BASE + p).then((r) => r.text())
+  if (!checkedProd) {
+    assertProd(html)
+    checkedProd = true
+  }
   const findings = scanText(html, companies)
   if (findings.length) {
     bad++
