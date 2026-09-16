@@ -225,3 +225,21 @@
     content: "...";
   }
 }
+
+/*
+ * 화면에서는 안 보이고 스크린리더만 읽는다.
+ *
+ * 🔴 `display:none` · `visibility:hidden` 을 쓰지 않는다 — 그러면 보조기술도
+ *    못 읽어 라이브 영역이 통째로 죽는다. 1px 로 잘라 두는 것이 표준 수법이다.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
