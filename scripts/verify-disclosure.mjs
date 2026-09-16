@@ -5,8 +5,7 @@
  * 한 건이라도 걸리면 종료코드 1 — CI·훅에서 그대로 게이트로 쓴다.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -18,30 +17,16 @@ import {
   checkTierRules,
   scanText,
 } from './disclosure.mjs'
+import { realCompanyNames } from './source.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SOURCE = process.env.PORTFOLIO_SOURCE ?? join(homedir(), 'Documents', 'portfolio-source')
 const DATA = join(ROOT, 'data', 'generated', 'projects.json')
 
-/**
- * 원본 `client` 필드에 든 실제 사명 목록을 모은다.
- * 이 파일에도 생성 데이터에도 사명을 적지 않기 위해, 검사에만 쓰고 출력하지 않는다.
+/*
+ * 🔴 사명 목록은 source.mjs 가 만든다 — 정본을 못 찾으면 거기서 throw 한다.
+ *    전에는 이 파일이 `if (!existsSync(dir)) return []` 로 넘어갔다. 그러면
+ *    경로가 틀어졌을 때 **사명 검사만 조용히 사라지고 초록이 뜬다.**
  */
-function realCompanyNames() {
-  const dir = join(SOURCE, 'projects')
-  if (!existsSync(dir)) return []
-  const names = new Set()
-  for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
-    const d = JSON.parse(readFileSync(join(dir, f), 'utf8'))
-    for (const key of ['client', 'projectNamed']) {
-      const v = d[key]
-      if (typeof v === 'string' && v.trim().length >= 2 && !/^(미상|unknown|개인)/i.test(v)) {
-        names.add(v.trim())
-      }
-    }
-  }
-  return [...names]
-}
 
 /** 워크스페이스의 package.json 들을 이어 읽는다. 없으면 빈 문자열. */
 function readManifests() {

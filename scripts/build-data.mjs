@@ -8,31 +8,18 @@
  * 🔴 허용목록 방식이라, 원본에 새 필드가 생겨도 조용히 새어나가지 않는다.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { anonymousLabelFor, sanitizeDeep } from './sanitize.mjs'
+import { readSourceIndex, readSourceProjects } from './source.mjs'
 import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const SOURCE = process.env.PORTFOLIO_SOURCE ?? join(homedir(), 'Documents', 'portfolio-source')
 const OUT_DIR = join(ROOT, 'data', 'generated')
 
-function readProjects() {
-  const dir = join(SOURCE, 'projects')
-  if (!existsSync(dir)) {
-    throw new Error(
-      `정본을 찾을 수 없다: ${dir}\nPORTFOLIO_SOURCE 로 경로를 넘기거나 정본 저장소를 확인한다.`,
-    )
-  }
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => {
-      const raw = JSON.parse(readFileSync(join(dir, f), 'utf8'))
-      return { ...raw, id: f.replace(/\.json$/, '') }
-    })
-}
+// 경로 해석과 읽기는 source.mjs 하나가 맡는다 — 못 찾으면 거기서 throw 한다.
+const readProjects = readSourceProjects
 
 /** 원본 `stack` 은 {frontend,backend,infra} 또는 배열. 평평한 배열로 만든다. */
 function flattenStack(stack) {
@@ -95,7 +82,7 @@ function project2public(project, indexEntry, tier) {
 
 function main() {
   const projects = readProjects()
-  const index = JSON.parse(readFileSync(join(SOURCE, 'index.json'), 'utf8'))
+  const index = readSourceIndex()
   const byId = new Map(index.projects.map((p) => [p.id, p]))
 
   let detail = []

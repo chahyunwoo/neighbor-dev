@@ -31,13 +31,13 @@
 
 ## 🔴 근거 없는 수치를 쓰지 않는다
 
-홈페이지에 수치를 실으면 `~/Documents/portfolio-source/projects/*.json` 의
+홈페이지에 수치를 실으면 정본(`portfolio-source`)의 `projects/*.json` 의
 `metrics[]` 에 **재현 명령이 있는 것만** 쓴다. 없으면 쓰지 않는다.
 
 실적 게재 범위: **2025.04 이후 17건**. 이전 6건은 싣지 않는다.
 
 ```bash
-cd ~/Documents/portfolio-source && python3 -c "
+cd "${PORTFOLIO_SOURCE:-$HOME/dev/data/portfolio-source}" && python3 -c "
 import json,re
 d=json.load(open('index.json'))
 def s(p):
@@ -197,7 +197,7 @@ node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 기획서 4절은 **"진행 흐름 ↔ 구조 흐름"** 이었다. 그 데이터가 정본에 없다:
 
 ```bash
-cd ~/Documents/portfolio-source && python3 -c "
+cd "${PORTFOLIO_SOURCE:-$HOME/dev/data/portfolio-source}" && python3 -c "
 import json,glob
 n=sum('diagramSeeds' in json.load(open(f)) for f in glob.glob('projects/*.json'))
 print('diagramSeeds 보유:', n, '건 (그나마 제목+참고위치뿐)')
