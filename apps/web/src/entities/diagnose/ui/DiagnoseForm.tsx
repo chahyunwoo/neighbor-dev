@@ -34,6 +34,14 @@ export function DiagnoseForm() {
    *    복사할 때만 복사본에 반영된다.
    */
   const [dropped, setDropped] = useState<ReadonlySet<string>>(() => new Set())
+  /**
+   * 스크린리더에게 읽어 줄 현재 상태.
+   *
+   * 🔴 **이 영역은 처음부터 끝까지 DOM 에 있다.** 조건부로 렌더하면 (a) 삽입과
+   *    동시에 내용이 들어가 첫 문구를 놓치고 (b) 결과가 오면 사라져 **결과를
+   *    알릴 자리가 없어진다.** 텍스트만 갈아끼운다.
+   */
+  const [live, setLive] = useState('')
 
   const toggleScope = useCallback((item: string) => {
     setDropped((prev) => {
@@ -54,6 +62,7 @@ export function DiagnoseForm() {
     setStreaming(true)
     setError(null)
     setResult('')
+    setLive('진단을 시작합니다')
     // 앞 진단에서 뺀 항목이 새 결과에 남으면 엉뚱한 것이 꺼진 채로 보인다.
     setDropped(new Set())
     try {
@@ -109,6 +118,20 @@ export function DiagnoseForm() {
     } finally {
       setPending(false)
       setStreaming(false)
+      /*
+       * 🔴 **끝났다는 것을 반드시 알린다.** 전에는 대기 문구만 계속 읽다가
+       *    결과가 오는 순간 **완전히 조용해졌다** — 결과가 왔는지 실패했는지
+       *    알 방법이 없었다(실측: 9602ms 에 라이브 영역이 통째로 사라졌다).
+       *
+       * ⚠️ `setLive` 는 최신 상태를 못 보므로(이 함수가 그 상태를 닫고 있다)
+       *    갱신 함수로 읽지 않고, 실패는 `role="alert"` 가 따로 읽는다.
+       *    여기서는 **무음이 되지 않게** 하는 것이 목적이다.
+       */
+      setLive((prev) =>
+        prev === '진단을 시작합니다' || STEPS.includes(prev.trim())
+          ? '진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다.'
+          : prev,
+      )
     }
   }
 
@@ -172,10 +195,23 @@ export function DiagnoseForm() {
         </div>
       </form>
 
-      {error ? <p className={styles.error}>{error}</p> : null}
+      {/*
+       * 🔴 **상시 라이브 영역.** 빈 문자열로 시작해 텍스트만 바뀐다.
+       *    `role="status"` 는 암묵적으로 `aria-live="polite"` 다.
+       */}
+      <p className={styles.srOnly} role="status">
+        {live}
+      </p>
+
+      {/* ⚠️ 실패는 즉시 알린다 — `role="alert"` 는 assertive 다. */}
+      {error ? (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {/* 🔴 첫 글자가 오기 전 — 멈춘 것처럼 보이지 않게 한다. */}
-      {pending && !result ? <Analyzing /> : null}
+      {pending && !result ? <Analyzing onStep={setLive} /> : null}
       {result ? (
         <div>
           <div className={styles.resultHead}>
@@ -223,14 +259,34 @@ const STEPS = [
   '위험한 곳을 찾는 중',
 ]
 
-function Analyzing() {
+/**
+ * 지금 읽어 줄 문구. **폼 바깥의 상시 라이브 영역**이 이 값을 읽는다.
+ *
+ * 🔴 `Analyzing` 자신에게 `aria-live` 를 걸면 안 된다 — 그 요소는 **내용과
+ *    동시에 DOM 에 삽입**되고(실측: `t=75ms "라이브영역 통째로 삽입"`),
+ *    대부분의 스크린리더는 영역이 **미리 있어야** 읽는다. 게다가 결과가
+ *    오면 이 요소가 통째로 사라져 **결과를 알릴 자리가 없어진다**
+ *    (실측: 결과 도착 후 `[aria-live],[role=status],[role=alert]` 0개).
+ */
+function Analyzing({ onStep }: { onStep: (s: string) => void }) {
   const [i, setI] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % STEPS.length), 1800)
+    /*
+     * 🔴 **마지막 단계에서 멈춘다. 처음으로 돌아가지 않는다.**
+     *    `% STEPS.length` 로 순환시켰더니 응답이 늦을 때 같은 4문구를
+     *    **무한히** 다시 읽었다 — polite 라도 1.8초마다 읽던 자리를 끊는다
+     *    (실측: 7776ms 에 첫 문구로 되돌아갔다).
+     */
+    const t = setInterval(() => setI((n) => Math.min(n + 1, STEPS.length - 1)), 1800)
     return () => clearInterval(t)
   }, [])
+
+  // 화면에 보이는 문구와 읽어 주는 문구를 하나로 묶는다.
+  useEffect(() => {
+    onStep(STEPS[i] ?? '')
+  }, [i, onStep])
 
   /*
    * 🔴 **결과가 생기는 자리로 따라간다.** 폼이 길어서 제출 버튼을 누르면
@@ -241,11 +297,17 @@ function Analyzing() {
    *    nav 아래에 딱 붙어 답답하다.
    */
   useEffect(() => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    /*
+     * ⚠️ **움직임을 끈 사람에게는 굴리지 않는다.** `behavior: 'smooth'` 는
+     *    `prefers-reduced-motion` 을 스스로 보지 않는다 — 실측: reduce
+     *    에뮬레이션에서도 `scrollY 0 → 97` 로 부드럽게 굴렀다.
+     */
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ref.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
   }, [])
 
   return (
-    <div ref={ref} className={styles.analyzing} aria-live="polite">
+    <div ref={ref} className={styles.analyzing}>
       <div className={styles.scan} aria-hidden="true" />
       <p className={styles.analyzingText}>
         {STEPS[i]}
