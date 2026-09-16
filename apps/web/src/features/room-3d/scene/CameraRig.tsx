@@ -143,11 +143,27 @@ const UI_WIDTH = 520
 /** 열렸을 때 오른쪽 패널이 먹는 폭. `RoomPanel` 과 같아야 한다. */
 const PANEL_WIDTH = 480
 
+/**
+ * 페이지에서 본문이 차지하는 폭. `PageShell` 의 본문 최대폭과 맞춘다.
+ * 3D 는 그 오른쪽 여백에 선다.
+ */
+const PAGE_UI_WIDTH = 980
+
+/**
+ * 페이지에서 물건에 다가가는 거리의 하한.
+ *
+ * 🔴 홈(4.8)보다 멀다. 배경이라 물건만 크게 보이면 "작업실 안" 이 사라지고
+ *    그냥 큰 3D 오브젝트가 된다 — 홈의 처음 구도가 9.5 이므로 그 사이를 쓴다.
+ */
+const PAGE_MIN_DISTANCE = 7.4
+
 export function CameraRig({
   focus,
   controls,
   onIntroDoor,
   onEntered,
+  skipIntro = false,
+  mode = 'room',
 }: {
   /** 열린 물건의 초점. `null` 이면 처음 구도로 돌아간다. */
   focus: FocusTarget | null
@@ -156,6 +172,26 @@ export function CameraRig({
   onIntroDoor: (open: boolean) => void
   /** 입장이 끝났다 — 부모가 UI 를 올린다. */
   onEntered: () => void
+  /**
+   * 입장 연출을 건너뛴다.
+   *
+   * 🔴 페이지에서 쓴다. 거기서는 방이 **배경**이고 이미 그 물건 앞에 와 있는
+   *    상태여야 한다 — 문 밖에서 3.2초 걸어 들어오면 본문을 읽으러 온 사람을
+   *    기다리게 한다.
+   */
+  skipIntro?: boolean
+  /**
+   * 이 방을 어떻게 쓰는가. 구도가 다르다.
+   *
+   * - `room` — 홈. 패널이 열리면 오른쪽 480px 이 가려지므로 그만큼 보정한다.
+   * - `page` — 본문 배경. **패널이 없고** 왼쪽 본문이 더 넓다. 그리고 물건에
+   *   바짝 붙으면 안 된다 — 배경이라 방이 보여야 "작업실 안" 이 유지된다.
+   *
+   * 🔴 실측 2026-09-16: 홈 값을 그대로 썼더니 물건이 화면을 꽉 채우고 방이
+   *    사라졌다가, viewOffset 이 패널 폭만큼 밀려 **3D 가 오른쪽 구석으로
+   *    빠져나갔다**(스크린샷으로 확인).
+   */
+  mode?: 'room' | 'page'
 }) {
   const { camera, size } = useThree()
   const fly = useRef<{
@@ -193,7 +229,8 @@ export function CameraRig({
     started.current = true
 
     // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // 페이지 배경으로 쓸 때도 같은 경로로 건너뛴다.
+    if (skipIntro || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       landed.current = true
       onEntered()
       return
@@ -241,7 +278,7 @@ export function CameraRig({
      *    비행 진행도(`useFrame`)에 맞춰 부른다 — 그래야 보이는 것과 맞는다.
      */
     onIntroDoor(true)
-  }, [camera, controls, onEntered, onIntroDoor])
+  }, [camera, controls, onEntered, onIntroDoor, skipIntro])
 
   useEffect(() => {
     const ctl = controls.current
@@ -268,7 +305,9 @@ export function CameraRig({
       // 🔴 하한을 넉넉히 잡는다. 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로
       //    읽혀 3D 를 유지한 뜻이 사라진다 — 방이 보이는 선을 지킨다.
       //    처음 구도가 9.5 이므로 그 절반 언저리가 "다가갔지만 방은 보이는" 거리다.
-      const dist = Math.min(CAMERA_LIMITS_FOCUS.maxDistance, Math.max(4.8, raw))
+      // 🔴 페이지는 배경이라 더 멀리 선다 — 물건이 보이되 방이 남아야 한다.
+      const floor = mode === 'page' ? PAGE_MIN_DISTANCE : 4.8
+      const dist = Math.min(CAMERA_LIMITS_FOCUS.maxDistance, Math.max(floor, raw))
       // 지금 보는 방향을 유지한 채 거리만 바꾼다 — 갑자기 반대편으로 돌지 않게.
       const dir = camera.position.clone().sub(ctl.target).normalize()
       position = target.clone().add(dir.multiplyScalar(dist))
@@ -300,7 +339,7 @@ export function CameraRig({
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
-  }, [focus, camera, controls, size.width, size.height])
+  }, [focus, camera, controls, size.width, size.height, mode])
 
   /*
    * 🔴 **투영을 민다. 카메라를 옮기지 않는다** (시안 `setFrameShift`).
@@ -319,16 +358,23 @@ export function CameraRig({
     const persp = camera as THREE.PerspectiveCamera
     const w = size.width
     const h = size.height
-    // 좁은 화면에서는 3D 를 띄우지 않으므로(폴백 3단) 가로 보정만 한다.
-    const right = focus ? PANEL_WIDTH : 0
-    const shift = (UI_WIDTH + (w - right)) / 2 - w / 2
+    /*
+     * 좁은 화면에서는 3D 를 띄우지 않으므로(폴백 3단) 가로 보정만 한다.
+     *
+     * 🔴 **페이지에는 패널이 없다.** 홈의 `PANEL_WIDTH` 를 그대로 빼면 3D 가
+     *    오른쪽으로 그만큼 더 밀려 화면 밖으로 빠진다(실측 스크린샷).
+     *    대신 왼쪽 본문이 홈의 카피보다 넓으므로 그 값을 쓴다.
+     */
+    const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
+    const left = mode === 'page' ? PAGE_UI_WIDTH : UI_WIDTH
+    const shift = (left + (w - right)) / 2 - w / 2
     persp.setViewOffset(w, h, -shift, 0, w, h)
     persp.updateProjectionMatrix()
     return () => {
       persp.clearViewOffset()
       persp.updateProjectionMatrix()
     }
-  }, [camera, focus, size.width, size.height])
+  }, [camera, focus, size.width, size.height, mode])
 
   useFrame(() => {
     const f = fly.current

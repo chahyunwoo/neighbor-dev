@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { RoomList, RoomSteps } from '@/entities/room'
+import { TransitionBody } from '@/features/page-transition'
 import { Room, RoomPanel } from '@/features/room-3d'
 import { useCanRender3D } from '@/shared/lib'
 import styles from './Hero.module.css'
@@ -110,11 +111,28 @@ export function Hero({ children }: { children: React.ReactNode }) {
        *    보이고 있었다면 그대로 둔다.
        */}
       <div className={styles.copyLayer} data-lit={!is3D || lit || shown}>
-        {children}
-        {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
-        {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
+        {/*
+         * 🔴 화면을 떠날 때 **왼쪽 글 전체가 같이 나간다.** 처음엔 제목만
+         *    연출을 붙였더니 캡션·본문·번호 목록이 **선명하게 그대로 남아**
+         *    제목만 혼자 흩어졌다(스크린샷으로 발견 — 프레임률은 60fps 로
+         *    멀쩡했다).
+         *
+         * ⚠️ `enter={false}` — 홈에는 이미 입장 연출이 있다(`data-lit`).
+         *    들어올 때까지 얹으면 같은 것이 두 번 움직인다.
+         */}
+        <TransitionBody enter={false}>
+          {children}
+          {/* 3D 일 때만 — 목록이 안 보이므로 이 번호 목록이 동선을 진다. */}
+          {is3D ? <RoomSteps openId={openId} seen={seen} onOpen={open} /> : null}
+        </TransitionBody>
       </div>
 
+      {/*
+       * ⚠️ 힌트는 `TransitionBody` 로 감싸지 않는다. `position:absolute` 라
+       *    래퍼가 끼면 위치가 바뀌고, `data-hidden` CSS 도 이 요소에 직접
+       *    걸려 있다. 대신 아래 CSS 가 `data-transition` 을 보고 흐려지게 한다
+       *    (이미 `transition: opacity` 가 있다).
+       */}
       {is3D ? (
         <p className={styles.hint} data-hidden={openId !== null}>
           드래그해서 둘러보기 · 눌러서 열기

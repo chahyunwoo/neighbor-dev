@@ -1,16 +1,14 @@
 /**
  * page-transition — 화면이 바뀔 때의 연출.
  *
- * 🔴 **3D 는 여기를 import 하지 않는다.** `room-3d` 는 `data-transition` 속성만
- *    읽는다(`lib/transition.ts` 의 `PHASE_ATTR`). features 끼리 엮으면 FSD
- *    단방향 규칙 위반이고 `verify-fsd.mjs` 가 잡는다.
+ * 🔴 **나가는 연출은 우리가 만들지 않는다.** View Transitions API 가 이전
+ *    화면을 스냅샷으로 잡아 새 화면과 겹쳐 준다(`TransitionRoot`). 손으로
+ *    만든 exit 는 두 화면을 겹치지 못해 "끊고 다시 시작" 이 된다.
  *
  * 왜 features 인가: 백엔드 엔드포인트가 없고 UI·흐름만 다룬다
  *    (CLAUDE.md 의 판정 기준 — `reveal` 과 같은 층).
  */
-
-export type { Phase } from './lib/transition'
-export { ENTER, EXIT, isExiting, PHASE_ATTR } from './lib/transition'
+export { EASE, ENTER, GLYPH_DURATION, GLYPH_SPAN } from './lib/transition'
 export { TransitionBody } from './ui/TransitionBody'
-export { TransitionRoot, useTransition } from './ui/TransitionRoot'
+export { TransitionRoot } from './ui/TransitionRoot'
 export { TransitionTitle } from './ui/TransitionTitle'

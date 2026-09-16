@@ -1,92 +1,45 @@
 'use client'
 
-import { Environment, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
-import { Suspense, useMemo } from 'react'
-import * as THREE from 'three'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
 import { CanvasMode } from '@/features/room-3d/canvas/CanvasMode'
 import { r3f } from '@/features/room-3d/canvas/tunnel'
 import { useCanRender3D } from '@/shared/lib'
-import { DEFAULTS, DEG, METALNESS, PALETTE, ROUGHNESS } from './layout'
+
+// 🔴 홈과 **같은 청크**를 쓴다. 홈을 거쳐 왔으면 이미 받아 둔 것이다.
+const Scene = dynamic(() => import('./Scene').then((m) => m.Scene), { ssr: false })
 
 /**
- * 물건 하나를 페이지 배경에 세운다 (기획서 4절).
+ * 본문 화면의 배경 — **같은 방을, 그 물건 앞에서 본다.**
  *
- * 🔴 **방을 열면 그 물건이 화면으로 이어져야 한다.** 이전에는 마커를 눌러
- *    페이지로 오면 3D 가 통째로 사라져 평범한 문서가 됐다 — 홈에만 3D 가
- *    있고 나머지 6개 화면에는 canvas 가 0개였다(실측 2026-09-09).
- *    그러면 "작업실 안에 프로젝트가 산다" 가 첫 화면 장식으로 끝난다.
+ * 🔴 **물건 하나만 따로 띄우지 않는다.** 예전에는 그렇게 했는데, 그러면 홈의
+ *    방과 페이지의 물건이 **서로 다른 장면**이 되어 화면이 바뀔 때 3D 가 한
+ *    프레임에 통째로 갈렸다 — 실측 2026-09-16: `data-canvas-mode` 가 120ms 에
+ *    `room` → `object` 로 즉시 바뀌었고, 캔버스 불투명도만 부드럽게 내려갈 뿐
+ *    **내용물이 확 바뀌었다.** 사용자 지적: *"자연스럽게 가다가 갑자기 확확
+ *    나타나고 확확 바뀐다"*. 크로스페이드로는 못 가린다 — 교체 지점 자체를
+ *    없애야 한다.
  *
- * ⚠️ 방 전체를 다시 그리지 않는다. 물건 하나만 띄운다 —
- *    · 페이지마다 방을 통째로 로드하면 번들과 GPU 부담이 6배가 된다
- *    · 본문이 주인공인 화면에서 방이 다 보이면 글이 안 읽힌다
+ *    → 방은 하나다. 화면이 바뀌면 **카메라만** 그 물건 앞으로 간다.
  *
- * ⚠️ 본문 뒤에 깔리므로 **읽기를 방해하면 안 된다.** 오른쪽에 치우쳐 두고
- *    투명도를 낮춘다. 마우스 이벤트도 받지 않는다.
- *    자리·투명도·마스크는 이제 `tokens.css` 의 `html[data-canvas-mode="object"]`
- *    가 정한다 — 캔버스가 하나뿐이라 DOM 속성으로는 못 바꾼다.
+ * 🔴 옛 주석의 "번들·GPU 6배" 는 **재현 명령이 없는 수치였다.** 실측:
+ *
+ *        du -ck apps/web/public/models/*.glb   →  232 total (KB)
+ *
+ *    방 전체 GLB 가 232KB 다. 홈을 거쳐 오면 추가 전송은 0 이고, 방을 다
+ *    그리는 홈에서 이미 60fps 가 나온다(전환 중 33ms 초과 프레임 0개).
+ *
+ * ⚠️ 본문 뒤에 깔리므로 **읽기를 방해하면 안 된다.** 오른쪽으로 치우치고
+ *    투명해지는 것은 `tokens.css` 의 `html[data-canvas-mode="object"]` 가 한다 —
+ *    캔버스가 하나뿐이라 DOM 속성으로 모드를 알린다.
  */
-
-interface Props {
-  /** 띄울 모델 파일명(확장자 제외). `/public/models/<model>.glb` */
-  model: string
-  /** 모델 자체 회전(도). 물건마다 정면이 다르다. */
-  rotationY?: number
-  /** 크기 보정. 물건마다 원본 크기가 제각각이다. */
-  scale?: number
-}
-
-function Piece({ model, rotationY = 0, scale = 1 }: Props) {
-  const { scene } = useGLTF(`/models/${model}.glb`)
-
-  const object = useMemo(() => {
-    const cloned = scene.clone(true)
-    // 방과 같은 리컬러를 쓴다 — 여기만 색이 다르면 같은 물건으로 안 읽힌다.
-    cloned.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return
-      const src = child.material
-      const materials = Array.isArray(src) ? src : [src]
-      child.material = materials.map((m) => {
-        const name = (m.name || '').split('.')[0]
-        const next = m.clone() as THREE.MeshStandardMaterial
-        next.color = new THREE.Color(PALETTE[name] ?? DEFAULTS.color)
-        next.metalness = METALNESS[name] ?? DEFAULTS.metalness
-        next.roughness = ROUGHNESS[name] ?? DEFAULTS.roughness
-        return next
-      })
-      if (!Array.isArray(src)) child.material = (child.material as THREE.Material[])[0]
-    })
-
-    // 원점을 물건 중심으로 옮긴다 — 모델마다 원점이 제각각(대개 바닥)이라
-    // 그대로 두면 어떤 것은 화면 밖으로 나간다.
-    const box = new THREE.Box3().setFromObject(cloned)
-    const center = box.getCenter(new THREE.Vector3())
-    cloned.position.sub(center)
-    return cloned
-  }, [scene])
-
-  return (
-    <group rotation={[0, rotationY * DEG, 0]} scale={scale}>
-      <primitive object={object} />
-    </group>
-  )
-}
-
-/**
- * 페이지 배경의 3D.
- *
- * 🔴 홈의 `Room` 과 같은 폴백 규칙을 따른다 — 좁은 화면과 reduced-motion
- *    에서는 띄우지 않는다. 판단을 여기서 다시 하지 않고 같은 조건을 쓴다.
- */
-export function ObjectStage({ model, rotationY = 0, scale = 1 }: Props) {
+export function ObjectStage({ objectId }: { objectId: string }) {
   // 🔴 판단은 `lib/can-3d.ts` 한 곳에서 한다 — 홈(`Hero`)도 같은 훅을 부른다.
-  //    이전에는 이 파일이 자체 `useState(false)` 로 따로 읽어 판정 타입까지
-  //    달랐다(`boolean` vs `boolean|null`).
   const can = useCanRender3D() === true
 
   /*
-   * ⚠️ 3D 를 못 쓰는 상황에서도 **모드는 선언한다.** 캔버스가 라우트를
-   *    넘어 살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 그대로
-   *    남는다(이전에는 언마운트로 저절로 정리됐다).
+   * ⚠️ 3D 를 못 쓰는 상황에서도 **모드는 선언한다.** 캔버스가 라우트를 넘어
+   *    살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 그대로 남는다.
    */
   if (!can) return <CanvasMode mode="off" />
 
@@ -94,34 +47,18 @@ export function ObjectStage({ model, rotationY = 0, scale = 1 }: Props) {
     <>
       <CanvasMode mode="object" />
       <r3f.In>
-        {/*
-         * 🔴 카메라를 여기서 낸다. 캔버스는 앱 전체에 하나뿐이고
-         *    (`components/canvas/CanvasShell.tsx`) 홈과 이 화면의 구도가
-         *    다르다(홈 fov 37 / 여기 34). `makeDefault` 라 라우트가 바뀌면
-         *    drei 가 교체하고 언마운트 때 되돌린다.
-         */}
-        <PerspectiveCamera makeDefault position={[3.4, 2.2, 4.2]} fov={34} />
-        <ambientLight intensity={0.5} />
-        {/* 램프 쪽에서 오는 따뜻한 빛 — 방의 조명 성격을 잇는다(4-A 절). */}
-        <directionalLight position={[4, 6, 3]} intensity={1.5} color="#ffd9b0" />
-        <directionalLight position={[-5, 2, -3]} intensity={0.45} color="#6ba3e8" />
         <Suspense fallback={null}>
-          <Piece model={model} rotationY={rotationY} scale={scale} />
-          <Environment preset="night" />
+          {/*
+           * `openId` 로 이 화면의 물건을 지정한다 — `CameraRig` 가 그리로
+           * 날아간다. 홈에서 마커를 눌렀을 때와 **같은 경로**다.
+           */}
+          <Scene mode="page" openId={objectId} seen={EMPTY} onOpen={noop} onEntered={noop} />
         </Suspense>
-        {/*
-         * 천천히 돈다 — 방문자가 손대지 않아도 "살아 있다" 가 보인다.
-         * 조작은 막는다(`enabled={false}`): 본문 뒤의 배경이라 여기서
-         * 드래그를 받으면 스크롤을 뺏는다.
-         */}
-        <OrbitControls
-          enabled={false}
-          autoRotate
-          autoRotateSpeed={0.4}
-          enablePan={false}
-          enableZoom={false}
-        />
       </r3f.In>
     </>
   )
 }
+
+/** 페이지에서는 "이미 열어본 것" 표시가 없다. 마커 자체를 안 그린다. */
+const EMPTY: ReadonlySet<string> = new Set()
+function noop() {}

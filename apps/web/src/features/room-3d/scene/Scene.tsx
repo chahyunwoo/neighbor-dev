@@ -50,6 +50,7 @@ export function Scene({
   seen,
   onOpen,
   onEntered,
+  mode = 'room',
 }: {
   /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
   openId: string | null
@@ -58,6 +59,26 @@ export function Scene({
   onOpen: (id: string) => void
   /** 입장 연출이 끝났다 — 부모가 UI 를 올린다. */
   onEntered: () => void
+  /**
+   * 이 방을 어떻게 쓰는가.
+   *
+   * - `room` — 홈. 돌아다니고 누를 수 있다. 입장 연출이 있다.
+   * - `page` — 본문 화면의 배경. **같은 방을 그대로 쓰되** 카메라만 그
+   *   물건 앞에 가 있다. 마커도 조작도 없다.
+   *
+   * 🔴 페이지에서 **물건 하나만 따로 띄우지 않는 이유**: 그러면 홈의 방과
+   *    페이지의 물건이 서로 다른 장면이 되어, 화면이 바뀔 때 3D 가 **한
+   *    프레임에 통째로 갈린다.** 어떤 크로스페이드로도 그 "확 바뀜" 은
+   *    안 가려진다(실측 2026-09-16: `data-canvas-mode` 가 120ms 에 room →
+   *    object 로 즉시 바뀌었다). 방이 하나면 교체 지점 자체가 없다.
+   *
+   *    ⚠️ 옛 주석은 "페이지마다 방을 통째로 로드하면 번들과 GPU 가 6배" 라고
+   *       경고했는데 **재현 명령이 없는 수치였다.** 실측하니 GLB 전체가
+   *       232KB 다(`du -ck apps/web/public/models/*.glb`). 홈을 거쳐 오면
+   *       이미 받아 둔 것이라 추가 전송은 0 이고, 방 전체를 그리는 홈에서
+   *       이미 60fps 가 나온다.
+   */
+  mode?: 'room' | 'page'
 }) {
   const controls = useRef<OrbitControlsLike>(null)
   /** 입장 연출이 문을 여는 동안만 true. 열린 물건과는 별개다. */
@@ -180,7 +201,8 @@ export function Scene({
       {/* 방 껍데기 — 벽이 빛을 되돌려 방을 밝힌다. 장식이 아니다. */}
       <Shell />
 
-      {hotspots.map(({ at, meta }) => (
+      {/* 🔴 페이지에서는 마커를 그리지 않는다 — 배경이고, 누를 것은 본문에 있다. */}
+      {(mode === 'room' ? hotspots : []).map(({ at, meta }) => (
         <Html
           key={meta.id}
           position={at}
@@ -227,11 +249,18 @@ export function Scene({
         controls={controls}
         onIntroDoor={setIntroDoor}
         onEntered={onEntered}
+        skipIntro={mode === 'page'}
+        mode={mode}
       />
 
       <OrbitControls
         ref={controls}
         target={ROOM_CENTER}
+        /*
+         * 🔴 페이지에서는 조작을 막는다. 본문 뒤의 배경이라 여기서 드래그를
+         *    받으면 스크롤을 뺏는다(옛 `ObjectStage` 도 같은 이유로 막았다).
+         */
+        enabled={mode === 'room'}
         enablePan={false}
         // 줌은 막는다 — 아이소메트릭 구도를 유지한다(기획서 4절).
         enableZoom={false}

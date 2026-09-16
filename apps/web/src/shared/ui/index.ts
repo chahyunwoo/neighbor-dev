@@ -7,5 +7,4 @@
  *    통짜로 두면 무관한 모듈까지 한 파일에 묶여 순환 참조가 생기기 쉽다.
  */
 export { RichText } from './RichText'
-export type { SplitPhase } from './SplitText'
 export { SplitText } from './SplitText'

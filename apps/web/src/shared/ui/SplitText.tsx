@@ -28,27 +28,39 @@ import { useEffect, useState } from 'react'
  *    위치 변화를 지운다 — 여기서 다시 판단하지 않는다.
  */
 
-/** 낱글자 하나의 움직임. 부모의 stagger 가 순서를 만든다. */
+/**
+ * 낱글자 하나의 움직임.
+ *
+ * 🔴 **나가는 상태가 없다.** 화면을 떠나는 연출은 View Transitions 가 이전
+ *    화면을 통째로 겹쳐 빼는 것으로 처리한다(`TransitionRoot`). 여기서 또
+ *    흩뜨리면 같은 것이 두 번 움직인다.
+ *
+ * ⚠️ `blur` 를 크게 잡지 않는다. 글자 수만큼 레이어가 생겨 비싸고, 값이 크면
+ *    "부드럽다" 가 아니라 "지저분하다" 로 읽힌다.
+ */
 const glyph = {
-  /** 들어오기 전 — 아래에서 흐린 채로 대기한다. */
-  hidden: { opacity: 0, y: '0.42em', filter: 'blur(8px)' },
+  /** 들어오기 전 — 아래에서 살짝 흐린 채로 대기한다. */
+  hidden: { opacity: 0, y: '0.36em', filter: 'blur(5px)' },
   /** 착지. */
   show: { opacity: 1, y: '0em', filter: 'blur(0px)' },
-  /** 흩어짐 — 위로 빠지며 흐려진다. 들어올 때와 반대 방향이다. */
-  scatter: { opacity: 0, y: '-0.5em', filter: 'blur(8px)' },
 }
-
-export type SplitPhase = 'show' | 'scatter'
 
 export function SplitText({
   text,
   className,
   as = 'span',
-  phase = 'show',
   delay = 0,
-  /** 글자 간격(초). 제목이 길면 줄여야 끝까지 기다리지 않는다. */
-  stagger = 0.04,
-  duration = 0.5,
+  /**
+   * 글자 **전체**가 움직이는 데 쓰는 총 시간(초). 간격이 아니다.
+   *
+   * 🔴 간격을 고정하면 **긴 제목이 끝없이 느려진다** — 20자 제목이 1초에 걸쳐
+   *    들어왔다(실측 2026-09-16: 549ms 에 0 → 1599ms 에 100).
+   *    총 시간을 묶고 글자 수로 나눈다.
+   */
+  span = 0.3,
+  /** 글자가 적을 때의 간격 상한. 이보다 벌리면 띄엄띄엄해 보인다. */
+  maxStep = 0.045,
+  duration = 0.46,
 }: {
   text: string
   /*
@@ -58,10 +70,9 @@ export function SplitText({
    */
   className?: string | undefined
   as?: 'span' | 'h1' | 'h2' | 'h3' | 'p'
-  /** 나갈 때 `scatter` 로 바꾼다. */
-  phase?: SplitPhase
   delay?: number
-  stagger?: number
+  span?: number
+  maxStep?: number
   duration?: number
 }) {
   /*
@@ -96,6 +107,11 @@ export function SplitText({
   const words = text.split(/(\s+)/)
   /** 글자에 전역 순번을 매긴다 — 지연을 직접 계산하려면 단어 경계를 넘는 번호가 필요하다. */
   const total = Array.from(text.replace(/\s+/g, '')).length
+  /**
+   * 글자 사이 간격. **총 시간을 글자 수로 나눈다.**
+   * 글자가 적으면 `maxStep` 에 걸려 띄엄띄엄해지지 않는다.
+   */
+  const step = total > 1 ? Math.min(maxStep, span / (total - 1)) : 0
   let seq = 0
   let key = 0
 
@@ -130,13 +146,13 @@ export function SplitText({
                * ⚠️ 나갈 때는 **뒤에서부터** 흩어진다. 들어올 때와 같은 방향이면
                *    두 연출이 한 방향으로 흐르는 띠처럼 보여 "되돌아간다" 가 안 읽힌다.
                */
-              const d = phase === 'scatter' ? (total - 1 - i) * stagger * 0.6 : delay + i * stagger
+              const d = delay + i * step
               return (
                 // 낱글자는 같은 글자가 여러 번 나와 값으로 구별할 수 없고, 순서도 안 바뀐다.
                 <motion.span
                   key={i}
                   initial={glyph.hidden}
-                  animate={glyph[phase]}
+                  animate={glyph.show}
                   transition={{ duration, delay: d, ease: [0.22, 0.61, 0.36, 1] }}
                   style={{ display: 'inline-block', willChange: 'transform, filter, opacity' }}
                 >

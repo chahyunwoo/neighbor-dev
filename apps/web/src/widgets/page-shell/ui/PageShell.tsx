@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { OBJECT_MODEL } from '@/entities/room'
 import { TransitionBody, TransitionTitle } from '@/features/page-transition'
 import { CanvasMode, ContentWidth, ObjectStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
@@ -42,8 +41,6 @@ interface Props {
  *    홈(`app/page.tsx`)이 이미 그렇게 하고 있어서 방식도 통일된다.
  */
 export function PageShell({ fig, crumb, title, lede, from, wide, children }: Props) {
-  const stage = from ? OBJECT_MODEL[from] : undefined
-
   return (
     <div className={styles.page}>
       {/* 본문 폭을 <html> 에 알린다 — 캔버스 폭과 같은 곳에서 갈리도록. */}
@@ -52,11 +49,7 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
        * 🔴 `from` 이 없어도 **모드를 선언한다**. 캔버스가 라우트를 넘어
        *    살아 있으므로, 아무도 말하지 않으면 이전 화면의 3D 가 남는다.
        */}
-      {stage ? (
-        <ObjectStage model={stage.model} rotationY={stage.rotationY} scale={stage.scale} />
-      ) : (
-        <CanvasMode mode="off" />
-      )}
+      {from ? <ObjectStage objectId={from} /> : <CanvasMode mode="off" />}
       <main className={styles.main}>
         <div className={styles.head}>
           <div className={styles.headText}>
