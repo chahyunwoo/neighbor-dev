@@ -451,3 +451,45 @@ a:hover {
     animation-duration: 1ms;
   }
 }
+
+/*
+ * 패널이 오른쪽에서 들어온다.
+ *
+ * 🔴 **이 키프레임이 아예 없었다.** `RoomPanel` 이 Tailwind 로
+ *    `animate-[panelIn_.44s_...]` 를 쓰는데 `panelIn` 정의가 어디에도 없어서
+ *    브라우저가 무시했고, 패널이 **한 프레임에 0 → 100 으로 튀어나왔다**
+ *    (실측 2026-09-16: `getAnimations()` 가 빈 배열, `keyframesExist: false`).
+ *
+ *    빌드도 타입체크도 프로브도 전부 통과한다 — 이름을 잘못 쓴 애니메이션은
+ *    아무도 안 잡는다. 사용자가 "확 나타난다" 고 한 것의 직접 원인이었다.
+ *
+ * ⚠️ 캔버스가 좁아지는 시간(0.44s)과 같은 곡선·같은 길이다. 둘이 다르면
+ *    패널은 벌써 와 있는데 방은 아직 움직이는 중이 된다.
+ */
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/*
+ * 패널 안의 글이 바뀔 때.
+ *
+ * ⚠️ `panelIn`(패널 자체가 들어올 때)보다 짧고 이동이 거의 없다. 패널은
+ *    제자리에 있고 내용만 갈리는 상황이라, 많이 움직이면 패널째 흔들린다.
+ */
+@keyframes panelSwap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

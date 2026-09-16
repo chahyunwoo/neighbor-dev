@@ -80,7 +80,23 @@ export function RoomPanel({
                    border-l border-line bg-[rgba(12,11,15,0.975)] outline-none
                    motion-safe:animate-[panelIn_.44s_cubic-bezier(.4,.05,.2,1)]"
       >
-        <div className="flex-1 overflow-y-auto px-8 pt-7 pb-4">
+        {/*
+         * 🔴 `key` 로 **물건이 바뀌면 이 덩어리를 새로 만든다.**
+         *    패널이 이미 열려 있으면 등장 애니메이션이 다시 안 돌아서, 내용이
+         *    한 프레임에 통째로 갈렸다(실측 2026-09-16: 물건 간 이동의 변화
+         *    구간이 **0ms**). 사용자가 "확확 바뀐다" 고 한 자리 중 하나다.
+         *
+         * ⚠️ 슬라이드가 아니라 **페이드만** 한다. 패널은 제자리에 있고 안의
+         *    글만 바뀌는 상황이라, 옆으로 밀면 패널째 움직이는 것처럼 보인다.
+         *
+         * ⚠️ 스크롤이 위로 돌아가는 것은 의도다 — 다른 물건의 글을 읽던
+         *    위치에서 시작하면 어디를 보는지 잃는다.
+         */}
+        <div
+          key={item.id}
+          className="flex-1 overflow-y-auto px-8 pt-7 pb-4
+                     motion-safe:animate-[panelSwap_.34s_cubic-bezier(.22,.61,.36,1)]"
+        >
           <div className="flex items-start justify-between gap-4">
             <span className="font-mono text-micro tracking-[0.1em] text-amber">
               {String(i + 1).padStart(2, '0')} / {String(ROOM_OBJECTS.length).padStart(2, '0')}
