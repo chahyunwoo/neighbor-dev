@@ -24,7 +24,11 @@ const NEED = ['/career', '/contact', '/diagnose', '/stack', '/team', '/work']
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
   let fail = 0
-  for (const p of ['/', '/work', '/career', '/stack']) {
+  /*
+   * 🔴 대상을 넓혔다. 전에는 넷뿐이라 `/diagnose`·`/contact`·`/team` 이
+   *    한 번도 안 보였다 — 검사 범위 밖은 "통과" 가 아니라 "안 본 것" 이다.
+   */
+  for (const p of ['/', '/work', '/career', '/stack', '/diagnose', '/contact', '/team']) {
     const ctx = await b.newContext({
       viewport: { width: 1440, height: 900 },
       javaScriptEnabled: false,
@@ -40,7 +44,17 @@ const NEED = ['/career', '/contact', '/diagnose', '/stack', '/team', '/work']
        *    방 목록이 `width:1px · clip-path:inset(50%)` 인데 검사기는
        *    **링크 7개가 다 보인다고 초록**을 냈다.
        */
+      /*
+       * ⚠️ **의도된 sr-only 는 "감춰진 글" 이 아니다.** 스크린리더 전용 라이브
+       *    영역은 `clip-path: inset(50%)` · 1px 로 감추는 것이 표준 수법이라,
+       *    그것까지 세면 `/diagnose` 가 위양성으로 빨개진다(실측:
+       *    `P.…__srOnly role=status text=""` 1건).
+       */
+      const srOnly = (e) =>
+        e.closest('[role="status"],[role="alert"],[aria-live]') !== null ||
+        /srOnly/.test(e.className ?? '')
       const vis = (e) => {
+        if (srOnly(e)) return true
         for (let n = e; n && n !== document.documentElement; n = n.parentElement) {
           const c = getComputedStyle(n)
           const b = n.getBoundingClientRect()

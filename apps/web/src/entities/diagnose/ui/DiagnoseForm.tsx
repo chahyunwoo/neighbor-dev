@@ -63,6 +63,11 @@ export function DiagnoseForm() {
     setError(null)
     setResult('')
     setLive('진단을 시작합니다')
+    /*
+     * 🔴 **실패 여부는 지역 변수로 들고 간다.**
+     *    `error` 상태는 이 함수가 닫고 있어(클로저) `finally` 에서 못 읽는다.
+     */
+    let failed = false
     // 앞 진단에서 뺀 항목이 새 결과에 남으면 엉뚱한 것이 꺼진 채로 보인다.
     setDropped(new Set())
     try {
@@ -76,6 +81,7 @@ export function DiagnoseForm() {
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}))
         const msg = Array.isArray(data.message) ? data.message[0] : data.message
+        failed = true
         setError(msg ?? '지금은 처리할 수 없습니다. 잠시 후 다시 시도해 주세요.')
         return
       }
@@ -105,33 +111,40 @@ export function DiagnoseForm() {
             setResult(acc)
           } else if (payload.ok === false) {
             // 🔴 게이트에 걸렸다. 이미 보여준 것을 지운다.
+            failed = true
             setResult(null)
             setError(payload.message ?? '결과를 만들지 못했습니다.')
           } else if (payload.message) {
+            failed = true
             setResult(null)
             setError(payload.message)
           }
         }
       }
     } catch {
+      failed = true
       setError('연결하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setPending(false)
       setStreaming(false)
       /*
-       * 🔴 **끝났다는 것을 반드시 알린다.** 전에는 대기 문구만 계속 읽다가
-       *    결과가 오는 순간 **완전히 조용해졌다** — 결과가 왔는지 실패했는지
-       *    알 방법이 없었다(실측: 9602ms 에 라이브 영역이 통째로 사라졌다).
+       * 🔴 **끝났다는 것을 알리되, 실패했는데 "결과" 를 말하지 않는다.**
        *
-       * ⚠️ `setLive` 는 최신 상태를 못 보므로(이 함수가 그 상태를 닫고 있다)
-       *    갱신 함수로 읽지 않고, 실패는 `role="alert"` 가 따로 읽는다.
-       *    여기서는 **무음이 되지 않게** 하는 것이 목적이다.
+       *    처음에는 "진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다." 를
+       *    **무조건** 넣었다. 실패 세 경로 전부에서 `role="alert"` 가 에러를
+       *    읽은 **직후** 이 문구가 따라 나왔고, 결과 영역은 없었다 —
+       *    스크린리더 사용자가 아래로 내려가 **없는 결과를 찾게 된다.**
+       *    무음보다 나쁘다. 무음은 답답하고 이건 거짓이다.
+       *
+       *    그때 `prev` 를 보는 가드를 달아 두었는데 **항상 참이라 죽어
+       *    있었다** — `live` 에 값을 쓰는 곳이 시작 문구와 `STEPS` 뿐이라
+       *    `: prev` 분기에 도달할 수 없었다(CLAUDE.md 의 `max(base, 설정)`
+       *    죽은 설정과 같은 형태).
+       *
+       * 🔴 **실패면 polite 영역을 비운다.** 에러는 `role="alert"`(assertive)
+       *    가 이미 읽는다. 여기서 또 읽으면 같은 말이 두 번 나온다.
        */
-      setLive((prev) =>
-        prev === '진단을 시작합니다' || STEPS.includes(prev.trim())
-          ? '진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다.'
-          : prev,
-      )
+      setLive(failed ? '' : '진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다.')
     }
   }
 
