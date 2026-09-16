@@ -96,7 +96,20 @@ export function Hero({ children }: { children: React.ReactNode }) {
        *    (실측 2026-09-09: 시안과 대조해 발견). 3D 를 어둡게 만드는 게
        *    아니라 **글자 뒤만** 어둡게 해서 대비를 만든다.
        */}
-      {is3D ? <div className={styles.scrim} data-lit={lit} aria-hidden="true" /> : null}
+      {/*
+       * 🔴 **카피와 **같은** 래치를 쓴다.** 한때 여기만 날것 `lit` 이었는데,
+       *    `entered` 를 되돌리게 만들면서(프로브 게이트 용도) **어둠막이
+       *    한 번 옅어졌다 돌아왔다** — 실측 2026-09-17(깊은 링크 → 홈):
+       *    최소 불투명도 0.58~0.61 @324ms, `data-lit=false` 프레임 15개.
+       *    글은 그대로 있는데 그 뒤 어둠막만 빠져서, 어둠막이 있는 이유
+       *    (밝은 3D 위 흰 글자 대비)가 그 동안 약해진다.
+       *
+       *    `lit` 은 **한 방향으로만** 가야 한다는 것이 바로 아래 카피 주석에
+       *    적혀 있던 규칙인데, 이 줄만 그 규칙 밖에 있었다.
+       */}
+      {is3D ? (
+        <div className={styles.scrim} data-lit={!is3D || lit || shown} aria-hidden="true" />
+      ) : null}
 
       {/*
        * `data-lit` 가 false 인 동안 카피는 아래에서 올라올 준비만 하고 있다.
