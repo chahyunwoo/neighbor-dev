@@ -6,7 +6,7 @@
  *    `await res.json()` 으로 받으면 스트리밍이 통째로 뭉쳐 온다.
  */
 
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3100'
+const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3201'
 
 export async function POST(request: Request) {
   let body: unknown

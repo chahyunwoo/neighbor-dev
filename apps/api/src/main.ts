@@ -40,8 +40,10 @@ async function bootstrap() {
   //    박히지 않게 하려는 것이고, 그 결과 같은 출처가 되어 CORS 가 불필요하다.
   //    CORS 를 켜면 "브라우저가 직접 불러도 된다" 는 신호가 되어 그 설계가 흐려진다.
 
-  // 포트: 이 맥의 8080·8090 은 다른 프로젝트가 쓴다. 3100 을 쓴다.
-  const port = Number(process.env.API_PORT ?? 3100)
+  // 포트: 이 맥은 여러 프로젝트가 포트를 나눠 쓴다. 띄우기 전에 매번 센다.
+  //   실측 2026-09-16: 3100·3101 은 다른 저장소의 dev 서버가 9/14 부터 쥐고 있다.
+  //   남의 것을 끄지 않는다 — 우리가 비켜서 web(3200) 과 짝이 되는 3201 로 옮겼다.
+  const port = Number(process.env.API_PORT ?? 3201)
   await app.listen(port)
   new Logger('bootstrap').log(`api 가 ${port} 에서 듣는다`)
 }
