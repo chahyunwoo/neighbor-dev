@@ -52,7 +52,7 @@ const FILL = 0.2
  * 🔴 OrbitControls 는 `update()` 마다 카메라를 제약 안으로 되돌린다. 우리가
  *    좌표를 직접 넣는 연출 구간에서는 그 보정이 **연출을 덮어쓴다.**
  */
-const FREE_LIMITS = {
+export const FREE_LIMITS = {
   minDistance: 0.1,
   maxDistance: 1000,
   minPolarAngle: 0,
@@ -290,7 +290,14 @@ export function CameraRig({
      * ⚠️ 비행이 끝나면 되돌린다 — 안 되돌리면 사용자가 방을 무한정 돌리거나
      *    벽 밖으로 나갈 수 있다.
      */
-    Object.assign(ctl, FREE_LIMITS)
+    /*
+     * ⚠️ **여기서 `Object.assign(ctl, FREE_LIMITS)` 를 하면 안 된다.**
+     *    `Scene` 이 `<OrbitControls {...CAMERA_LIMITS}>` 로 **prop 을 넘기므로**,
+     *    리렌더될 때마다 drei 가 그 값을 다시 설정해 인스턴스 조작을 덮어쓴다.
+     *    그리고 `Scene` 은 마커 실측 보고(`measured`)로 여러 번 리렌더된다 —
+     *    실측 2026-09-16: 제약을 풀었는데도 600ms 시점에 이미 방 안이었다.
+     *    → 제약은 **`Scene` 이 prop 으로** 바꾼다(`entered` 상태).
+     */
 
     fly.current = {
       p0: from.clone(),
@@ -446,8 +453,7 @@ export function CameraRig({
     if (t >= 1) {
       // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
-        // 🔴 제약을 되돌린다(위 FREE_LIMITS 주석 참고). 안 하면 방 밖으로 나갈 수 있다.
-        Object.assign(ctl, CAMERA_LIMITS)
+        // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true
         onEntered()
       }

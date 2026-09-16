@@ -6,7 +6,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '@/entities/room'
 import { anchorFromBox } from './anchors'
-import { CameraRig, type FocusTarget, type OrbitControlsLike } from './CameraRig'
+import { CameraRig, type FocusTarget, FREE_LIMITS, type OrbitControlsLike } from './CameraRig'
 import {
   MONITOR_POSITION,
   Monitor,
@@ -83,6 +83,27 @@ export function Scene({
   const controls = useRef<OrbitControlsLike>(null)
   /** 입장 연출이 문을 여는 동안만 true. 열린 물건과는 별개다. */
   const [introDoor, setIntroDoor] = useState(false)
+
+  /*
+   * 🔴 **입장 비행이 끝났는가 — 제약을 언제 걸지 정한다.**
+   *
+   *    `CAMERA_LIMITS` 는 `minDistance 4.6` 과 방위각 범위를 건다. 그런데 입장
+   *    시작 위치는 타깃에서 **3.96** 밖에 안 떨어져 있고 방위각도 그 범위 밖이라,
+   *    제약이 살아 있으면 `update()` 가 매 프레임 카메라를 끌어당겨 **문 밖에서
+   *    시작하지도 못한다**(실측 2026-09-16: 시작이 `[3.53, 1.73, -0.77]` — 이미
+   *    방 안이었고, 진행 0.45 에서 한 프레임에 좌우각이 79.3° 꺾였다).
+   *
+   *    ⚠️ `CameraRig` 안에서 `Object.assign(ctl, ...)` 로 푸는 것은 **안 먹는다** —
+   *       여기서 prop 으로 넘기므로 리렌더마다 drei 가 되돌린다. 이 컴포넌트는
+   *       마커 실측 보고(`measured`)로 여러 번 리렌더된다.
+   *
+   *    ⚠️ 페이지 배경(`mode === 'page'`)은 입장 연출이 없으므로 처음부터 제약을 건다.
+   */
+  const [entered, setEntered] = useState(mode === 'page')
+  const handleEntered = useCallback(() => {
+    setEntered(true)
+    onEntered()
+  }, [onEntered])
 
   // 🔴 캔버스 밖으로 나간 마커를 가장자리에 붙인다(이슈 #3).
   useEdgeClamp()
@@ -248,7 +269,7 @@ export function Scene({
         focus={focus}
         controls={controls}
         onIntroDoor={setIntroDoor}
-        onEntered={onEntered}
+        onEntered={handleEntered}
         skipIntro={mode === 'page'}
         mode={mode}
       />
@@ -266,7 +287,7 @@ export function Scene({
         enableZoom={false}
         enableDamping
         dampingFactor={0.08}
-        {...CAMERA_LIMITS}
+        {...(entered ? CAMERA_LIMITS : FREE_LIMITS)}
       />
 
       {/* 포스트프로세싱은 데스크톱에서만 켠다 — 부모가 그 판단을 한다. */}
