@@ -25,7 +25,7 @@
 import io,os,subprocess,shutil,json,sys,tempfile,atexit
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BK=tempfile.mkdtemp(prefix='neighbor-gates-')
-FILES=['sanitize.mjs','tiers.mjs','build-data.mjs','disclosure.mjs','verify-disclosure.mjs']
+FILES=['sanitize.mjs','tiers.mjs','build-data.mjs','disclosure.mjs','verify-disclosure.mjs','source.mjs']
 
 # 원본을 백업해 둔다. git 을 쓰지 않는다 — 같은 파일의 다른 미커밋 변경이 날아간다.
 for _f in FILES:
@@ -107,6 +107,47 @@ for m in MUTS:
     caught=(rc!=0) and (expect in out)
     hits=' / '.join(l.strip().lstrip('🔴 ') for l in out.splitlines() if '🔴' in l)[:200]
     res.append((name,'✅ 잡힘' if caught else '❌ 못 잡음', f'기대={expect} | {hits or out.strip()[:120]}'))
+
+restore()
+
+# ── G1. 사명 검사가 *지금 실제로* 잡는가 ───────────────────────────────
+#
+# 뮤테이션이 아니라 **기준선 검사**다. 위의 M1~M8 은 전부 소스를 망가뜨려 보는데,
+# 사명 대조만은 그 방식으로 못 본다 — 정상 데이터에는 사명이 애초에 없어서
+# 무엇을 망가뜨려도 위반이 안 나기 때문이다.
+#
+# 🔴 실측 2026-09-16: `realCompanyNames()` 를 `return []` 로 되돌려도 이 스크립트가
+#    초록을 냈다. 사명 목록이 비면 `disclosure.mjs` 의 회사표기 검사가 통째로
+#    no-op 이 되는데(`extraCompanyNames.length > 0` 조건, 기본 구현은 `() => []`),
+#    그걸 감시하는 케이스가 없었다. 검사기를 고치면서 그 검사기를 지키는 게이트는
+#    안 넣은 것이다.
+#
+# 방법: 정본의 실제 사명 1건을 생성 데이터에 심고 검사기가 잡는지 본다.
+# ⚠️ 사명 값은 **출력하지 않는다** — 찍는 순간 그게 곧 유출이다(이 저장소는 PUBLIC).
+INJECT = os.path.join(BK, 'inject.mjs')
+# ⚠️ import 는 **이 파일의 위치** 기준으로 풀린다. 탐침은 임시 디렉터리에 두므로
+#    상대경로(`./scripts/...`)를 쓰면 `/tmp/scripts/...` 를 찾다 실패한다(실측).
+io.open(INJECT,'w',encoding='utf-8').write("""
+import { readFileSync, writeFileSync } from 'node:fs'
+import { realCompanyNames } from '__ROOT__/scripts/source.mjs'
+const p = 'data/generated/projects.json'
+const d = JSON.parse(readFileSync(p, 'utf8'))
+const names = realCompanyNames()
+if (names.length === 0) { console.error('NO_NAMES'); process.exit(2) }
+d.detail[0].__probe = names[0]          // 값은 찍지 않는다
+writeFileSync(p, JSON.stringify(d, null, 2))
+""".replace('__ROOT__', ROOT))
+rci,_ = run('node scripts/build-data.mjs')
+rcj,outj = run(f'node {INJECT}')
+if rcj != 0:
+    res.append(('G1 사명 검사가 실제로 잡는가','❌ 주입 실패',outj.strip()[:160]))
+else:
+    rcg,outg = run('node scripts/verify-disclosure.mjs')
+    caught = (rcg != 0) and ('회사표기' in outg)
+    detail = '기대=회사표기 | ' + (' / '.join(
+        l.strip().lstrip('🔴 ') for l in outg.splitlines() if '🔴' in l)[:160]
+        or outg.strip()[:120])
+    res.append(('G1 사명 검사가 실제로 잡는가','✅ 잡힘' if caught else '❌ 못 잡음', detail))
 
 restore()
 rc,o1=run('node scripts/build-data.mjs'); rc2,o2=run('node scripts/verify-disclosure.mjs')

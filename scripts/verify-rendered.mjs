@@ -16,29 +16,21 @@
  *     node scripts/verify-rendered.mjs
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { scanText } from './disclosure.mjs'
+import { realCompanyNames } from './source.mjs'
 
 const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:3200'
-const SOURCE = join(homedir(), 'Documents', 'portfolio-source')
 
-function realCompanyNames() {
-  const dir = join(SOURCE, 'projects')
-  if (!existsSync(dir)) return []
-  const names = new Set()
-  for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
-    const d = JSON.parse(readFileSync(join(dir, f), 'utf8'))
-    for (const k of ['client', 'projectNamed']) {
-      const v = d[k]
-      if (typeof v === 'string' && v.trim().length >= 2 && !/^(미상|unknown|개인)/i.test(v))
-        names.add(v.trim())
-    }
-  }
-  return [...names]
-}
+/*
+ * 🔴 사명 목록은 source.mjs 가 만든다 — 정본을 못 찾으면 거기서 throw 한다.
+ *
+ *    실측 2026-09-16: 이 파일은 경로를 직접 박아 두고(`~/Documents/...`,
+ *    환경변수도 안 받았다) 없으면 `return []` 로 넘어갔다. 정본이 옮겨진 뒤로
+ *    **사명 유출 검사가 아무것도 하지 않으면서 초록을 내고 있었다.**
+ */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const data = JSON.parse(readFileSync(join(ROOT, 'data/generated/projects.json'), 'utf8'))
