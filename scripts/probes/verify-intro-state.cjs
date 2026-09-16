@@ -354,7 +354,22 @@ async function shotNow(pg) {
       '마커를 연 채 좌우로 둘러볼 때 초점 제약이 쓰인다',
       `이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
     )
-    ok(vspan >= 1, '   (대조) 세로 드래그가 실제로 구도를 바꿨다', `세로 이동 폭 ${vspan}px`)
+    /*
+     * 🔴 **이 값은 게이트다. 양성 대조가 아니다.**
+     *    한때 `vspan >= 1` 이었는데, 그건 "세로 드래그가 뭔가 하긴 했다" 만
+     *    확인할 뿐 **극각 제약이 죽어도 통과했다** — 실측 2026-09-17:
+     *    `CAMERA_LIMITS_FOCUS` 의 극각만 ROOM 으로 되돌려(16.2° 손실)
+     *    `vspan 74 → 53` 인데 `>= 1` 이라 초록이었다.
+     *    바로 위 주석이 "가로만 보면 극각을 못 잡는다" 고 적어 놓고
+     *    정작 판정은 가로 하나뿐이었던 셈이다.
+     *
+     *    값은 완전히 결정적이다(4회 반복 전부 913 / 74). 기준을 그 사이에 둔다.
+     */
+    ok(
+      vspan >= 65,
+      '마커를 연 채 위아래로 둘러볼 때 초점 극각이 쓰인다',
+      `세로 이동 폭 ${vspan}px (기준 65px 이상 · 극각이 ROOM 이면 ~53px)`,
+    )
   }
 
   /*
@@ -379,7 +394,7 @@ async function shotNow(pg) {
    *    그래서 같은 시나리오를 **드래그 있음/없음으로 두 번** 돌려 그 **차이**
    *    를 본다. 제약이 튀면 드래그 쪽만 커진다.
    */
-  const run = async (phase, withDrag) => {
+  const run = async (phase, withDrag, pressAt) => {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
     await pg.goto(`${BASE}/`, { waitUntil: 'load' })
@@ -468,8 +483,21 @@ async function shotNow(pg) {
     }
     // 비행이 도는 중(200ms)에 손을 댄다.
     const rec = watch()
-    await pg.waitForTimeout(200)
+    await pg.waitForTimeout(pressAt)
+    let onCanvas = true
     if (withDrag) {
+      /*
+       * 🔴 **양성 대조 — 누른 지점이 캔버스여야 한다.**
+       *    마커는 캔버스 위에 뜬 **DOM 버튼**이고 비행 중에 화면을 돌아다닌다.
+       *    그 자리에 마커가 오면 pointerdown 을 버튼이 먹어 OrbitControls 의
+       *    `'start'` 가 아예 안 뜬다 — 그러면 **"안 튀었다" 가 아니라
+       *    "아무 일도 안 일어났다"** 인데 차이가 0 이라 초록이 뜬다
+       *    (실측 2026-09-17: 패널 위를 눌렀더니 `start 0회 · 차이 0.0 · 통과`).
+       */
+      onCanvas = await pg.evaluate(
+        ([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS',
+        [480, 460],
+      )
       await pg.mouse.move(480, 460)
       await pg.mouse.down()
       await pg.waitForTimeout(120)
@@ -477,18 +505,33 @@ async function shotNow(pg) {
     }
     const worst = await rec
     await ctx.close()
-    return worst
+    return { worst, onCanvas }
   }
 
+  /*
+   * ⚠️ **두 시점을 다 본다.** 초점 effect 의 deps 에 `size` 가 있어, 마커를
+   *    열면 캔버스가 0.44초 걸쳐 좁아지며 effect 가 여러 번 다시 돌고
+   *    **새 비행을 만든다** — 그래서 `abort` 로 죽인 비행이 되살아난다.
+   *    200ms 는 그 "되살아나는" 구간이고, 700ms 는 중단이 유지되는 구간이다
+   *    (실측 2026-09-17: 200ms 에 누르면 3초 뒤 거리가 목표 5.29 로 착지,
+   *     700ms 면 6.5 에서 멈춘다). 한쪽만 재면 반쪽이다.
+   */
   for (const phase of ['여는 비행', '닫는 비행']) {
-    const base = await run(phase, false)
-    const dragged = await run(phase, true)
-    const extra = dragged - base
-    ok(
-      extra <= 6,
-      `${phase} 도중 드래그해도 한 프레임에 안 튄다`,
-      `한 프레임 그림 변화 — 드래그 없음 ${base} · 있음 ${dragged} → 차이 ${extra.toFixed(1)} (기준 6 이하)`,
-    )
+    for (const pressAt of [200, 700]) {
+      const a = await run(phase, false, pressAt)
+      const b = await run(phase, true, pressAt)
+      ok(
+        b.onCanvas,
+        `   (대조) ${phase} ${pressAt}ms — 누른 곳이 캔버스다`,
+        b.onCanvas ? '캔버스' : '다른 요소가 먹었다',
+      )
+      const extra = b.worst - a.worst
+      ok(
+        extra <= 6,
+        `${phase} ${pressAt}ms 에 드래그해도 한 프레임에 안 튄다`,
+        `한 프레임 그림 변화 — 없음 ${a.worst} · 있음 ${b.worst} → 차이 ${extra.toFixed(1)} (기준 6 이하)`,
+      )
+    }
   }
 
   await b.close()
