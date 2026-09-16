@@ -15,7 +15,7 @@ export const metadata: Metadata = {
  *    그 접두사를 붙이면 값이 브라우저 번들에 박혀 api 주소가 공개된다.
  *    방문자 요청은 `app/api/diagnose/route.ts` 프록시를 거친다.
  */
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3100'
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3201'
 
 /** 매 요청마다 api 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
 export const dynamic = 'force-dynamic'
