@@ -43,7 +43,10 @@ async function bootstrap() {
   // 포트: 이 맥은 여러 프로젝트가 포트를 나눠 쓴다. 띄우기 전에 매번 센다.
   //   실측 2026-09-16: 3100·3101 은 다른 저장소의 dev 서버가 9/14 부터 쥐고 있다.
   //   남의 것을 끄지 않는다 — 우리가 비켜서 web(3200) 과 짝이 되는 3201 로 옮겼다.
-  const port = Number(process.env.API_PORT ?? 3201)
+  //   ⚠️ `??` 가 아니라 `||` 다. `.env` 의 빈 값(`API_PORT=`)은 undefined 가 아니라
+  //      빈 문자열이라 `??` 를 통과하고, `Number('')` 은 0 이 된다 — 실측하면
+  //      "api 가 0 에서 듣는다" 가 찍히고 **랜덤 포트**에 떠서 web 이 못 찾는다.
+  const port = Number(process.env.API_PORT || 3201)
   await app.listen(port)
   new Logger('bootstrap').log(`api 가 ${port} 에서 듣는다`)
 }

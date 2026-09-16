@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 /** api 상태는 서버에서 본다. 브라우저에는 api 주소를 내보내지 않는다. */
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3201'
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3201'
 
 /** 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
 export const dynamic = 'force-dynamic'

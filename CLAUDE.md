@@ -149,7 +149,7 @@ api 가 3100 이었는데 **2026-09-16 실측에서 남이 쥐고 있어 3201 �
 ```bash
 pnpm verify                      # lint · typecheck · test · 방 검사 · 데이터 검사
 pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
-curl -s http://localhost:3100/diagnose/status
+curl -s http://localhost:3201/diagnose/status
 pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
 node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 ```
