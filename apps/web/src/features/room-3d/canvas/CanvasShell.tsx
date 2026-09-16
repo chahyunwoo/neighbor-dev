@@ -85,6 +85,8 @@ export function CanvasShell() {
   useEffect(() => {
     const root = document.documentElement
     const ro = new ResizeObserver(() => measure())
+    /** 지금 ResizeObserver 가 보고 있는 요소들. 바뀔 때만 다시 건다. */
+    let watched: (Element | null)[] = []
     /** 지금 화면의 헤더·푸터를 재서 변수에 넣는다. 없으면 0. */
     const measure = () => {
       for (const [sel, prop] of [
@@ -105,22 +107,51 @@ export function CanvasShell() {
      *    DOM 변화를 직접 본다. 안 그러면 `/work` 에서 홈의 푸터 높이가
      *    남아 캔버스 아래가 70px 잘린다.
      */
-    const mo = new MutationObserver(() => {
-      measure()
-      ro.disconnect()
-      for (const sel of ['nav', 'footer']) {
-        const el = document.querySelector(sel)
-        if (el) ro.observe(el)
-      }
-    })
+    /*
+     * 🔴 **프레임당 한 번으로 합친다.**
+     *
+     *    전에는 콜백마다 곧바로 `measure()` 를 돌았다. `measure()` 는
+     *    `getBoundingClientRect()` 를 2회 부르는데 그것이 **강제 동기
+     *    레이아웃**이다. `childList: true, subtree: true` 로 body 전체를
+     *    보고 있으니 **DOM 삽입 1회당 리플로우 1회**가 된다.
+     *
+     *    실측 2026-09-17(프로드 빌드, 홈): 노드 400회 삽입에
+     *    `getBoundingClientRect` **962회 · 합계 132.9ms**
+     *    (삽입 1회당 2.4회 · 0.33ms).
+     *
+     *    `/diagnose` 는 응답을 스트리밍한다 — 토큰마다 노드가 붙는다.
+     *    그 화면에서 이 비용이 그대로 쌓인다.
+     *
+     * ⚠️ 마이크로태스크(`Promise.resolve`)로 합치면 안 된다 —
+     *    MutationObserver 자체가 마이크로태스크라 같은 틱에 또 돈다.
+     *    레이아웃을 읽는 일이므로 **프레임 경계**에 맞추는 것이 맞다.
+     */
+    let queued = 0
+    const schedule = () => {
+      if (queued) return
+      queued = requestAnimationFrame(() => {
+        queued = 0
+        measure()
+        /*
+         * ⚠️ 관찰 대상이 그대로면 다시 걸지 않는다. `disconnect()` 후
+         *    `observe()` 를 반복하면 ResizeObserver 가 매번 **최초 1회
+         *    콜백**을 다시 쏘아 `measure()` 가 한 번 더 돈다.
+         */
+        const next = ['nav', 'footer'].map((sel) => document.querySelector(sel))
+        if (next.length === watched.length && next.every((el, i) => el === watched[i])) return
+        ro.disconnect()
+        watched = next
+        for (const el of next) if (el) ro.observe(el)
+      })
+    }
+    const mo = new MutationObserver(schedule)
     mo.observe(document.body, { childList: true, subtree: true })
 
     measure()
-    for (const sel of ['nav', 'footer']) {
-      const el = document.querySelector(sel)
-      if (el) ro.observe(el)
-    }
+    watched = ['nav', 'footer'].map((sel) => document.querySelector(sel))
+    for (const el of watched) if (el) ro.observe(el)
     return () => {
+      if (queued) cancelAnimationFrame(queued)
       ro.disconnect()
       mo.disconnect()
     }
