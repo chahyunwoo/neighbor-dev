@@ -263,7 +263,7 @@ export function CanvasShell() {
  *    같은 이유다.
  */
 function SceneSlot() {
-  const { mode, openId, seen, open, markEntered } = useRoom()
+  const { mode, openId, seen, open, markEntered, resetEntered } = useRoom()
   return (
     <Suspense fallback={null}>
       <Scene
@@ -272,6 +272,7 @@ function SceneSlot() {
         seen={seen}
         onOpen={open}
         onEntered={markEntered}
+        onIntroStart={resetEntered}
       />
     </Suspense>
   )

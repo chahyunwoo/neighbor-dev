@@ -42,6 +42,16 @@ interface RoomApi extends RoomState {
   open: (id: string) => void
   close: () => void
   markEntered: () => void
+  /**
+   * 입장 연출이 **다시 시작됐다** — `entered` 를 되돌린다.
+   *
+   * 🔴 짝이 없으면 이 값이 한 번 켜진 뒤 안 꺼진다. `RoomStage` 가 이것으로
+   *    `data-room-entered` 를 쓰고, **브라우저 프로브가 "이제 마커를 눌러도
+   *    된다" 를 아는 유일한 신호**가 그것이다. 깊은 링크로 들어왔다 홈으로
+   *    오면 4.2초짜리 입장 비행이 도는 동안에도 `true` 라, 검사기가 조용히
+   *    비행 중에 클릭하게 된다(실측 2026-09-17: 홈 도착 +100ms 에 이미 true).
+   */
+  resetEntered: () => void
 }
 
 const Ctx = createContext<RoomApi | null>(null)
@@ -76,10 +86,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => setOpenId(null), [])
   const markEntered = useCallback(() => setEntered(true), [])
+  const resetEntered = useCallback(() => setEntered(false), [])
 
   const value = useMemo(
-    () => ({ mode, openId, seen, entered, declare, open, close, markEntered }),
-    [mode, openId, seen, entered, declare, open, close, markEntered],
+    () => ({ mode, openId, seen, entered, declare, open, close, markEntered, resetEntered }),
+    [mode, openId, seen, entered, declare, open, close, markEntered, resetEntered],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

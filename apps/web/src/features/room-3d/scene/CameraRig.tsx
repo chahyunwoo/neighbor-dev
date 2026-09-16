@@ -289,11 +289,73 @@ export function CameraRig({
   const landed = useRef(false)
   /** 입장 중 문을 이미 닫았는가. `useFrame` 이 매 프레임 돌므로 한 번만 부른다. */
   const doorClosed = useRef(false)
+  /**
+   * 비행이 끝나면 걸 제약. **비행 중에는 안 건다** — 위 `limitsAfterFly` 주석 참고.
+   * `null` 이면 걸 것이 없다(사용자가 비행을 중단시킨 경우).
+   */
+  const limitsAfterFly = useRef<Record<string, number> | null>(null)
 
   // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
   useEffect(() => {
     const ctl = controls.current
-    if (!ctl || started.current) return
+    if (!ctl) return
+
+    /*
+     * 🔴 **`started` 가드보다 먼저 본다.**
+     *
+     *    전에는 `if (!ctl || started.current) return` 이 위에 있어서, **입장
+     *    연출이 도는 중에 다른 화면으로 나가면 이 분기에 못 들어왔다.**
+     *    그러면 카메라도 안 세우고 `landed` 도 false 로 남는데, 초점 effect 가
+     *    `if (!ctl || !landed.current) return` 으로 막혀 있다 —
+     *    **입장 비행이 4.2초를 끝까지 다 돌고 나서야** 그 화면의 구도가 잡혔다.
+     *
+     *    실측 2026-09-17 (홈 진입 후 N ms 에 `/work` 클릭):
+     *      이탈 600ms  → 도착 745ms  · 목표 구도 4847ms  (그 사이 4101ms)
+     *      이탈 1200ms → 도착 1311ms · 목표 구도 4838ms  (그 사이 3527ms)
+     *      이탈 2600ms → 도착 2680ms · 목표 구도 4852ms  (그 사이 2171ms)
+     *    그동안 화면에는 책상 램프 클로즈업이나 방 전체 개요가 오른쪽 띠에
+     *    밀려 있다가 4400~4850ms 에 **한 번에 휙 돈다.**
+     *    입장 4.2초 안에 나가는 것은 흔한 동작이다.
+     */
+    if (skipIntro) {
+      /*
+       * 🔴 **돌던 입장 비행을 접는다.** 방을 떠났는데 카메라가 계속 걸어
+       *    들어오고 있으면 그 화면의 초점 비행과 싸운다. 문도 닫는다 —
+       *    비행이 중간에 끊기면 `doorCloseAt` 진행도에 영영 못 닿는다.
+       */
+      if (fly.current?.intro) {
+        fly.current = null
+        if (!doorClosed.current) {
+          doorClosed.current = true
+          onIntroDoor(false)
+        }
+      }
+      /*
+       * 🔴 **카메라를 처음 구도에 세운다.**
+       *
+       *    `Scene` 의 `<PerspectiveCamera makeDefault fov={...} />` 에는
+       *    `position` 이 없다 — 자리를 잡는 것은 이 effect 다. 홈을 거쳐 온
+       *    사람은 입장 비행이 이미 세워 놨지만, **주소로 바로 들어온 사람은
+       *    카메라가 기본 위치(원점 근처)에 있다.** 그 상태로 초점 비행이
+       *    `dir = camera.position - target` 을 잡으면 방향이 엉뚱해져 같은
+       *    주소인데 다른 화면이 나온다.
+       *
+       *    실측 2026-09-16(캔버스 평균 휘도): 홈경유 26.5 / 직접 5.7(`/work`),
+       *    29.9 / 4.4(`/stack`). 검색·공유 링크가 곧 수주 경로인 사이트라
+       *    **직접 진입이 오히려 기본 경로**다.
+       *
+       * ⚠️ 입장 도중 나온 것이라면 카메라가 이미 방 안 어딘가에 있다. 그때도
+       *    처음 구도로 세워야 초점 비행의 방향이 화면마다 같아진다.
+       */
+      camera.position.set(...CAMERA_POSITION)
+      ctl.target.set(...ROOM_CENTER)
+      ctl.update()
+      landed.current = true
+      onEntered()
+      return
+    }
+
+    if (started.current) return
 
     // 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -304,41 +366,14 @@ export function CameraRig({
     }
 
     /*
-     * 🔴 **페이지 배경일 때는 `started` 를 세우지 않는다.**
+     * 🔴 **페이지 배경으로 쓸 때 `started` 를 세우지 않는다** (위 분기).
      *
      *    캔버스가 라우트를 넘어 살아 있으므로 이 컴포넌트는 **세션당 한 번만**
      *    마운트된다. 검색으로 `/work` 에 바로 들어온 사람은 첫 마운트가
-     *    `mode='page'` 라 여기서 건너뛰는데, 예전에는 그 자리에서
-     *    `started.current = true` 로 굳어 **그 뒤 홈에 와도 입장 effect 가
-     *    early-return** 했다. 문이 열리고 걸어 들어오는 연출을 그 방문자는
-     *    영영 못 봤고, `markIntroSeen()` 도 안 불려 나중에 홈을 새로고침하면
-     *    그때 뒤늦게 풀 길이가 재생됐다("이미 본 사람은 짧게" 와 반대 방향).
-     *
-     *    검색 유입이 곧 수주 경로라 `/work`·`/stack` 이 첫 화면이 되기 쉽다.
-     *    → 건너뛰기만 하고 **다음에 홈으로 오면 그때 입장한다.**
+     *    `mode='page'` 라 위에서 나가는데, 예전에는 그 자리에서
+     *    `started.current = true` 로 굳어 **그 뒤 홈에 와도 early-return** 했다.
+     *    문이 열리고 걸어 들어오는 연출을 그 방문자는 영영 못 봤다.
      */
-    if (skipIntro) {
-      /*
-       * 🔴 **카메라를 처음 구도에 세우고 나간다.**
-       *
-       *    `Scene` 의 `<PerspectiveCamera makeDefault fov={...} />` 에는
-       *    `position` 이 없다 — 자리를 잡는 것은 이 입장 effect 다. 홈을
-       *    거쳐 온 사람은 입장 비행이 이미 세워 놨지만, **주소로 바로 들어온
-       *    사람은 카메라가 기본 위치(원점 근처)에 있다.** 그 상태로 초점
-       *    비행이 `dir = camera.position - target` 을 잡으면 방향이 엉뚱해져
-       *    같은 주소인데 다른 화면이 나온다.
-       *
-       *    실측 2026-09-16(캔버스 평균 휘도): 홈경유 26.5 / 직접 5.7(`/work`),
-       *    29.9 / 4.4(`/stack`). 검색·공유 링크가 곧 수주 경로인 사이트라
-       *    **직접 진입이 오히려 기본 경로**다.
-       */
-      camera.position.set(...CAMERA_POSITION)
-      ctl.target.set(...ROOM_CENTER)
-      ctl.update()
-      landed.current = true
-      onEntered()
-      return
-    }
     started.current = true
 
     /*
@@ -466,16 +501,34 @@ export function CameraRig({
     }
 
     /*
-     * 🔴 제약을 상태에 맞춰 바꾼다(시안 `applyLimits`).
-     *    overview 의 `minDistance: 4.6` 을 그대로 두면 물건 앞까지 못 가고,
-     *    비행이 끝나자마자 OrbitControls 가 카메라를 뒤로 밀어낸다.
+     * 🔴 **제약은 비행이 *끝난 뒤*에 건다** (`useFrame` 의 `t >= 1` 자리).
+     *
+     *    전에는 여기서 곧바로 `Object.assign(ctl, CAMERA_LIMITS_FOCUS)` 를
+     *    했다. 그런데 개요 구도의 카메라–타깃 거리가 **9.36** 이고
+     *    `CAMERA_LIMITS_FOCUS.maxDistance` 는 **6.5** 다 —
+     *    `ctl.update()` 가 **한 프레임에 30.6% 를 당긴다.**
+     *
+     *    실측 2026-09-17(마커를 열 때, 마커 중심 좌표):
+     *      t=0ms   캔버스 1440   현관문 1412,253
+     *      t=27ms  캔버스 1440   현관문 1594,167   ← 한 프레임에 +182px
+     *      t=47ms  캔버스 1436   ...              (여기부터가 캔버스 좁아짐)
+     *    🔴 **캔버스가 좁아져서가 아니다.** 점프가 캔버스 폭이 아직 1440 인
+     *       시점에 난다. 인과 확증: `maxDistance` 만 12 로 바꿔 재빌드하니
+     *       점프가 완전히 사라졌다.
+     *
+     *    비행 경로는 `CAMERA_LIMITS`(거리 4.6~12) 안에 통째로 들어간다 —
+     *    출발 9.36, 도착은 `floor`(4.8) 이상 6.5 이하. 그래서 비행 동안에는
+     *    기존 제약을 그대로 두어도 끌려가지 않는다.
+     *
+     * ⚠️ 사용자가 손대서 비행이 중단되면(`abort`) 제약을 바꾸지 않는다.
+     *    중간 지점에서 focus 제약을 걸면 그 자리에서 또 당겨진다.
      */
-    const limits = focus ? CAMERA_LIMITS_FOCUS : CAMERA_LIMITS
-    Object.assign(ctl, limits)
+    limitsAfterFly.current = focus ? CAMERA_LIMITS_FOCUS : CAMERA_LIMITS
 
     // 🔴 사용자가 손대면 비행을 포기한다. 카메라가 고집부리지 않게(시안과 같다).
     const abort = () => {
       fly.current = null
+      limitsAfterFly.current = null
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
@@ -631,6 +684,11 @@ export function CameraRig({
     }
 
     if (t >= 1) {
+      // 🔴 제약은 여기서 건다 — 시작에 걸면 한 프레임에 카메라가 당겨진다.
+      if (limitsAfterFly.current) {
+        Object.assign(ctl, limitsAfterFly.current)
+        limitsAfterFly.current = null
+      }
       // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
         // 보정을 최종값으로 확정한다(보간이 끝났다).
