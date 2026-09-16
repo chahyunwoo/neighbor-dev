@@ -13,7 +13,6 @@
  *     node .wip/canvas-probe.cjs
  */
 
-const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:3200'
 const NAMES = ['모니터', '화이트보드', '책장', '서랍', '노트북', '테이블', '현관문']
 /**
  * 입장 연출이 끝날 때까지 기다린다.
@@ -35,7 +34,7 @@ async function waitEntered(pg, quiet = 900) {
   await pg.waitForTimeout(quiet)
 }
 
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 let fail = 0
 const ok = (cond, label, detail) => {

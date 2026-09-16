@@ -16,8 +16,7 @@
  *
  *    ①만 막는 noscript 규칙이 있었는데 ②를 못 덮고 있었다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 /** 이 화면들로 가는 길이 홈에서 보여야 한다. 내비에는 셋뿐이다. */
 const NEED = ['/career', '/contact', '/diagnose', '/stack', '/team', '/work']
 

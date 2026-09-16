@@ -5,7 +5,7 @@
  *    구간에만 나타났다 사라진다.
  * 🔴 headed 로 돈다(headless 는 3D 가 안 그려져 조건 자체가 달라진다).
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const RUNS = Number(process.env.RUNS || 3)
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
@@ -29,7 +29,7 @@ const RUNS = Number(process.env.RUNS || 3)
       }
       requestAnimationFrame(t)
     })
-    await pg.goto('http://localhost:3200/', { waitUntil: 'domcontentloaded' })
+    await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
     await pg.waitForTimeout(3000)
     const o = await pg.evaluate(() => window.__o || [])
     const ok = o.length === 0

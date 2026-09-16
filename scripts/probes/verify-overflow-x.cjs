@@ -12,8 +12,7 @@
  *    의 미디어쿼리가 **3D 가부와 같은 조건**이라, 3D 가 꺼지면 덮개도 같이
  *    벗겨진다. 켜진 화면만 보면 영영 안 보인다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const PAGES = ['/', '/work', '/stack', '/career', '/team', '/diagnose', '/contact']
 
 const CASES = [

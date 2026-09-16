@@ -15,8 +15,7 @@
  *       모바일 주소창 접힘, 홈→하위 전환에서 푸터가 사라지며 캔버스 높이가
  *       733→803→900 으로 바뀌는 것만으로도 걸린다.
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 /** 되돌린 뒤 이만큼 넘게 어긋나면 실패. 감쇠 보간이 있어 몇 px 은 허용한다. */
 const TOL = 12
 

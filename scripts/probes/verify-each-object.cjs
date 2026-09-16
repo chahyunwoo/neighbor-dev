@@ -6,14 +6,14 @@
  *    WebGL 이라 2D 컨텍스트로 못 읽는다(전부 0). 둘 다 시도해서 확인했다.
  * 🔴 headed 로 돈다(headless 는 3D 가 안 그려진다).
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const OUT = process.argv[2] || '.'
 const NAMES = ['모니터', '화이트보드', '책장', '서랍', '노트북', '테이블', '현관문']
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
   for (const nm of NAMES) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
-    await pg.goto('http://localhost:3200/', { waitUntil: 'networkidle' })
+    await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' })
     await pg.waitForTimeout(4500)
     await pg
       .locator('button[class*="marker"]')

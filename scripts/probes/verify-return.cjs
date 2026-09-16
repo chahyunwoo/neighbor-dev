@@ -4,7 +4,7 @@
  * 🔴 **headed 로 돌린다.** headless 는 GPU 가 없어 프레임이 안 나오고,
  *    그러면 카메라 비행 자체를 못 본다(이 저장소가 그 오진을 두 번 밟았다).
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 /** 복귀 비행은 이 안에 끝나야 한다(ms). 첫 진입은 3.2초짜리라 훨씬 길다. */
 const RETURN_BUDGET = 1500
 
@@ -33,11 +33,11 @@ const measure = async (pg) => {
   const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
   let fail = 0
 
-  await pg.goto('http://localhost:3200/', { waitUntil: 'domcontentloaded' })
+  await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
   const first = await measure(pg)
-  await pg.goto('http://localhost:3200/work', { waitUntil: 'networkidle' })
+  await pg.goto(`${BASE}/work`, { waitUntil: 'networkidle' })
   await pg.waitForTimeout(1200)
-  await pg.goto('http://localhost:3200/', { waitUntil: 'domcontentloaded' })
+  await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
   const back = await measure(pg)
 
   const ok = back !== null && back <= RETURN_BUDGET

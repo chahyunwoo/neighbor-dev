@@ -5,7 +5,7 @@
  *    **카피가 4.5초까지 안 보였다** — 방문자는 그동안 빈 방을 본다.
  *    보이는 것은 `opacity` 로 재야 한다(요소는 처음부터 DOM 에 있다).
  */
-const { chromium, LAUNCH } = require('./_pw.cjs')
+const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 /** 카피가 이 시각 안에는 읽혀야 한다(ms). */
 const BUDGET = 1200
 ;(async () => {
@@ -14,13 +14,13 @@ const BUDGET = 1200
   for (const label of ['첫 진입', '복귀']) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
     if (label === '복귀') {
-      await pg.goto('http://localhost:3200/', { waitUntil: 'networkidle' })
+      await pg.goto(`${BASE}/`, { waitUntil: 'networkidle' })
       await pg.waitForTimeout(4000)
-      await pg.goto('http://localhost:3200/work', { waitUntil: 'networkidle' })
+      await pg.goto(`${BASE}/work`, { waitUntil: 'networkidle' })
       await pg.waitForTimeout(1200)
     }
     const t0 = Date.now()
-    await pg.goto('http://localhost:3200/', { waitUntil: 'domcontentloaded' })
+    await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
     let at = null
     for (let i = 0; i < 60; i++) {
       const r = await pg.evaluate(() => {
