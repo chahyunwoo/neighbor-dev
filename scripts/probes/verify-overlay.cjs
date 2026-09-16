@@ -5,17 +5,13 @@
  *    걸려 있어도 **본문 폭이 안 줄면** 3D 가 글씨 위에 얹힌다.
  *    화면을 열어 두 영역이 실제로 겹치는지 잰다.
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 const PAGES = ['/work', '/work/claude-board', '/career', '/stack', '/team', '/contact', '/diagnose']
 /** 캔버스 왼쪽 가장자리에서 이만큼은 본문이 들어와도 봐준다(마스크가 투명한 구간). */
 const SLACK = 40
 
 ;(async () => {
-  const b = await chromium.launch({
-    headless: false,
-    args: ['--window-position=-3000,0'],
-  }) /* 🔴 headed — GPU 없이 12fps 로 떨어지면
-    없는 증상이 만들어진다(CLAUDE.md). 3D 가 본문을 덮는지 본다 — 캔버스가 실제로 그려져야 한다. */
+  const b = await chromium.launch(LAUNCH)
   let fail = 0
   for (const vp of [
     { width: 1440, height: 900 },

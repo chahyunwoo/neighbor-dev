@@ -165,6 +165,21 @@ node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 셋 다 **스크린샷을 열어보고서야** 발견했다. 그 뒤 검사 항목으로 추가했지만,
 검사기를 늘리는 것과 별개로 화면은 계속 눈으로 본다.
 
+## 🔴 3D 프로브는 headless 로 열되 **GPU 플래그를 준다** (2026-09-16 갱신)
+
+아래 "headless 로 재지 않는다" 는 **기본 옵션 기준**이었다. 진짜 원인은 창이
+아니라 **렌더러**다 — 기본 headless 는 SwiftShader(소프트웨어)로 떨어진다.
+
+```
+headless 기본            11fps   ANGLE (SwiftShader)
+headless + angle=metal   61fps   ANGLE (Apple M3 GPU)
+```
+
+`scripts/probes/_pw.cjs` 의 `LAUNCH` 를 쓴다(`chromium.launch(LAUNCH)`).
+**`headless: false` 를 쓰지 마라** — 진짜 창이 뜨고, `canvas-probe` 는 마커마다
+컨텍스트를 열어 창이 연달아 튀어나온다. `--window-position` 으로 화면 밖에
+보내려 해도 macOS 는 그 좌표를 무시한다(실측).
+
 ## 🔴 3D 모션은 headless 로 재지 않는다 — 없는 증상이 만들어진다
 
 실측 2026-09-10. headless 크로뮴은 GPU 가 없어 **12fps** 로 떨어진다.

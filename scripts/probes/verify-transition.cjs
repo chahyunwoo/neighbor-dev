@@ -16,12 +16,12 @@
  *   ④ 긴 프레임이 없다 (씬이 재마운트되면 90ms 대 멈춤이 난다)
  *   ⑤ 3D 캔버스가 살아남는다 (라우트를 넘어 하나)
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 
 const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
 
 async function main() {
-  const browser = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
+  const browser = await chromium.launch(LAUNCH)
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const problems = []
   const note = (s) => process.stdout.write(`${s}\n`)

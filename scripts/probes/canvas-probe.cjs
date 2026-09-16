@@ -35,7 +35,7 @@ async function waitEntered(pg, quiet = 900) {
   await pg.waitForTimeout(quiet)
 }
 
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 
 let fail = 0
 const ok = (cond, label, detail) => {
@@ -78,11 +78,7 @@ async function markerHits(page) {
 }
 
 ;(async () => {
-  const browser = await chromium.launch({
-    headless: false,
-    args: ['--window-position=-3000,0'],
-  }) /* 🔴 headed — GPU 없이 12fps 로 떨어지면
-    없는 증상이 만들어진다(CLAUDE.md). 마커를 눌러 열리는지 본다 — 자리 계산이 매 프레임 돈다. */
+  const browser = await chromium.launch(LAUNCH)
 
   // ── 1. 데스크톱: 캔버스 개수 · 마커 도달성 · 실제 클릭 ──────────────
   console.log('\n[1] 데스크톱 1440x900')

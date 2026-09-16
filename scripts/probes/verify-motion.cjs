@@ -5,15 +5,11 @@
  *    **카피가 4.5초까지 안 보였다** — 방문자는 그동안 빈 방을 본다.
  *    보이는 것은 `opacity` 로 재야 한다(요소는 처음부터 DOM 에 있다).
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 /** 카피가 이 시각 안에는 읽혀야 한다(ms). */
 const BUDGET = 1200
 ;(async () => {
-  const b = await chromium.launch({
-    headless: false,
-    args: ['--window-position=-3000,0'],
-  }) /* 🔴 headed — GPU 없이 12fps 로 떨어지면
-    없는 증상이 만들어진다(CLAUDE.md). 카피가 언제 읽히는지 본다 — 3D 로딩·입장 연출과 얽혀 있다. */
+  const b = await chromium.launch(LAUNCH)
   let fail = 0
   for (const label of ['첫 진입', '복귀']) {
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()

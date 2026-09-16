@@ -2,7 +2,7 @@
  * 이슈 #3 — **한 페이지 안에서 연속으로** 마커를 눌러도 전부 열리는가.
  * 마커마다 새 컨텍스트로 재면 이 이슈를 못 본다(프롬프트가 경고한 함정).
  */
-const { chromium } = require('./_pw.cjs')
+const { chromium, LAUNCH } = require('./_pw.cjs')
 let fail = 0
 const ok = (c, l, d) => {
   if (!c) fail++
@@ -16,7 +16,7 @@ const ok = (c, l, d) => {
    *    실측 2026-09-16: headless 로 5회 돌려 3회가 5~6/7 로 실패했고
    *    실패 해상도도 매번 달랐다(이슈 #37).
    */
-  const b = await chromium.launch({ headless: false, args: ['--window-position=-3000,0'] })
+  const b = await chromium.launch(LAUNCH)
   for (const vp of [
     { width: 1440, height: 900 },
     { width: 1280, height: 800 },
