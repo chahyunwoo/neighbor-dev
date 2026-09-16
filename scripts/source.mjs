@@ -39,22 +39,43 @@ function candidates() {
   ]
 }
 
+/** `projects/` 안의 `.json` 개수. 디렉터리가 없으면 -1. */
+function projectFileCount(dir) {
+  const projects = join(dir, 'projects')
+  if (!existsSync(projects)) return -1
+  return readdirSync(projects).filter((f) => f.endsWith('.json')).length
+}
+
 /**
- * 정본 저장소 경로. `projects/` 가 실제로 있는 자리만 인정한다.
+ * 정본 저장소 경로. **`projects/*.json` 이 실제로 들어 있는 자리만** 인정한다.
  *
- * 디렉터리 존재만 보지 않는 이유: 빈 껍데기가 남아 있으면 프로젝트 0건을
- * 정상으로 읽어, 검사가 통과한 것처럼 보인다.
+ * 🔴 디렉터리 존재만 보면 안 된다. 빈 껍데기가 남아 있으면 프로젝트 0건을
+ *    정상으로 읽어 검사가 통과한 것처럼 보인다 — 클론이 중간에 끊겼거나
+ *    sparse checkout 인 기계에서 실제로 일어난다.
+ *
+ *    ⚠️ 이 파일의 첫 판은 주석에 그렇게 써 놓고 **구현은 `existsSync` 만 했다.**
+ *       빈 `projects/` 를 넘기자 사명이 박힌 데이터가 그대로 통과했다(exit 0).
+ *       주석이 막겠다고 한 것과 코드가 막는 것은 다르다.
  */
 export function portfolioSourceDir() {
   const tried = candidates()
+  const empty = []
   for (const dir of tried) {
-    if (existsSync(join(dir, 'projects'))) return dir
+    const n = projectFileCount(dir)
+    if (n > 0) return dir
+    if (n === 0) empty.push(dir)
   }
   throw new Error(
     [
-      '정본(portfolio-source)을 찾을 수 없다. 아래를 순서대로 봤다:',
-      ...tried.map((d) => `  · ${d}/projects`),
+      '정본(portfolio-source)을 쓸 수 없다. 아래를 순서대로 봤다:',
+      ...tried.map((d) => {
+        const n = projectFileCount(d)
+        return `  · ${d}/projects — ${n < 0 ? '없음' : `비어 있음(.json 0건)`}`
+      }),
       '',
+      ...(empty.length
+        ? ['⚠️ 디렉터리는 있는데 .json 이 0건이다 — 클론이 덜 됐거나 빈 껍데기다.', '']
+        : []),
       'PORTFOLIO_SOURCE 로 경로를 넘기거나 정본 저장소를 확인한다.',
       '🔴 이 검사를 건너뛰고 진행하지 않는다 — 클라이언트 실명 유출 검사가 여기에 달려 있다.',
     ].join('\n'),
@@ -82,14 +103,34 @@ export function readSourceIndex() {
  * 값을 찍는 순간 그게 곧 유출이다(호출부는 건수만 낸다).
  */
 export function realCompanyNames() {
+  const projects = readSourceProjects()
   const names = new Set()
-  for (const d of readSourceProjects()) {
+  for (const d of projects) {
     for (const key of ['client', 'projectNamed']) {
       const v = d[key]
       if (typeof v === 'string' && v.trim().length >= 2 && !/^(미상|unknown|개인)/i.test(v)) {
         names.add(v.trim())
       }
     }
+  }
+  /*
+   * 🔴 빈 목록을 돌려주지 않는다.
+   *
+   *    `disclosure.mjs` 의 회사표기 검사는 기본 구현이 `() => []` 이고, 넘어온
+   *    목록이 비면 **그 검사가 통째로 no-op 이 된다**(`extraCompanyNames.length > 0`
+   *    조건). 즉 0건은 "위반 없음" 이 아니라 "검사 안 함" 인데 화면에는 똑같이
+   *    초록으로 보인다. 실측 2026-09-16 기준 23개 파일에서 17건이 나온다.
+   */
+  if (names.size === 0) {
+    throw new Error(
+      [
+        `정본에서 사명을 한 건도 찾지 못했다 (프로젝트 ${projects.length}건을 읽었다).`,
+        '🔴 0건은 "위반 없음" 이 아니라 **회사표기 검사가 통째로 꺼진다**는 뜻이다.',
+        '',
+        '정본이 낡았거나 부분 사본인지, client·projectNamed 필드 이름이 바뀌었는지 본다.',
+        '정말 사명이 하나도 없는 것이 맞다면 이 검사를 조정하고 그 근거를 남긴다.',
+      ].join('\n'),
+    )
   }
   return [...names]
 }
