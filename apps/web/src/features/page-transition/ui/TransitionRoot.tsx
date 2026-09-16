@@ -89,9 +89,22 @@ export function TransitionRoot({ children }: { children: ReactNode }) {
       if (e.button !== 0) return
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
 
+      /*
+       * 🔴 **가장 가까운 인터랙티브 요소가 링크일 때만 가로챈다.**
+       *
+       *    `closest('a')` 만 쓰면 **링크 안에 든 버튼**을 눌러도 바깥 링크를
+       *    찾아 전환을 시작한다. 실측 2026-09-16: `/work` 의 사례 카드가
+       *    `<Link>` 이고 그 안에 스택 "N개 더" 펼침 버튼이 있는데, capture
+       *    단계인 이 리스너가 버튼의 핸들러보다 **먼저** 돌아 `preventDefault` +
+       *    `stopPropagation` 을 해버려 **펼치기가 죽었다**(`verify-fold` 가 잡았다.
+       *    "펼치면 글자가 늘어난다 — 4100 → 4100").
+       *
+       *    버튼·입력처럼 자기 동작이 있는 요소가 더 가까우면 그쪽 일이다.
+       */
       const el = e.target as Element | null
-      const a = el?.closest('a')
-      if (!(a instanceof HTMLAnchorElement)) return
+      const hit = el?.closest('a, button, [role="button"], input, select, textarea, summary, label')
+      if (!(hit instanceof HTMLAnchorElement)) return
+      const a = hit
       if (a.target && a.target !== '_self') return
       if (a.hasAttribute('download')) return
       // 새 창을 여는 rel 이나 명시적 opt-out.
