@@ -4,13 +4,7 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import {
-  CAMERA_FOV,
-  CAMERA_LIMITS,
-  CAMERA_LIMITS_FOCUS,
-  CAMERA_POSITION,
-  ROOM_CENTER,
-} from './layout'
+import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
 
 /**
  * OrbitControls 인스턴스 타입.
@@ -103,22 +97,31 @@ export interface FocusTarget {
  *    3초짜리 카메라 비행은 그 자체가 장벽이다.
  */
 export const INTRO = {
-  from: [-4.7, 1.35, -1.6] as [number, number, number],
   /**
-   * 입장 시작 시야각. 최종(`CAMERA_FOV` 37)보다 **넓다.**
+   * 시작 위치 — **문틀 바로 안쪽, 사람 눈높이.**
    *
-   * 🔴 문 앞에서는 카메라가 문에서 **1.88** 밖에 안 떨어져 있어, 37° 로는
-   *    문(높이 2.1)이 화면을 넘어가 **잘린다**(사용자 지적: "시야가 이상하게
-   *    돼서 문이 좀 짤려서 나옴"). 37° 로 문 전체를 담으려면 거리 3.14 가
-   *    필요한데, **그만큼 벌리면 벽 밖으로 나가 화면이 통째로 검어진다**
-   *    (실측 2026-09-16: 거리 3.6 에서 문틀조차 안 보였다).
+   * 🔴 문 **밖**(x -4.7)에서 시작하지 않는다. 그렇게 했더니 카메라가 문에서
+   *    1.88 밖에 안 떨어져 문이 잘렸고, 거리를 벌리면 벽 밖으로 나가 화면이
+   *    통째로 검어졌다(실측 2026-09-16: 거리 3.6 에서 문틀조차 안 보임).
+   *    화각을 58° 로 넓혀 우겨넣어 봤지만 **그 광각 자체가 어색했다**
+   *    (사용자 지적: "시야각이 이상하게 나오잖음").
    *
-   *    → 좌표는 그대로 두고 **시야만 넓힌다.** 광각이라 문틀이 프레임으로
-   *      들어오고, 들어오는 동안 37° 로 좁혀지며 최종 구도에 자연스럽게 앉는다.
+   *    → 필요한 것은 "문 밖에서 걸어온다" 가 아니라 **"문 열고 들어선다"** 다.
+   *      문틀을 막 지난 자리에서 시작하면 그 느낌이 나면서 화각도 정상이다.
+   *
+   * ⚠️ 너무 안쪽(시안의 x -1.30)은 안 된다 — 이미 방 한가운데라 "들어왔다" 가
+   *    아니라 그냥 뒤로 줄어드는 것처럼 보인다(예전 사용자 지적).
+   *    현관문이 x -2.89 이므로 그 바로 안쪽을 쓴다.
    */
-  fov: 58,
-  lookAt: [-1.0, 1.15, -0.2] as [number, number, number],
-  ms: 3200,
+  from: [-2.35, 1.35, -1.15] as [number, number, number],
+  lookAt: [-0.4, 1.15, 0.1] as [number, number, number],
+  /**
+   * 입장에 쓰는 시간(ms).
+   *
+   * ⚠️ 3200 이었는데 **"확 들어온다"** 는 말을 들었다. 이동 거리가 줄어든 만큼
+   *    (문 밖 → 문 안쪽) 같은 시간이면 더 느려지지만, 그것만으로는 모자랐다.
+   */
+  ms: 4200,
   /** 문이 열리는 시각(ms). 들어가기 전에 열려 있어야 한다. */
   doorOpenAt: 0,
   /** 문이 닫히는 시각(ms). 다 들어온 뒤다. */
@@ -495,8 +498,6 @@ export function CameraRig({
         size.width,
         size.height,
       )
-      // 넓은 시야에서 시작해 최종 화각으로 좁혀진다(위 `INTRO.fov` 주석).
-      persp.fov = INTRO.fov + (CAMERA_FOV - INTRO.fov) * e
       persp.updateProjectionMatrix()
     }
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
@@ -514,7 +515,6 @@ export function CameraRig({
         // 보정을 최종값으로 확정한다(보간이 끝났다).
         const persp = camera as THREE.PerspectiveCamera
         persp.setViewOffset(size.width, size.height, -shiftRef.current, 0, size.width, size.height)
-        persp.fov = CAMERA_FOV
         persp.updateProjectionMatrix()
         // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true
