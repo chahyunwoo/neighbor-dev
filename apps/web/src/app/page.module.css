@@ -23,6 +23,33 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /*
+   * 🔴 **가로로 넘치는 것을 여기서 자른다.**
+   *
+   *    `.lamp` 은 `position:absolute` 에 `left:46% · width:900px` 이라
+   *    오른쪽 끝이 1440 화면에서 **1562px** 이다. 그동안은 `tokens.css` 의
+   *    `@media (min-width:901px) and (prefers-reduced-motion:no-preference)
+   *    { body { overflow-y: clip } }` 가 가려주고 있었는데, **그 조건이
+   *    정확히 "3D 를 띄우는 조건" 과 같다.** 3D 가 꺼지는 순간 덮개도 같이
+   *    벗겨진다.
+   *
+   *    실측 2026-09-17 (홈, `scrollWidth` vs `clientWidth`)
+   *      3D 켜짐 1440      1440 / 1440 →   0px
+   *      reduced 1440      1562 / 1440 → 122px
+   *      좁은 화면 420      550 /  420 → 130px
+   *    끝까지 밀면 제목과 카드 7개의 **왼쪽이 전부 잘린다.**
+   *
+   * ⚠️ **아래 `position: relative` 가 있어야 이게 듣는다.** `.lamp` 의
+   *    컨테이닝 블록이 이 요소가 아니면(위치 지정된 조상이 없으면 초기
+   *    컨테이닝 블록이다) **잘리지 않는다** — 자르기는 컨테이닝 블록이
+   *    클리핑 요소 안에 있을 때만 절대 위치 자손에 적용된다.
+   *    그 선언은 원래 다른 이유(클릭 통과)로 있던 것이라, 지우면 여기가
+   *    조용히 죽는다.
+   *
+   * ⚠️ `hidden` 이 아니라 `clip` 이다 — `hidden` 은 스크롤 컨테이너를 만들어
+   *    `position:sticky` 와 스크롤 앵커링에 영향을 준다(`tokens.css` 같은 이유).
+   */
+  overflow-x: clip;
   position: relative;
   /*
    * 🔴 빈 곳의 클릭은 3D 로 통과시킨다 (2026-09-09 지속 캔버스 전환).
