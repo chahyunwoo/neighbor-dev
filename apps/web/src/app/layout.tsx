@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
+import { TransitionRoot } from '@/features/page-transition'
 import { MotionRoot } from '@/features/reveal'
 import { CanvasRoot } from '@/features/room-3d'
 import '@/shared/styles/tokens.css'
@@ -38,7 +39,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
-        <MotionRoot>{children}</MotionRoot>
+        {/*
+         * 🔴 `TransitionRoot` 가 `MotionRoot` **안**이다. 전환도 모션이라
+         *    `reducedMotion="user"` 의 적용 범위에 들어가야 한다.
+         *    (다만 **대기 시간**은 Motion 이 안 지워서 `TransitionRoot` 가
+         *    직접 건너뛴다 — 그 파일 주석 참고.)
+         */}
+        <MotionRoot>
+          <TransitionRoot>{children}</TransitionRoot>
+        </MotionRoot>
         {/*
          * 지속 캔버스 — 앱 전체에 하나. 라우트가 바뀌어도 살아 있다.
          *

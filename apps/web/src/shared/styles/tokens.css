@@ -300,8 +300,38 @@ html[data-canvas-mode="off"] .canvas-shell {
   visibility: hidden;
 }
 
+/*
+ * 화면이 나가는 동안 3D 가 뒤로 물러난다 (`data-transition`, EXIT.scene 260ms).
+ *
+ * 🔴 **카메라를 건드리지 않는다.** `CameraRig` 는 입장 비행·초점 역산·
+ *    `setViewOffset` 보정이 한 시계 위에서 맞물려 있다. 거기에 전환용 이동을
+ *    끼우면 그 연출들이 서로를 덮어쓴다(실측 이력이 그 파일 주석에 있다).
+ *    바깥에서 **다 그려진 화면을 미는** 쪽이 안전하고, 보이는 결과는 같다.
+ *
+ * ⚠️ 축소하면 캔버스가 리샘플링되어 살짝 흐려진다 — 여기서는 그게 의도한
+ *    효과(뒤로 물러나며 초점이 빠짐)와 같은 방향이라 그대로 쓴다.
+ */
+html[data-transition="exiting"] .canvas-shell {
+  transform: scale(0.965);
+  filter: blur(2.5px) saturate(1.18) brightness(1.06);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) 0.26s,
+    filter 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) 0.26s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .canvas-shell {
+    transition: none;
+  }
+
+  /*
+   * 🔴 움직임을 끈 사람에게는 물러남도 없앤다. `TransitionRoot` 가 지연까지
+   *    건너뛰므로 이 상태 자체가 거의 안 뜨지만, 남겨 두면 그 사람 화면에서만
+   *    3D 가 축소된 채 굳을 수 있다.
+   */
+  html[data-transition="exiting"] .canvas-shell {
+    transform: none;
+    filter: none;
     transition: none;
   }
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { OBJECT_MODEL } from '@/entities/room'
+import { TransitionBody, TransitionTitle } from '@/features/page-transition'
 import { CanvasMode, ContentWidth, ObjectStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
 
@@ -59,17 +60,32 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
       <main className={styles.main}>
         <div className={styles.head}>
           <div className={styles.headText}>
-            <div className={styles.crumb}>
+            {/*
+             * 🔴 빵부스러기와 아래 캡션도 같이 나간다. 처음엔 제목·본문만
+             *    감쌌더니 **이 둘만 선명하게 남아 혼자 떠 있었다** — 화면이
+             *    비었는데 라벨만 공중에 뜬 꼴이다(스크린샷으로 발견).
+             */}
+            <TransitionBody className={styles.crumb}>
               <Link href="/">← 작업실로</Link>
               <span aria-hidden="true">/</span>
               <span>{crumb}</span>
-            </div>
-            <h1 className={styles.title}>{title}</h1>
-            {lede ? <p className={styles.lede}>{lede}</p> : null}
+            </TransitionBody>
+            {/*
+             * 🔴 제목만 낱글자로 움직인다. 이 한 줄이 화면 전환의 주인공이라
+             *    나머지는 시차를 두고 따라붙는다(`lib/transition.ts` 의 시계).
+             */}
+            <TransitionTitle text={title} className={styles.title} />
+            {lede ? (
+              <TransitionBody>
+                <p className={styles.lede}>{lede}</p>
+              </TransitionBody>
+            ) : null}
           </div>
-          <p className={styles.fig}>{fig}</p>
+          <TransitionBody as="p" className={styles.fig}>
+            {fig}
+          </TransitionBody>
         </div>
-        {children}
+        <TransitionBody>{children}</TransitionBody>
       </main>
     </div>
   )
