@@ -49,6 +49,7 @@ export function SplitText({
   text,
   className,
   as = 'span',
+  animate = true,
   delay = 0,
   /**
    * 글자 **전체**가 움직이는 데 쓰는 총 시간(초). 간격이 아니다.
@@ -70,6 +71,14 @@ export function SplitText({
    */
   className?: string | undefined
   as?: 'span' | 'h1' | 'h2' | 'h3' | 'p'
+  /**
+   * 글자를 쪼개 움직일 것인가.
+   *
+   * 🔴 `false` 면 원문을 그대로 둔다. 라우트 전환으로 들어온 화면에서는
+   *    View Transitions 가 이미 화면을 겹쳐 넘기므로, 여기서 또 `opacity: 0`
+   *    으로 시작하면 **VT 가 찍을 그림이 비어 버린다**(`TransitionTitle` 주석).
+   */
+  animate?: boolean
   delay?: number
   span?: number
   maxStep?: number
@@ -81,6 +90,7 @@ export function SplitText({
    */
   const [ready, setReady] = useState(false)
   useEffect(() => {
+    if (!animate) return
     let alive = true
     const go = () => {
       if (alive) setReady(true)
@@ -94,11 +104,11 @@ export function SplitText({
     return () => {
       alive = false
     }
-  }, [])
+  }, [animate])
 
   const Tag = motion[as]
 
-  if (!ready) {
+  if (!animate || !ready) {
     // 쪼개기 전. 움직이지 않고 그냥 보인다 — 폰트를 기다리는 동안 글이 사라지면 안 된다.
     return <Tag className={className}>{text}</Tag>
   }

@@ -2,7 +2,16 @@
 
 import { useReducedMotion } from 'motion/react'
 import { usePathname, useRouter } from 'next/navigation'
-import { type ReactNode, useCallback, useEffect, useRef } from 'react'
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 /**
  * 화면 전환 — **두 화면을 실제로 겹친다.**
@@ -35,7 +44,24 @@ function canViewTransition(): boolean {
   return typeof document !== 'undefined' && typeof document.startViewTransition === 'function'
 }
 
+/**
+ * 이 세션에서 라우트를 몇 번 갈아탔는가.
+ *
+ * 🔴 **0 이면 "처음 들어온 화면"** 이다. 그때만 글자 단위 등장 연출을 켠다 —
+ *    라우트 전환에는 View Transitions 가 화면을 통째로 겹쳐 넘기므로, 그 위에
+ *    글자 연출을 또 얹으면 **VT 가 새 화면을 찍는 58ms 시점에 제목이 투명해**
+ *    겹칠 그림이 없어진다(실측 2026-09-16: 320ms·560ms 스크린샷이 비었다).
+ *
+ *    첫 로드에는 VT 가 없으니 충돌할 것도 없고, 첫인상에서 효과가 가장 크다.
+ */
+const NavCountCtx = createContext(0)
+
+export function useNavCount(): number {
+  return useContext(NavCountCtx)
+}
+
 export function TransitionRoot({ children }: { children: ReactNode }) {
+  const [navCount, setNavCount] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
   const reduced = useReducedMotion()
@@ -68,11 +94,13 @@ export function TransitionRoot({ children }: { children: ReactNode }) {
     (href: string) => {
       // 움직임을 끈 사람 · 지원 안 하는 브라우저 — 그냥 이동한다.
       if (reduced || !canViewTransition()) {
+        setNavCount((n) => n + 1)
         router.push(href)
         return
       }
       // 앞선 전환이 아직 안 끝났으면 그쪽을 먼저 풀어 준다(연타).
       settle.current?.()
+      setNavCount((n) => n + 1)
       document.startViewTransition(() => {
         router.push(href)
         return new Promise<void>((resolve) => {
@@ -133,5 +161,5 @@ export function TransitionRoot({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  return <>{children}</>
+  return <NavCountCtx.Provider value={navCount}>{children}</NavCountCtx.Provider>
 }
