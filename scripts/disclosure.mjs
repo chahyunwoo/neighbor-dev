@@ -120,6 +120,24 @@ const SUMMARY_ONLY_IDS = new Set([
   'game-crawler',
 ])
 
+/**
+ * 공개하면 안 되는 **사례 상세 층**의 원본 저장소명.
+ *
+ * 🔴 위 `SUMMARY_ONLY_IDS` 는 경력 요약 6건만 봤다. 그런데 사례 상세 4건의
+ *    `id` 도 저장소명 그대로였고, 그게 `/work/<id>` 라는 **주소**로 나갔다
+ *    (실측 2026-09-16: `/work/hyunwoo-dev-admin` 등 전부 200).
+ *    같은 파일 안에서 한쪽만 막고 다른 쪽을 남긴 형태다.
+ *
+ * ⚠️ 점 형태(`hyunwoo.dev`)는 `개인도메인` 검사가 잡지만 **하이픈 형태는 못 잡는다.**
+ *    `publicIdFor`(sanitize.mjs)가 슬러그로 바꾸고, 이 검사가 그 배선이 끊기면 잡는다.
+ */
+const DETAIL_PRIVATE_IDS = new Set([
+  'hyunwoo-dev-admin',
+  'hyunwoo-dev-blog',
+  'hyunwoo-dev-monorepo',
+  'hyunwoo-dev-web',
+])
+
 const CHECKS = [
   ['사설IP', findPrivateIps],
   // 이메일. ⚠️ RFC 2606 이 문서용으로 못박은 도메인은 뺀다 — placeholder 의
@@ -170,6 +188,7 @@ const CHECKS = [
    *    → **보이는 텍스트가 아니라 HTML 원문을 검사한다**(verify-rendered 가 그렇게 한다).
    */
   ['요약건저장소명', (t) => [...SUMMARY_ONLY_IDS].filter((id) => t.includes(id))],
+  ['상세건저장소명', (t) => [...DETAIL_PRIVATE_IDS].filter((id) => t.includes(id))],
   [
     '호스트명·포트',
     (t) => [...t.matchAll(/\b[\w-]+\.(local|internal|lan|home)\b(:\d+)?/gi)].map((m) => m[0]),

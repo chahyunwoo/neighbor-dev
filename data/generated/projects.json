@@ -317,7 +317,7 @@
       "scale": "오퍼레이션 72개 · Prisma 모델 21개 · 스키마 4개 · 소스 7,634줄"
     },
     {
-      "id": "hyunwoo-dev-admin",
+      "id": "personal-site-admin",
       "tier": "detail",
       "label": "개인 기술 사이트 어드민 — 콘텐츠·포트폴리오 운영 콘솔",
       "period": "2025.12 ~ 2026.04 (운영 중)",
@@ -400,7 +400,7 @@
       "scale": "라우트 12개 · 소스 6,625줄 · 리소스 8종 CRUD"
     },
     {
-      "id": "hyunwoo-dev-blog",
+      "id": "personal-blog",
       "tier": "detail",
       "label": "개인 기술 블로그 — 파일 기반 MDX를 걷어내고 API 콘텐츠로 전환",
       "period": "2025.12 ~ 2026.04 (운영 중)",
@@ -499,7 +499,7 @@
       "scale": "발행 글 42건 · 라우트 5개 · 소스 3,876줄"
     },
     {
-      "id": "hyunwoo-dev-monorepo",
+      "id": "personal-site-monorepo",
       "tier": "detail",
       "label": "개인 기술 사이트 모노레포 — 앱 3개 공통 인프라와 OpenAPI 타입 파이프라인",
       "period": "2025.12 ~ 2026.04 (운영 중)",
@@ -604,7 +604,7 @@
       "scale": "앱 3개 + 공유 패키지 3개 · 공용 컴포넌트 21개 · 워크플로 5종"
     },
     {
-      "id": "hyunwoo-dev-web",
+      "id": "personal-site-web",
       "tier": "detail",
       "label": "개인 기술 사이트 프론트 — Three.js 인터랙티브 원페이지",
       "period": "2025.12 ~ 2026.04 (운영 중)",

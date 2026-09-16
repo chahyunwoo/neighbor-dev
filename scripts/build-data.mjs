@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { anonymousLabelFor, sanitizeDeep } from './sanitize.mjs'
+import { anonymousLabelFor, publicIdFor, sanitizeDeep } from './sanitize.mjs'
 import { readSourceIndex, readSourceProjects } from './source.mjs'
 import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
 
@@ -58,7 +58,8 @@ function usableMetrics(metrics) {
 
 function project2public(project, indexEntry, tier) {
   const full = {
-    id: project.id,
+    // 🔴 저장소명을 URL 로 내보내지 않는다(`publicIdFor` 주석 참고).
+    id: publicIdFor(project.id),
     tier,
     label: labelOf(project, indexEntry),
     period: project.period,
