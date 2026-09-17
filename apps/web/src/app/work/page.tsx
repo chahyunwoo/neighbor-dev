@@ -97,39 +97,66 @@ export default function WorkPage() {
   )
 }
 
+/**
+ * 화면에 낼 도메인 몇 개를 고른다.
+ *
+ * 🔴 정본의 `domain[]` 은 **검색 키워드용**이라 같은 뜻이 여러 번 들어 있다 —
+ *    `예약 / 예약시스템 / 부킹`, `정산 / 수수료정산 / 파트너정산`.
+ *    앞에서 그냥 3개를 자르면 **"예약 · 예약시스템 · 부킹"** 이 된다.
+ *    서로 포함관계인 것을 걸러 뜻이 겹치지 않게 고른다.
+ *
+ * ⚠️ 완벽하지 않다 — `예약`과 `부킹` 처럼 글자가 안 겹치는 유사어는 못 거른다.
+ *    화면을 보고 거슬리면 **정본의 순서를 고치는 것**이 맞다(여기서 단어를
+ *    지어내지 않는다 — CLAUDE.md).
+ */
+function pickDomains(domain: readonly string[] | undefined, n = 3): string[] {
+  const out: string[] = []
+  for (const d of domain ?? []) {
+    const t = d.trim()
+    if (!t) continue
+    if (out.some((o) => o.includes(t) || t.includes(o))) continue
+    out.push(t)
+    if (out.length >= n) break
+  }
+  return out
+}
+
 function DetailCard({ project }: { project: DetailProject }) {
-  const metricCount = project.metrics?.length ?? 0
-  const decisionCount = project.decisions?.length ?? 0
+  const domains = pickDomains(project.domain)
 
   return (
     <Link href={`/work/${project.id}`} className={styles.card}>
-      <div className={styles.cardTop}>
-        <span className={styles.period}>{project.period}</span>
-      </div>
+      {/*
+       * 🔴 **분야가 맨 앞이다.** 이 사이트를 보는 사람은 대부분 비개발자
+       *    발주자다 — `TypeScript · NestJS` 로 시작하면 아무것도 안 읽힌다.
+       *    `판단 3 · 지표 7` 도 걷어냈다. 그 숫자는 개발자에게만 뜻이 있고,
+       *    카드는 **훑는 자리**라 읽을 것이 적을수록 좋다.
+       */}
+      {domains.length ? <p className={styles.cardDomain}>{domains.join(' · ')}</p> : null}
       <h3 className={styles.cardTitle}>{project.label}</h3>
       {project.problem ? (
         <p className={styles.cardProblem}>
           <RichText>{project.problem}</RichText>
         </p>
       ) : null}
-      {/*
-       * 카드는 훑는 자리다 — 여기서 기술을 늘어놓으면 문제 서술이 안 읽힌다.
-       * 2개만 남기고 접는다(실측: peek 3 이면 카드 10장에 태그만 27개가 깔렸다).
-       */}
-      <StackTags names={displayStack(project.stack)} peek={2} label={project.label} />
-      {decisionCount + metricCount > 0 ? (
-        <div className={styles.counts}>
-          {decisionCount > 0 ? <span>판단 {decisionCount}</span> : null}
-          {metricCount > 0 ? <span>지표 {metricCount}</span> : null}
-        </div>
-      ) : null}
+      <div className={styles.cardFoot}>
+        <span className={styles.period}>{project.period}</span>
+        {/*
+         * 기술은 **바닥에 2개만.** 훑을 때 방해가 안 되되, 개발자가 보면
+         * 바로 눈에 든다(실측: peek 3 이면 카드 10장에 태그만 27개가 깔렸다).
+         */}
+        <StackTags names={displayStack(project.stack)} peek={2} label={project.label} />
+      </div>
     </Link>
   )
 }
 
 function SummaryRow({ project }: { project: SummaryProject }) {
+  const domains = pickDomains(project.domain)
   return (
     <div className={styles.row}>
+      {/* 기획서 3절: 이 층의 표기는 **도메인** + 기간 + 기술 스택이다. */}
+      {domains.length ? <p className={styles.rowDomain}>{domains.join(' · ')}</p> : null}
       <span className={styles.rowLabel}>{project.label}</span>
       <span className={styles.rowPeriod}>{project.period}</span>
       <div className={styles.rowStack}>
