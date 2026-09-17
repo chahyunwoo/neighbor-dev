@@ -163,7 +163,21 @@ restore()
 # 빌드가 필요하다(실측 2.1초, 캐시 있을 때).
 
 def run_rendered():
-    return run('node scripts/verify-rendered.mjs')
+    # 🔴 `--bundles-only` — 디스크만 읽는다. 서버를 타면 서버가 없을 때
+    #    `fetch failed` 로 죽어 **번들 검사에 도달조차 못 하고**, 그 실패가
+    #    "게이트가 못 잡음" 으로 보고된다(원인은 서버인데 결론은 게이트 고장).
+    return run('node scripts/verify-rendered.mjs --bundles-only')
+
+# 🔴 **양성 대조 — 뮤테이션 전에 초록인지 먼저 본다.**
+#    이게 없으면 "이미 새고 있음" 과 "게이트가 잡음" 이 같은 출력이 된다.
+#    번들이 이미 유출 중이면(= #78 상태 그 자체) 탐침이 아무 일도 안 해도
+#    `✅ 잡힘` 이 나온다. 전역 규칙: 초기값을 갱신값 중 하나로 두지 않는다.
+_rc0, _out0 = run_rendered()
+if _rc0 != 0:
+    res.append(('G0 뮤테이션 전 번들이 깨끗한가', '❌ 이미 위반 상태',
+                '양성 대조 실패 — G2·G3 의 ✅ 를 믿을 수 없다 | ' + _out0.strip()[:160]))
+else:
+    res.append(('G0 뮤테이션 전 번들이 깨끗한가', '✅ 잡힘', '초록 확인 — G2·G3 의 빨강이 탐침 때문임이 성립한다'))
 
 # G2 — 검사기가 번들 안의 내부 식별자를 잡는가. 청크에 탐침을 직접 심는다.
 #      ⚠️ 빌드 산출물을 건드리므로 **반드시 되돌린다.** 다음 빌드가 덮어쓰지만
@@ -231,7 +245,13 @@ else:
     finally:
         restore()
         run('node scripts/build-data.mjs')
-        run('pnpm --filter @neighbor/web build')   # 잔재가 청크에 남지 않게 다시 빌드한다
+        # 🔴 잔재가 청크에 남지 않게 다시 빌드한다. **rc 를 본다** —
+        #    실패하면 뮤테이션으로 만든 청크(audit 이 실린 번들)가 그대로 남고,
+        #    다음 검사의 빨강이 **진짜 유출처럼 보인다.**
+        _rcc, _outc = run('pnpm --filter @neighbor/web build')
+        if _rcc != 0:
+            res.append(('G3 잔재 정리(재빌드)', '❌ 못 잡음',
+                        '재빌드 실패 — .next 에 뮤테이션 청크가 남아 있다 | ' + _outc.strip()[-160:]))
 
 restore()
 rc,o1=run('node scripts/build-data.mjs'); rc2,o2=run('node scripts/verify-disclosure.mjs')

@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "data": "node scripts/build-data.mjs",
     "data:verify": "node scripts/verify-disclosure.mjs",
+    "bundle:verify": "pnpm --filter @neighbor/web build && node scripts/verify-rendered.mjs --bundles-only",
     "test": "pnpm --filter @neighbor/api test && pnpm --filter @neighbor/web test",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm fsd:verify && pnpm anim:verify && pnpm room:verify && pnpm data && pnpm data:verify",
     "fsd:verify": "node scripts/verify-fsd.mjs",

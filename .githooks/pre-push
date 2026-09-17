@@ -1,0 +1,29 @@
+#!/bin/bash
+# 푸시 전 게이트 — **`main` 푸시가 곧 Vercel 배포다.** 여기가 마지막 방어선이다.
+#
+# 🔴 왜 pre-commit 이 아니라 pre-push 인가:
+#    번들 검사는 빌드 산출물(apps/web/.next/static)을 읽는다. 커밋마다 빌드하면
+#    너무 느리고, 정작 막아야 하는 것은 **공개되는 순간**이다.
+#
+# 🔴 왜 이 훅이 필요한가 (#78):
+#    감사 명단이 클라이언트 번들에 실려 나가던 것을 고치면서 검사기를 만들었는데,
+#    그 검사기를 **자동으로 부르는 곳이 한 곳도 없었다** — pnpm verify 에도,
+#    Stop 훅에도, pre-commit 에도 없고 CI 자체가 없다. 검사기가 있는 것과
+#    검사기가 도는 것은 다르다. 우회하지 말고 고쳐라.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 0
+
+fail=0
+
+# 빌드 산출물이 최신인지 보장할 방법이 없으므로 여기서 직접 만든다.
+# 캐시가 있으면 몇 초다(실측 2026-09-17: 2.1초).
+echo "→ 번들 검사용 prod 빌드"
+if ! pnpm --filter @neighbor/web build >/dev/null 2>&1; then
+  echo "🔴 prod 빌드 실패 — 번들 검사를 돌릴 수 없다."
+  fail=1
+else
+  # 서버를 띄우지 않는다. --bundles-only 는 디스크만 읽는다.
+  node scripts/verify-rendered.mjs --bundles-only || fail=1
+fi
+
+[ "$fail" -eq 0 ] || { echo ""; echo "푸시를 막았다. --no-verify 로 우회하지 않는다."; exit 1; }

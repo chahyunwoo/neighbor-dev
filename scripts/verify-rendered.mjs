@@ -16,9 +16,17 @@
  *    서빙되고 있었다. HTML 에는 한 글자도 없어서 이 검사기가 초록이었다.
  *    → 아래 `checkBundles()` 가 `.next/static` 아래 `.js` 를 같이 훑는다.
  *
- * 쓰는 법 (서버가 떠 있어야 한다):
- *     cd apps/web && pnpm build && pnpm start &
- *     node scripts/verify-rendered.mjs
+ * 쓰는 법:
+ *     pnpm --filter @neighbor/web build
+ *     node scripts/verify-rendered.mjs --bundles-only   # 서버 없이 — 디스크만 읽는다
+ *
+ *     pnpm --filter @neighbor/web start &
+ *     node scripts/verify-rendered.mjs                  # 화면 + 번들
+ *
+ * 🔴 **번들 검사는 서버를 타지 않는다.** 처음엔 화면 루프 뒤에 뒀는데, 서버가
+ *    없으면 `fetch failed` 로 죽어 **번들 검사에 도달조차 못 했다.** 디스크만
+ *    읽는 검사인데 서버 기동이 전제조건이 돼 있었고, 그래서 `verify-gates.py`
+ *    를 단독 실행하면 "게이트가 못 잡음" 으로 보고됐다 — 원인은 서버인데.
  */
 
 import { existsSync, globSync, readFileSync } from 'node:fs'
@@ -28,6 +36,14 @@ import { BUNDLE_CHECKS, scanText } from './disclosure.mjs'
 import { realCompanyNames } from './source.mjs'
 
 const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:3200'
+
+const argv = process.argv.slice(2)
+const BUNDLES_ONLY = argv.includes('--bundles-only')
+const PAGES_ONLY = argv.includes('--pages-only')
+if (BUNDLES_ONLY && PAGES_ONLY) {
+  console.error('🔴 --bundles-only 와 --pages-only 를 같이 줄 수 없다.')
+  process.exit(2)
+}
 
 /*
  * 🔴 사명 목록은 source.mjs 가 만든다 — 정본을 못 찾으면 거기서 throw 한다.
@@ -85,7 +101,7 @@ function assertProd(html) {
 
 let bad = 0
 let checkedProd = false
-for (const p of paths) {
+for (const p of PAGES_ONLY || !BUNDLES_ONLY ? paths : []) {
   const html = await fetch(BASE + p).then((r) => r.text())
   if (!checkedProd) {
     assertProd(html)
@@ -114,15 +130,42 @@ for (const p of paths) {
  *    받는 방식은 빠뜨린다.** 실제로 #78 의 청크가 그랬다(HTML 참조 0회, HTTP 200).
  */
 function checkBundles() {
+  /*
+   * 🔴 **원격을 가리킨 채로는 돌지 않는다.** 이 검사는 로컬 디스크의
+   *    `apps/web/.next/static` 을 읽는다. `배포.md` 는 `WEB_BASE_URL` 로
+   *    배포처를 가리켜 이 스크립트를 돌리라고 적어놨는데, 그러면 **화면은
+   *    배포처를 보고 번들은 내 맥을 본다.** 로컬 빌드가 다른 브랜치거나
+   *    낡았어도 `✅ 번들 전부 통과` 가 찍힌다 — 검사기가 아예 다른 것을
+   *    보고 있는, 제일 나쁜 형태다.
+   *    → 조용히 넘어가지 않고 그 자리에서 말하고 멈춘다.
+   */
+  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(BASE)
+  if (!isLocal) {
+    console.error(`🔴 WEB_BASE_URL 이 원격이다: ${BASE}`)
+    console.error('')
+    console.error('   번들 검사는 로컬 디스크(apps/web/.next/static)를 읽는다.')
+    console.error('   원격 배포본과 무관한 것을 훑고 초록을 낼 수 있어 거부한다.')
+    console.error('')
+    console.error('   배포처 점검은 화면만:  node scripts/verify-rendered.mjs --pages-only')
+    console.error('   번들은 배포할 빌드에서: node scripts/verify-rendered.mjs --bundles-only')
+    process.exit(2)
+  }
+
   const dir = join(ROOT, 'apps/web/.next/static')
   if (!existsSync(dir)) {
     console.error(`🔴 빌드 산출물이 없다: ${dir}`)
     console.error('   prod 빌드를 먼저 한다 — pnpm --filter @neighbor/web build')
     process.exit(2)
   }
-  const files = globSync(join(dir, '**/*.js'))
+  /*
+   * 🔴 `.js` 만 보지 않는다. 무엇이 "번들" 인지를 정하는 유일한 지점이라
+   *    여기서 빠지면 그 확장자는 **아무도 안 본다.**
+   *    실측 2026-09-17 산출물: js 20 · css 4. CSS 도 `content:"…"`·`url(…)`·
+   *    주석을 실어 나르고, 소스맵을 켜면 `.map` 이 원본 주석째로 나간다.
+   */
+  const files = globSync(join(dir, '**/*.{js,css,map,mjs,cjs}'))
   if (files.length === 0) {
-    console.error(`🔴 ${dir} 에 .js 가 0개다. 검사가 아무것도 안 보고 초록을 낼 뻔했다.`)
+    console.error(`🔴 ${dir} 에 검사할 파일이 0개다. 검사가 아무것도 안 보고 초록을 낼 뻔했다.`)
     process.exit(2)
   }
 
@@ -133,6 +176,15 @@ function checkBundles() {
     process.exit(2)
   }
   const audit = JSON.parse(readFileSync(auditPath, 'utf8'))
+  /*
+   * 🔴 **빈 명단으로 초록을 내지 않는다.** `audit` 가 `[]` 면 대조가 영원히
+   *    0건인데 출력은 "내부식별자 대조" 라고 말한다 — 정상과 계측 실패가
+   *    같은 모양이 된다. 0 은 "없다" 가 아니라 "못 읽었다" 일 수 있다.
+   */
+  if (audit.length === 0) {
+    console.error(`🔴 감사 명단이 비었다: ${auditPath} — 대조가 no-op 이 된다.`)
+    process.exit(2)
+  }
   const publicIds = new Set(data.detail.map((p) => p.id))
 
   let n = 0
@@ -158,11 +210,21 @@ function checkBundles() {
   return n
 }
 
-const badBundles = checkBundles()
+/*
+ * 🔴 **안 돌린 것을 통과했다고 말하지 않는다.** `--bundles-only` 인데
+ *    "화면 16개 전부 통과" 를 찍으면, 로그만 보는 다음 사람이 화면도
+ *    검사된 줄 안다. 안 본 것은 "건너뜀" 이라고 적는다.
+ */
+const badBundles = PAGES_ONLY ? 0 : checkBundles()
+if (PAGES_ONLY) console.log('⏭  번들 검사 건너뜀 (--pages-only)')
 
-console.log(
-  bad === 0
-    ? `✅ 렌더된 ${paths.length}개 화면 전부 통과`
-    : `🔴 ${bad}/${paths.length} 화면에서 위반`,
-)
+if (BUNDLES_ONLY) {
+  console.log(`⏭  화면 검사 건너뜀 (--bundles-only · 대상 ${paths.length}개)`)
+} else {
+  console.log(
+    bad === 0
+      ? `✅ 렌더된 ${paths.length}개 화면 전부 통과`
+      : `🔴 ${bad}/${paths.length} 화면에서 위반`,
+  )
+}
 process.exit(bad === 0 && badBundles === 0 ? 0 : 1)
