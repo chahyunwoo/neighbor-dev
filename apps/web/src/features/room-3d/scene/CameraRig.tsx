@@ -333,6 +333,14 @@ export function CameraRig({
    * `null` 이면 걸 것이 없다(사용자가 비행을 중단시킨 경우).
    */
   const limitsAfterFly = useRef<Record<string, number> | null>(null)
+  /**
+   * 마지막으로 **비행을 시작시킨** 목표. `focusKey`(값) 와 `mode` 다.
+   *
+   * 🔴 왜 값인가: `focus` 는 부모(`Scene`)가 **매 렌더 새 객체**로 만든다.
+   *    참조를 deps 에 두면 리렌더마다 effect 가 돌아 비행이 처음부터 다시
+   *    시작된다 — 이슈 #88 의 절반이 이것이었다.
+   */
+  const lastTarget = useRef<string | null>(null)
 
   // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
   useEffect(() => {
@@ -516,6 +524,14 @@ export function CameraRig({
     onIntroDoor(true)
   }, [camera, controls, onEntered, onIntroDoor, onIntroStart, skipIntro])
 
+  /*
+   * 🔴 **초점을 값으로 식별한다** (#88).
+   *    `Scene` 의 `focus` 는 IIFE 가 매 렌더 새로 만든 객체라 참조가 늘 다르다.
+   *    이 문자열이 같으면 "같은 물건을 보고 있다" 는 뜻이다.
+   */
+  const focusKey = focus ? `${focus.center.join(',')}|${focus.radius}` : ''
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus 는 focusKey 로 식별한다(#88)
   useEffect(() => {
     const ctl = controls.current
     // 🔴 **입장이 끝나기 전에는 아무것도 하지 않는다.** 입장 중 리렌더가
@@ -549,6 +565,43 @@ export function CameraRig({
       position = target.clone().add(dir.multiplyScalar(dist))
     } else {
       position = new THREE.Vector3(...CAMERA_POSITION)
+    }
+
+    /*
+     * 🔴 **같은 목표로 다시 불렸으면 비행을 재시작하지 않는다** (이슈 #88).
+     *
+     *    라우트 전환 중 캔버스가 한 번에 안 바뀐다 — 상세는 본문 옆 좁은
+     *    배경이고 홈은 전체 화면이라, **25프레임에 걸쳐** 커진다(실측
+     *    2026-09-17: 605x900 → 1440x733). deps 에 `size` 가 있으므로 그동안
+     *    이 effect 가 매 프레임 돌았고, 그때마다 `start: performance.now()` 로
+     *    **비행이 처음부터 다시 시작**됐다. 카메라가 목표로 가다 말다를
+     *    반복하는 것이 사용자가 본 "덜덜 떨리면서 제자리로 간다" 다.
+     *
+     *    총 소요는 예산(1500ms) 안이라 **옛 프로브는 초록이었다** —
+     *    `verify-return` 이 정착 시간만 봤기 때문이다. 지금은 방향 반전도 센다.
+     *
+     * ⚠️ 목표가 **정말로** 바뀐 경우(다른 물건을 열었다·mode 가 바뀌었다)는
+     *    새 비행이 맞다. 그래서 `focusKey`+`mode` 로 가른다.
+     */
+    const targetKey = `${focusKey}@${mode}`
+    const sameTarget = lastTarget.current === targetKey
+    lastTarget.current = targetKey
+
+    if (sameTarget) {
+      if (fly.current && !fly.current.intro) {
+        // 날고 있다 — 시계(`start`)와 출발점은 그대로 두고 **도착만** 고쳐 잡는다.
+        fly.current.p1 = position
+        fly.current.t1 = target
+        return
+      }
+      /*
+       * 이미 착지했는데 캔버스만 바뀐 것 — **연출이 아니라 적응**이다.
+       * 새 비행을 걸면 리사이즈하는 내내 비행이 재시작된다. 즉시 맞춘다.
+       */
+      camera.position.copy(position)
+      ctl.target.copy(target)
+      ctl.update()
+      return
     }
 
     fly.current = {
@@ -656,7 +709,7 @@ export function CameraRig({
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
-  }, [focus, camera, controls, size.width, size.height, mode])
+  }, [focusKey, camera, controls, size.width, size.height, mode])
 
   /*
    * 🔴 **투영을 민다. 카메라를 옮기지 않는다** (시안 `setFrameShift`).
