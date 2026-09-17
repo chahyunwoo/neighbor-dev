@@ -46,9 +46,27 @@ function flattenStack(stack) {
  * `index.json` 의 domain 배열을 쓰고, 없으면 원본 project 문자열의 괄호 앞부분만.
  */
 function labelOf(project, indexEntry) {
-  // 익명 라벨이 지정된 건은 원본을 쓰지 않는다 (sanitize.mjs).
+  /*
+   * 🔴 **익명 라벨이 1순위다. 여기를 내리지 않는다.**
+   *    `anonymousLabelFor` 는 개인 사이트 도메인이 라벨로 나가는 것을 막는
+   *    방어선이고, 정본이 쓴 `headline` 을 그 위에 두면 사람이 손으로 쓴
+   *    문자열이 방어선을 우회한다. `verify-gates.py` 의 M2 가 그 자리에서
+   *    빨개지도록 설계돼 있다 — 우선순위를 뒤집으면 게이트가 먼저 말해준다.
+   */
   const fixed = anonymousLabelFor(project.id)
   if (fixed) return fixed
+
+  /*
+   * 화면용 한 줄. 정본이 비개발자 언어로 직접 쓴 값이다(#80).
+   *
+   * 🔴 **`??` 를 쓰지 않는다** — `"headline": ""` 이 통과해 카드 제목이 사라진다.
+   *    정본은 사람이 쓰는 파일이라 실제로 일어난다. trim 길이로 본다.
+   * 🔴 **아래 괄호 정리를 적용하지 않는다** — 사람이 화면용으로 쓴 값이라
+   *    가공하면 안 된다. `견적 요청(RFQ)` 처럼 괄호로 끝나면 통째로 날아간다.
+   */
+  const headline = typeof project.headline === 'string' ? project.headline.trim() : ''
+  if (headline) return headline
+
   const named = indexEntry?.project ?? project.project ?? project.id
   // "제목 (스택 나열)" 형태에서 괄호 뒤를 떼어 라벨을 짧게 만든다.
   return String(named)
