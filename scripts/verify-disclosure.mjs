@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * 생성된 공개 데이터를 12항목으로 검사한다. **데이터를 바꿀 때마다 돌린다.**
+ * 생성된 공개 데이터를 검사한다(항목 수는 `CHECK_NAMES.length`). **데이터를 바꿀 때마다 돌린다.**
+ *
+ * ⚠️ 주석에 숫자를 박지 않는다 — 항목이 늘 때마다 낡는다(실측: 12 라고 적혀 있는데 17 이었다).
  *
  * 한 건이라도 걸리면 종료코드 1 — CI·훅에서 그대로 게이트로 쓴다.
  */
@@ -21,6 +23,11 @@ import { realCompanyNames } from './source.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DATA = join(ROOT, 'data', 'generated', 'projects.json')
+/*
+ * 감사 명단은 `data/generated/` **밖**에 있다 — 앱의 `@data/*` 별칭이
+ * 그 폴더만 가리키므로 밖에 두면 앱이 부를 수 없다(#78). build-data.mjs 참고.
+ */
+const AUDIT = join(ROOT, 'data', 'audit.json')
 
 /*
  * 🔴 사명 목록은 source.mjs 가 만든다 — 정본을 못 찾으면 거기서 throw 한다.
@@ -84,7 +91,17 @@ function main() {
    *    실려도 안 잡히게 됐다(실측: verify-gates 의 M6 이 '못 잡음' 이 됐다).
    *    검사에 필요한 것과 화면에 나가는 것을 가른다.
    */
-  const audit = payload.audit ?? []
+  /*
+   * 🔴 **없으면 빈 배열로 넘어가지 않는다.** 전에 `payload.audit ?? []` 였는데,
+   *    그 형태는 명단이 통째로 사라져도 아래 건수 비교에서만 걸린다. 파일이
+   *    아예 없는 것은 "생성이 안 돌았다" 는 뜻이므로 그 자리에서 멈춘다 —
+   *    `source.mjs` 가 정본을 못 찾을 때 throw 하는 것과 같은 이유다.
+   */
+  if (!existsSync(AUDIT)) {
+    process.stderr.write(`감사 명단이 없다: ${AUDIT}\n먼저 \`pnpm data\` 를 돌린다.\n`)
+    process.exit(1)
+  }
+  const audit = JSON.parse(readFileSync(AUDIT, 'utf8'))
   if (audit.length !== all.length) {
     problems.push(`층배정: 감사 명단이 ${audit.length}건인데 게재는 ${all.length}건이다`)
   }

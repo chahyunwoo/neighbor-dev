@@ -1,0 +1,47 @@
+#!/bin/bash
+# 푸시 전 게이트 — **`main` 푸시가 곧 Vercel 배포다.** 여기가 마지막 방어선이다.
+#
+# 🔴 왜 pre-commit 이 아니라 pre-push 인가:
+#    번들 검사는 빌드 산출물(apps/web/.next/static)을 읽는다. 커밋마다 빌드하면
+#    너무 느리고, 정작 막아야 하는 것은 **공개되는 순간**이다.
+#
+# 🔴 왜 이 훅이 필요한가 (#78):
+#    감사 명단이 클라이언트 번들에 실려 나가던 것을 고치면서 검사기를 만들었는데,
+#    그 검사기를 **자동으로 부르는 곳이 한 곳도 없었다** — pnpm verify 에도,
+#    Stop 훅에도, pre-commit 에도 없고 CI 자체가 없다. 검사기가 있는 것과
+#    검사기가 도는 것은 다르다. 우회하지 말고 고쳐라.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 0
+
+fail=0
+
+# 🔴 **무엇을 빌드하는지 먼저 못박는다.**
+#    `next build` 는 워킹트리를 빌드한다 — 푸시하는 커밋이 아니다. 둘이 갈리면
+#    훅은 워킹트리를 검사하고 Vercel 은 커밋된 것을 빌드한다. 이 PR 이 원격
+#    `WEB_BASE_URL` 을 거부한 것과 **똑같은 형태의 어긋남**이라 여기서도 막는다.
+#    ⚠️ `data/generated/projects.json` 은 커밋되는 파일이면서 번들의 입력이고,
+#       `pnpm verify` 가 돌 때마다 재생성되므로 실제로 갈리기 쉽다.
+if ! git diff --quiet HEAD -- . 2>/dev/null; then
+  echo "🔴 워킹트리에 커밋 안 된 변경이 있다 — 훅이 검사할 것과 푸시될 것이 다르다."
+  git status --short | head -10
+  echo ""
+  echo "커밋하거나 stash 한 뒤 푸시한다."
+  exit 1
+fi
+
+# 빌드 산출물이 최신인지 보장할 방법이 없으므로 여기서 직접 만든다.
+# 캐시가 있으면 몇 초다(실측 2026-09-17: 2.1초).
+echo "→ 번들 검사용 prod 빌드"
+build_log=$(mktemp)
+if ! pnpm --filter @neighbor/web build >"$build_log" 2>&1; then
+  echo "🔴 prod 빌드 실패 — 번들 검사를 돌릴 수 없다."
+  tail -20 "$build_log"      # 이유를 감추지 않는다
+  rm -f "$build_log"
+  fail=1
+else
+  rm -f "$build_log"
+  # 서버를 띄우지 않는다. --bundles-only 는 디스크만 읽는다.
+  node scripts/verify-rendered.mjs --bundles-only || fail=1
+fi
+
+[ "$fail" -eq 0 ] || { echo ""; echo "푸시를 막았다. --no-verify 로 우회하지 않는다."; exit 1; }

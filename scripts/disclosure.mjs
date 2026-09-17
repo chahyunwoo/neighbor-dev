@@ -110,7 +110,7 @@ function findIssueKeys(text) {
   return hits
 }
 
-/** 검사 12항목. 각각 (이름, 찾는 함수). */
+/** 검사 17항목. 각각 (이름, 찾는 함수). */
 const SUMMARY_ONLY_IDS = new Set([
   'payment-gateway-api',
   'flow-logistics-frontend',
@@ -140,14 +140,29 @@ const DETAIL_PRIVATE_IDS = new Set([
 
 const CHECKS = [
   ['사설IP', findPrivateIps],
-  // 이메일. ⚠️ RFC 2606 이 문서용으로 못박은 도메인은 뺀다 — placeholder 의
-  //    `you@example.com` 이 유출로 잡혔다(실측 2026-09-09). 그 도메인들은
-  //    누구에게도 도달하지 않으므로 연락처가 아니다.
-  //    **example 이 붙은 것만** 뺀다. 다른 실제 도메인은 그대로 잡는다.
+  /*
+   * 이메일. ⚠️ RFC 2606 이 문서용으로 못박은 도메인은 뺀다 — placeholder 의
+   *    `you@example.com` 이 유출로 잡혔다(실측 2026-09-09). 그 도메인들은
+   *    누구에게도 도달하지 않으므로 연락처가 아니다.
+   *    **example 이 붙은 것만** 뺀다. 다른 실제 도메인은 그대로 잡는다.
+   *
+   * 🔴 **TLD 는 알파벳이고 오른쪽 경계가 있다.** 전에는 `\.[\w.]{2,}` 라
+   *    `next@16.3.4_` 같은 pnpm 경로를 이메일로 잡았다(번들 실측 4건).
+   *    ⚠️ 경계만 조이면 `hong@client.co.kr` 을 **놓친다** — 2단계 TLD 가
+   *    진짜 유출 시나리오다. 서브도메인 그룹을 함께 둬야 한다.
+   *
+   * 🔴 **룩어헤드에 `.` 을 넣지 않는다.** 한 번 넣었다가 회귀를 만들었다:
+   *    `(?![\w.+-])` 로 쓰면 `문의는 hong@client.co.kr.` 처럼 **문장 끝
+   *    마침표가 붙은 이메일을 통째로 못 잡는다**(짧게 끊는 게 아니라 0건).
+   *    한국어 문장은 마침표로 끝나므로 실제 경로다. `.` 을 빼도 pnpm 경로는
+   *    여전히 안 잡힌다 — TLD 를 알파벳으로 못박은 쪽이 일을 하기 때문이다.
+   *    실측 2026-09-17: 진짜 이메일 5/5(마침표·하이픈 뒤따름 포함) ·
+   *    pnpm 경로 5종 0/5 · 번들 24개에서 새 오탐 0건.
+   */
   [
     '이메일',
     (t) =>
-      [...t.matchAll(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g)]
+      [...t.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-zA-Z]{2,}(?![\w+-])/g)]
         .map((m) => m[0])
         .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a)),
   ],
@@ -189,6 +204,32 @@ const CHECKS = [
    */
   ['요약건저장소명', (t) => [...SUMMARY_ONLY_IDS].filter((id) => t.includes(id))],
   ['상세건저장소명', (t) => [...DETAIL_PRIVATE_IDS].filter((id) => t.includes(id))],
+  /*
+   * 하이픈 형태 **전반**. 위 `상세건저장소명` 은 정확한 id 4개만, `개인도메인` 은
+   * 점 형태만 본다 — 그 사이가 비어 있다. `hyunwoo-dev 블로그` 나
+   * `hyunwoo-dev-newthing` 처럼 쓰면 **둘 다 통과한다.**
+   *
+   * ⚠️ 위양성 0건을 확인하고 넣었다(실측 2026-09-17): 게재분·렌더 HTML·번들 청크
+   *    전부 0건. 정본에는 37군데 있지만 그건 산출물로 안 나가는 작업 노트다.
+   */
+  [
+    '개인도메인하이픈',
+    (t) => {
+      // 왼쪽 경계를 준다 — 없으면 `xhyunwoo-dev` 도 잡는다. 대소문자는 무시한다.
+      const re = new RegExp(`(?<![\\w-])${['hyunwoo', 'dev'].join('-')}(-[\\w-]+)?`, 'gi')
+      /*
+       * 🔴 **값을 돌려주지 않는다.** 호출부가 hits 를 그대로 출력하므로
+       *    걸리는 날 로그에 개인 도메인이 찍힌다 — 그 로그가 곧 유출이다.
+       *    바로 위 `개인도메인` 이 플레이스홀더를 쓰는 것과 같은 이유다.
+       *
+       * ⚠️ **건수를 문자열 안에 접는다.** 같은 플레이스홀더를 n 개 돌려주면
+       *    `scanText` 의 `[...new Set(hits)]` 가 중복을 지워 **몇 건이 걸려도
+       *    항상 1건**으로 보고된다(실측). 게이트는 빨개지지만 범위를 못 읽는다.
+       */
+      const n = [...t.matchAll(re)].length
+      return n > 0 ? [`<개인 도메인(하이픈)> ${n}건`] : []
+    },
+  ],
   [
     '호스트명·포트',
     (t) => [...t.matchAll(/\b[\w-]+\.(local|internal|lan|home)\b(:\d+)?/gi)].map((m) => m[0]),
@@ -208,13 +249,38 @@ const CHECKS = [
 
 export const CHECK_NAMES = CHECKS.map(([name]) => name)
 
+/*
+ * 빌드된 JS 청크에 돌릴 검사 목록.
+ *
+ * 🔴 **전부 돌리면 못 쓴다.** minify 된 코드에서 오탐이 쏟아진다 —
+ *    실측 2026-09-17: `a.internal`·`n.internal`(프로퍼티 접근) 7건,
+ *    `RGB-0`·`PI-1`(상수명) 2건, `next@16.3.4_`(pnpm 경로) 4건.
+ *
+ * 🔴 **이메일은 빼지 않는다.** 처음엔 뺐는데, 오탐 4건이 전부 정규식이 느슨해서
+ *    생긴 것이었다(TLD 자리에 숫자·언더스코어를 허용했다). 정규식을 정확하게
+ *    고치니 오탐이 0 이 됐다 — **검사를 빼는 대신 검사를 맞게 고치는 쪽**이다.
+ *    번들에서 이메일만 잡을 수 있는 경로가 실제로 있다: 문의 폼의 placeholder
+ *    (`entities/contact`)가 클라이언트 번들에 실리고, 그게 언젠가 실주소로
+ *    바뀌면 나머지 검사는 **하나도 안 잡는다**(`내부URL`·`트래커경로` 는
+ *    스킴·경로 형태만 본다).
+ *
+ * ⚠️ 남은 둘(`호스트명·포트`·`이슈키`)은 minify 코드의 프로퍼티 접근·상수명과
+ *    구조적으로 구별이 안 된다. 다만 스킴 붙은 내부 호스트는 `내부URL` 이,
+ *    경로형 이슈키는 `트래커경로` 가 덮는다. `층규칙` 은 구조 검사라 텍스트에 안 건다.
+ */
+export const BUNDLE_CHECKS = CHECK_NAMES.filter(
+  (n) => !['호스트명·포트', '이슈키', '층규칙'].includes(n),
+)
+
 /**
- * 텍스트 검사 10종을 돌린다. `extraCompanyNames` 가 오면 회사표기 검사에 쓴다.
+ * 텍스트 검사를 돌린다. `extraCompanyNames` 가 오면 회사표기 검사에 쓴다.
+ * `only` 에 검사명 배열을 주면 그것만 돌린다(번들 청크용 — BUNDLE_CHECKS 참고).
  * @returns {{check: string, hits: string[]}[]} 걸린 것만
  */
-export function scanText(text, extraCompanyNames = []) {
+export function scanText(text, extraCompanyNames = [], only = null) {
   const findings = []
   for (const [name, find] of CHECKS) {
+    if (only && !only.includes(name)) continue
     let hits = find(text)
     if (name === '회사표기' && extraCompanyNames.length > 0) {
       hits = extraCompanyNames.filter((n) => n.length >= 2 && text.includes(n))
