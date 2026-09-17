@@ -43,3 +43,14 @@ pnpm-debug.log*
 .turbo/
 *.local
 .wip/
+
+# 로컬 전용 Claude Code 설정 — 사람마다 다르다.
+# 전역 gitignore 에도 있지만 여기 적어야 biome 의 useIgnoreFile 이 본다
+# (biome 은 저장소 .gitignore 만 읽는다).
+.claude/settings.local.json
+
+# 🔴 감사 명단 — **커밋하지 않는다.** 내부 식별자(정본 저장소명)가 들어 있고
+#    이 저장소는 PUBLIC 이다. 전에는 이 데이터가 data/generated/projects.json
+#    안에 있어 2026-09-09~09-17 GitHub 에 공개돼 있었다(#78 조사 중 발견).
+#    검사기가 쓰는 파일이고 `pnpm data` 가 언제든 다시 만든다.
+data/audit.json

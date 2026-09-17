@@ -189,6 +189,21 @@ const CHECKS = [
    */
   ['요약건저장소명', (t) => [...SUMMARY_ONLY_IDS].filter((id) => t.includes(id))],
   ['상세건저장소명', (t) => [...DETAIL_PRIVATE_IDS].filter((id) => t.includes(id))],
+  /*
+   * 하이픈 형태 **전반**. 위 `상세건저장소명` 은 정확한 id 4개만, `개인도메인` 은
+   * 점 형태만 본다 — 그 사이가 비어 있다. `hyunwoo-dev 블로그` 나
+   * `hyunwoo-dev-newthing` 처럼 쓰면 **둘 다 통과한다.**
+   *
+   * ⚠️ 위양성 0건을 확인하고 넣었다(실측 2026-09-17): 게재분·렌더 HTML·번들 청크
+   *    전부 0건. 정본에는 37군데 있지만 그건 산출물로 안 나가는 작업 노트다.
+   */
+  [
+    '개인도메인하이픈',
+    (t) =>
+      [...t.matchAll(new RegExp(`${['hyunwoo', 'dev'].join('-')}(-[\\w-]+)?`, 'g'))].map(
+        (m) => m[0],
+      ),
+  ],
   [
     '호스트명·포트',
     (t) => [...t.matchAll(/\b[\w-]+\.(local|internal|lan|home)\b(:\d+)?/gi)].map((m) => m[0]),
@@ -208,13 +223,31 @@ const CHECKS = [
 
 export const CHECK_NAMES = CHECKS.map(([name]) => name)
 
+/*
+ * 빌드된 JS 청크에 돌릴 검사 목록.
+ *
+ * 🔴 **전부 돌리면 못 쓴다.** minify 된 코드에서 오탐이 쏟아진다 —
+ *    실측 2026-09-17: `a.internal`·`n.internal`(프로퍼티 접근) 7건,
+ *    `RGB-0`·`PI-1`(상수명) 2건, `next@16.3.4_`(pnpm 경로) 4건.
+ *    그래서 `호스트명·포트`·`이슈키`·`이메일` 셋을 뺐다.
+ *
+ * ⚠️ 이건 "오탐을 걸러내는 쪽으로 고치는 것" 이 아니다 — 검사 자체는 그대로 두고
+ *    **대상이 다르니 거는 항목을 고른다.** HTML 에는 여전히 16종 전부 건다.
+ *    청크에서 막아야 하는 것은 식별자·사명·도메인이지 이메일 형태가 아니다.
+ */
+export const BUNDLE_CHECKS = CHECK_NAMES.filter(
+  (n) => !['호스트명·포트', '이슈키', '이메일', '층규칙'].includes(n),
+)
+
 /**
- * 텍스트 검사 10종을 돌린다. `extraCompanyNames` 가 오면 회사표기 검사에 쓴다.
+ * 텍스트 검사를 돌린다. `extraCompanyNames` 가 오면 회사표기 검사에 쓴다.
+ * `only` 에 검사명 배열을 주면 그것만 돌린다(번들 청크용 — BUNDLE_CHECKS 참고).
  * @returns {{check: string, hits: string[]}[]} 걸린 것만
  */
-export function scanText(text, extraCompanyNames = []) {
+export function scanText(text, extraCompanyNames = [], only = null) {
   const findings = []
   for (const [name, find] of CHECKS) {
+    if (only && !only.includes(name)) continue
     let hits = find(text)
     if (name === '회사표기' && extraCompanyNames.length > 0) {
       hits = extraCompanyNames.filter((n) => n.length >= 2 && text.includes(n))

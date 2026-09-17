@@ -18,6 +18,17 @@ import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = join(ROOT, 'data', 'generated')
 
+/*
+ * 🔴 **감사 명단은 `data/generated/` 밖에 둔다.** 앱의 경로 별칭이
+ *    `@data/*` → `data/generated/*` 이므로(`apps/web/tsconfig.json`),
+ *    여기에 두면 앱에서 `@data/` 로 **부를 수 없다.** 상대경로(`../`)는
+ *    FSD 검사기가 이미 막는다 — 구조가 차단하지 사람이 조심하는 게 아니다.
+ *
+ *    같은 폴더에 두면 안 되는 이유는 실측으로 나왔다(#78): `projects.json`
+ *    하나를 통째로 default import 하면 **타입에 없는 키까지 번들에 실린다.**
+ */
+const AUDIT_FILE = join(ROOT, 'data', 'audit.json')
+
 // 경로 해석과 읽기는 source.mjs 하나가 맡는다 — 못 찾으면 거기서 throw 한다.
 const readProjects = readSourceProjects
 
@@ -155,26 +166,29 @@ function main() {
     counts: { detail: detail.length, summary: summary.length, excluded: excluded.length },
     detail,
     summary,
-    /*
-     * 🔴 **감사용 명단.** 어느 정본 항목이 어느 층으로 나갔는지 검사기가
-     *    확인할 수 있게 남긴다. 화면은 이걸 **절대 렌더하지 않는다.**
-     *
-     *    경력 요약 건의 `id` 는 저장소명이라 공개 항목에서 뺐는데
-     *    (`tiers.mjs` 의 ALLOWED_FIELDS 참고), 그러자 층 배정 검사가
-     *    `p.id` 를 못 읽어 **게재 금지 건이 실려도 안 잡히게 됐다**
-     *    (실측: verify-gates 의 M6 이 '못 잡음' 으로 바뀌었다).
-     *    검사에 필요한 것과 화면에 나가는 것을 가른다.
-     *
-     * ⚠️ 이 파일은 저장소에 커밋되지만 **번들에 들어가지 않는다** —
-     *    `lib/projects.ts` 가 detail·summary 만 읽는다. 확인:
-     *      curl -s localhost:3200/career | grep -c cafe24   → 0
-     */
-    audit: [
-      ...detail.map((p, i) => ({ tier: p.tier, id: detailIds[i] })),
-      ...summary.map((p, i) => ({ tier: p.tier, id: summaryIds[i] })),
-    ],
   }
   writeFileSync(join(OUT_DIR, 'projects.json'), `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+
+  /*
+   * 🔴 **감사용 명단 — 별도 파일.** 어느 정본 항목이 어느 층으로 나갔는지
+   *    검사기가 확인할 수 있게 남긴다. 경력 요약 건의 `id` 는 저장소명이라
+   *    공개 항목에서 뺐는데(`tiers.mjs` 의 ALLOWED_FIELDS), 그러자 층 배정
+   *    검사가 `p.id` 를 못 읽어 **게재 금지 건이 실려도 안 잡히게 됐다**
+   *    (실측: verify-gates 의 M6 이 '못 잡음' 으로 바뀌었다).
+   *    검사에 필요한 것과 화면에 나가는 것을 가른다.
+   *
+   * ⚠️ **전에는 이걸 payload 안에 뒀다가 번들로 샜다**(#78). 주석에는
+   *    "번들에 들어가지 않는다" 고 적혀 있었고 확인 명령이
+   *    `curl /career | grep -c` 였다 — **HTML 만 봤다.** 실제로는
+   *    `'use client'` 인 3D 씬이 `@data/projects.json` 을 통째로 import 해
+   *    타입에 없는 `audit` 까지 청크에 실렸다.
+   *    지금은 `verify-rendered.mjs` 가 청크까지 훑는다.
+   */
+  const audit = [
+    ...detail.map((p, i) => ({ tier: p.tier, id: detailIds[i] })),
+    ...summary.map((p, i) => ({ tier: p.tier, id: summaryIds[i] })),
+  ]
+  writeFileSync(AUDIT_FILE, `${JSON.stringify(audit, null, 2)}\n`, 'utf8')
 
   process.stdout.write(
     `생성: data/generated/projects.json\n` +

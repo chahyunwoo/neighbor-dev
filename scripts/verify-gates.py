@@ -150,6 +150,90 @@ else:
     res.append(('G1 사명 검사가 실제로 잡는가','✅ 잡힘' if caught else '❌ 못 잡음', detail))
 
 restore()
+
+# ── G2·G3. 번들 청크 검사가 *지금 실제로* 잡는가 (#78) ──────────────────
+#
+# 🔴 실측 2026-09-17: 검사용 감사 명단이 `'use client'` 인 3D 씬을 통해 JS 청크에
+#    실려 내부 식별자 16건이 서빙되고 있었다. **HTML 에는 한 글자도 없어서**
+#    `verify-rendered.mjs` 가 초록이었다 — 그 파일이 `r.text()` 로 페이지 HTML 만
+#    봤기 때문이다. 막으려고 만든 `상세건저장소명` 검사는 이미 있었는데
+#    **보는 곳에 없었다.** 「검사기가 있다 ≠ 검사기가 잡는다」가 또 반복됐다.
+#
+# M1~M8 과 달리 `verify-disclosure` 가 아니라 `verify-rendered` 를 돌린다.
+# 빌드가 필요하다(실측 2.1초, 캐시 있을 때).
+
+def run_rendered():
+    return run('node scripts/verify-rendered.mjs')
+
+# G2 — 검사기가 번들 안의 내부 식별자를 잡는가. 청크에 탐침을 직접 심는다.
+#      ⚠️ 빌드 산출물을 건드리므로 **반드시 되돌린다.** 다음 빌드가 덮어쓰지만
+#         그 사이에 다른 검사가 돌면 오탐이 난다.
+import glob as _glob
+_chunks = sorted(_glob.glob(os.path.join(ROOT,'apps/web/.next/static','**','*.js'), recursive=True))
+if not _chunks:
+    res.append(('G2 번들 검사가 내부 식별자를 잡는가','❌ 준비 실패','.next/static 에 .js 가 없다 — 먼저 빌드한다'))
+else:
+    _target=_chunks[0]
+    _bk=os.path.join(BK,'chunk.bak'); shutil.copy(_target,_bk)
+    try:
+        # 심는 값은 정본 id 가 아니라 **게재되지 않은 id** 여야 한다.
+        # 게재 id 는 공개 URL 슬러그라 위반이 아니다(정상 노출).
+        _audit=json.load(io.open(os.path.join(ROOT,'data','audit.json'),encoding='utf-8'))
+        _pub={p['id'] for p in json.load(
+            io.open(os.path.join(ROOT,'data','generated','projects.json'),encoding='utf-8'))['detail']}
+        _probe=next((a['id'] for a in _audit if a['id'] not in _pub), None)
+        if _probe is None:
+            res.append(('G2 번들 검사가 내부 식별자를 잡는가','❌ 준비 실패','비공개 id 가 없다'))
+        else:
+            with io.open(_target,'a',encoding='utf-8') as _f:
+                _f.write(f'\n// MUTATION {_probe}\n')   # 값은 아래에서 찍지 않는다
+            _rc,_out=run_rendered()
+            _caught=(_rc!=0) and ('내부식별자' in _out)
+            res.append(('G2 번들 검사가 내부 식별자를 잡는가','✅ 잡힘' if _caught else '❌ 못 잡음',
+                        '기대=내부식별자 | ' + (' / '.join(
+                          l.strip().lstrip('🔴 ') for l in _out.splitlines() if '🔴' in l)[:160]
+                          or _out.strip()[:120])))
+    finally:
+        shutil.copy(_bk,_target)
+
+# G3 — audit 분리를 되돌리면(= #78 재발) 잡히는가. 소스 뮤테이션 + 실제 빌드.
+_bd=os.path.join(ROOT,'scripts','build-data.mjs')
+_src=io.open(_bd,encoding='utf-8').read()
+_anchor="""    counts: { detail: detail.length, summary: summary.length, excluded: excluded.length },
+    detail,
+    summary,
+  }"""
+if _src.count(_anchor)!=1:
+    res.append(('G3 audit 을 payload 로 되돌리면 잡히는가','❌ 앵커 불일치',
+                f'count={_src.count(_anchor)} — no-op, 뮤테이션 무효'))
+else:
+    _mut=_anchor.replace("""    summary,
+  }""","""    summary,
+    audit: [   // MUTATION
+      ...detail.map((p, i) => ({ tier: p.tier, id: detailIds[i] })),
+      ...summary.map((p, i) => ({ tier: p.tier, id: summaryIds[i] })),
+    ],
+  }""")
+    io.open(_bd,'w',encoding='utf-8').write(_src.replace(_anchor,_mut))
+    assert 'MUTATION' in io.open(_bd,encoding='utf-8').read()
+    try:
+        run('node scripts/build-data.mjs')
+        _rcb,_outb=run('pnpm --filter @neighbor/web build')
+        if _rcb!=0:
+            res.append(('G3 audit 을 payload 로 되돌리면 잡히는가','❌ 빌드 실패',_outb.strip()[-160:]))
+        else:
+            _rc,_out=run_rendered()
+            _caught=(_rc!=0) and ('내부식별자' in _out)
+            res.append(('G3 audit 을 payload 로 되돌리면 잡히는가','✅ 잡힘' if _caught else '❌ 못 잡음',
+                        '기대=내부식별자 | ' + (' / '.join(
+                          l.strip().lstrip('🔴 ') for l in _out.splitlines() if '🔴' in l)[:160]
+                          or _out.strip()[:120])))
+    finally:
+        restore()
+        run('node scripts/build-data.mjs')
+        run('pnpm --filter @neighbor/web build')   # 잔재가 청크에 남지 않게 다시 빌드한다
+
+restore()
 rc,o1=run('node scripts/build-data.mjs'); rc2,o2=run('node scripts/verify-disclosure.mjs')
 print('=== 뮤테이션 결과 ===')
 for n,v,d in res: print(f'{v}  {n}\n      {d}')
