@@ -295,7 +295,7 @@ export function scanText(text, extraCompanyNames = [], only = null) {
  * 지난 세션의 사고가 정확히 이것이므로 구조로 검사한다.
  */
 export function checkTierRules(projects) {
-  const DETAIL_ONLY = ['problem', 'decisions', 'metrics', 'role', 'scale']
+  const DETAIL_ONLY = ['cardBody', 'problem', 'decisions', 'metrics', 'role', 'scale']
   const violations = []
   for (const p of projects) {
     if (p.tier !== 'summary') continue

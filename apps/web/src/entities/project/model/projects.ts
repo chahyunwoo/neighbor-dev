@@ -54,6 +54,14 @@ export interface Metric {
 export interface DetailProject extends BaseProject {
   tier: 'detail'
   role?: string
+  /**
+   * 카드 본문 한 문장(#84) — **목록을 훑는 발주자가 읽는 자리**다.
+   *
+   * 🔴 `problem` 과 바꿔 쓰지 않는다. `problem` 은 상세 화면의
+   *    「무엇이 문제였나」로, 더 읽으러 들어온 사람이 읽는 사실 기록이다.
+   *    카드에서 그것을 잘라 쓰던 것이 #84 에서 고친 문제다.
+   */
+  cardBody?: string
   problem?: string
   decisions?: Decision[]
   metrics?: Metric[]

@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { anonymousLabelFor, publicIdFor, sanitizeDeep } from './sanitize.mjs'
+import { anonymousCardBodyFor, anonymousLabelFor, publicIdFor, sanitizeDeep } from './sanitize.mjs'
 import { readSourceIndex, readSourceProjects } from './source.mjs'
 import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
 
@@ -74,6 +74,26 @@ function labelOf(project, indexEntry) {
     .trim()
 }
 
+/**
+ * 카드 본문 한 문장(#84). **제목과 두 자리의 독자가 다르다** —
+ * 카드는 목록을 훑는 발주자가 읽고, 상세의 「무엇이 문제였나」(`problem`)는
+ * 더 읽으러 들어온 사람이 읽는다. 그래서 `problem` 을 자르지 않고 따로 둔다.
+ *
+ * 🔴 **익명 본문이 1순위다** — `labelOf` 와 같은 이유(방어선을 정본 자유
+ *    텍스트가 우회하지 못하게). 순서를 뒤집으면 개인 도메인이 본문으로 나간다.
+ * 🔴 **`??` 를 쓰지 않는다** — `"cardBody": ""` 가 통과해 카드 본문이 빈 채
+ *    자리만 차지한다. 정본은 사람이 쓰는 파일이라 실제로 일어난다.
+ * ⚠️ 없으면 `undefined` 를 돌려준다 — **`problem` 으로 폴백하지 않는다.**
+ *    폴백하면 #84 가 고치려던 개발자 언어가 조용히 되돌아온다.
+ */
+function cardBodyOf(project) {
+  const fixed = anonymousCardBodyFor(project.id)
+  if (fixed) return fixed
+
+  const body = typeof project.cardBody === 'string' ? project.cardBody.trim() : ''
+  return body || undefined
+}
+
 /** metric 에서 클라이언트 트래커 접두사가 박힌 것은 항목 통째로 제외한다. */
 function usableMetrics(metrics) {
   return (metrics ?? []).filter((m) => {
@@ -118,6 +138,7 @@ function project2public(project, indexEntry, tier) {
     commissioned: isCommissioned(project),
     stack: flattenStack(project.stack),
     role: project.role,
+    cardBody: cardBodyOf(project),
     problem: project.problem ?? indexEntry?.problemSummary,
     decisions: project.decisions,
     metrics: usableMetrics(project.metrics),
