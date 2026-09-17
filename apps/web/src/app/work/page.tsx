@@ -31,6 +31,24 @@ export const metadata: Metadata = {
 export default function WorkPage() {
   const detail = getDetailProjects()
   const summary = getSummaryProjects()
+  /*
+   * 🔴 **층을 한 번 더 가른다 — 의뢰받은 일인가.**
+   *
+   *    `clientSafe`(공개 가능 여부)로만 가르면 **의뢰냐 개인이냐가 화면에
+   *    안 드러난다.** 실측 2026-09-17: 큰 카드 10장 중 **7장이 본인 개인
+   *    사이트·도구**였고, 그 7장의 제목이 전부 `모노레포 — OpenAPI 타입
+   *    파이프라인` 같은 개발자 언어였다(제목 8/10 · 도메인 7/10 에 기술 용어).
+   *    정작 `커머스 · 물류 · 위성영상` 처럼 **비개발자가 읽는 것은 전부
+   *    의뢰받은 일**인데 아래 작은 줄에 깔려 있었다.
+   *
+   *    기획서 1절: *"발주자는 내 프로젝트가 어떻게 될지를 보러 오지,
+   *    개발자의 서재를 구경하러 오지 않는다."*
+   *
+   * ⚠️ 공개 수준(기획서 3절의 층 규칙)은 **그대로다.** 바꾸는 것은 화면 비중뿐이고,
+   *    개인 7건도 `detail` 이라 **상세 링크를 유지**한다 — 크기만 줄인다.
+   */
+  const commissioned = detail.filter((p) => p.commissioned)
+  const own = detail.filter((p) => !p.commissioned)
 
   return (
     <>
@@ -58,14 +76,14 @@ export default function WorkPage() {
          */}
         <section className={styles.section}>
           <Reveal className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>사례</h2>
+            <h2 className={styles.sectionTitle}>의뢰받아 만든 것</h2>
             <span className={styles.sectionNote}>
-              {detail.length}건 · 문제와 그때 내린 판단까지
+              {commissioned.length}건 · 문제와 그때 내린 판단까지
             </span>
           </Reveal>
           {/* 카드는 하나씩 차례로 들어온다(`RevealGroup` 의 stagger). */}
           <RevealGroup className={styles.cards}>
-            {detail.map((p) => (
+            {commissioned.map((p) => (
               <RevealItem key={p.id} as="article">
                 <DetailCard project={p} />
               </RevealItem>
@@ -75,8 +93,8 @@ export default function WorkPage() {
 
         <section className={styles.section}>
           <Reveal className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>경력</h2>
-            <span className={styles.sectionNote}>{summary.length}건 · 도메인과 기술만</span>
+            <h2 className={styles.sectionTitle}>의뢰받아 만든 것 — 상세는 못 적습니다</h2>
+            <span className={styles.sectionNote}>{summary.length}건 · 분야와 기간만</span>
           </Reveal>
           <RevealGroup className={styles.rows}>
             {summary.map((p) => (
@@ -89,8 +107,28 @@ export default function WorkPage() {
           <p className={styles.note}>
             위 {summary.length}건은 계약상 화면과 세부 판단을 공개할 수 없습니다.
             <br />
-            도메인과 쓴 기술까지만 적었습니다 — 없는 일을 지어내지 않기 위해 남겨둡니다.
+            분야와 기간까지만 적었습니다 — 없는 일을 지어내지 않기 위해 남겨둡니다.
           </p>
+        </section>
+
+        {/*
+         * 🔴 **직접 만든 것은 목록으로 내린다.** 같은 크기의 카드로 두면
+         *    화면의 대부분을 차지하면서 "이 사람은 자기 블로그를 일곱 번
+         *    만들었네" 로 읽힌다(기획서 3절이 경고한 "취미 개발자" 위험).
+         *    상세 링크는 그대로 둔다 — 볼 사람은 본다.
+         */}
+        <section className={styles.section}>
+          <Reveal className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>직접 만들어 쓰는 것</h2>
+            <span className={styles.sectionNote}>{own.length}건 · 이 사이트를 포함해</span>
+          </Reveal>
+          <RevealGroup className={styles.rows}>
+            {own.map((p) => (
+              <RevealItem key={p.id}>
+                <OwnRow project={p} />
+              </RevealItem>
+            ))}
+          </RevealGroup>
         </section>
       </PageShell>
     </>
@@ -146,6 +184,27 @@ function DetailCard({ project }: { project: DetailProject }) {
          * 바로 눈에 든다(실측: peek 3 이면 카드 10장에 태그만 27개가 깔렸다).
          */}
         <StackTags names={displayStack(project.stack)} peek={2} label={project.label} />
+      </div>
+    </Link>
+  )
+}
+
+/**
+ * 직접 만들어 쓰는 것 — **한 줄 행이되 상세로 갈 수 있다.**
+ *
+ * 🔴 `SummaryRow` 와 형태는 같지만 **링크가 있다.** 이 7건은 `detail` 층이라
+ *    문제·판단·수치가 다 있다 — 공개 못 해서 줄인 것이 아니라 **방문자가
+ *    먼저 볼 것이 아니어서** 줄인 것이다. 그 차이를 형태가 아니라 링크로 둔다.
+ */
+function OwnRow({ project }: { project: DetailProject }) {
+  const domains = pickDomains(project.domain)
+  return (
+    <Link href={`/work/${project.id}`} className={styles.rowLink}>
+      {domains.length ? <p className={styles.rowDomain}>{domains.join(' · ')}</p> : null}
+      <span className={styles.rowLabel}>{project.label}</span>
+      <span className={styles.rowPeriod}>{project.period}</span>
+      <div className={styles.rowStack}>
+        <StackTags names={displayStack(project.stack)} peek={3} label={project.label} />
       </div>
     </Link>
   )
