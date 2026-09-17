@@ -162,30 +162,34 @@ html {
  *    아래 기본값은 측정 전 한 프레임을 위한 것이고 실측값과 같다.
  */
 /*
- * 🔴 **페이지 진입 애니메이션이 스크롤바를 만들던 것을 막는다** (이슈 #24).
+ * 🔴 **`body { overflow-y: clip }` 을 걷어냈다 — 그게 사이트를 못 쓰게 만들고 있었다.**
  *
- *    `template.tsx` 의 `pageIn` 이 `y:10` 에서 0 으로 올라오는데, 홈은
- *    `.page` 가 `height:100dvh` 라 그동안 문서가 **뷰포트+10px** 이 되어
- *    스크롤바가 나타났다 사라졌다 — 실측 2026-09-10: 220~680ms 28프레임, 3회 재현.
+ *    이슈 #24(첫 페인트 스크롤바 깜빡임)를 막으려고 `@media (min-width: 901px)
+ *    and (prefers-reduced-motion: no-preference)` 에 걸어 뒀는데,
+ *    **그 미디어쿼리는 3D 여부를 안 본다.** 주석은 "본문이 긴 화면(`/work` 등)은
+ *    스크롤이 필요하므로 건드리지 않는다" 고 말했지만 **의도가 구현된 적이 없었다.**
+ *    홈이 `height:100dvh` 라 안 넘쳐서 안 드러났을 뿐이다.
  *
- *    3D 를 쓰는 화면(=한 화면에 담기는 화면)에서만 막는다. 본문이 긴 화면
- *    (`/work` 등)은 스크롤이 필요하므로 건드리지 않는다.
+ *    실측 2026-09-17 (1440x900, 실제 휠 30회):
+ *      /work              문서 2461 · 끝 1561 → 휠로 간 곳 **0**
+ *      /work/claude-board 문서 2382 · 끝 1482 → **0**
+ *      /diagnose(긴 결과) 문서 2762 · 끝 1862 → **97**
+ *    `/work` 는 사례 카드 대부분을 못 봤다. 모바일(420px)만 정상이었다 —
+ *    그 미디어쿼리 밖이라서.
  *
- * ⚠️ `overflow:hidden` 이 아니라 `clip` 이다 — `hidden` 은 스크롤 컨테이너를
- *    만들어 `position:sticky` 나 스크롤 앵커링에 영향을 준다.
+ * 🔴 **그리고 막을 대상이 이미 없었다.** 근거였던 `template.tsx` 의 `pageIn`
+ *    (y 10px 이동)은 #35 에서 걷어냈고, 지금 그 파일은 `return children` 뿐이다.
+ *    **근거가 사라진 방어가 남아 사이트를 망가뜨린 것**이다.
+ *
+ * ⚠️ 홈의 깜빡임은 다른 곳에서 이미 막힌다 — `page.module.css` 의
+ *    `html[data-canvas-mode="room"] .page { height:100dvh; overflow:hidden }`.
+ *    `verify-noscroll` 이 그 재발을 계속 본다.
+ *
+ * ⚠️ **방어를 넣을 때는 그 방어가 무엇을 깨뜨리는지도 같이 잰다.**
+ *    `verify-noscroll` 은 "스크롤바가 안 생기는가" 만 보고
+ *    "**되기는 하는가**" 를 안 봤다 — 그래서 20종이 전부 초록이었다.
+ *    `verify-scroll` 이 그 반대 방향을 본다.
  */
-/*
- * ⚠️ **`data-canvas-mode` 로 걸면 늦다.** 그 속성은 하이드레이션 후에 붙는데
- *    넘침은 216ms 부터 시작한다 — 실측: 그 조건으로는 28프레임 중 5프레임이
- *    남았다(스크롤바가 실제로 보인 구간).
- *    3D 가부와 같은 조건을 **미디어쿼리로** 써서 첫 페인트부터 적용한다.
- *    값은 `lib/can-3d.ts` 의 `NARROW_QUERY`·`REDUCED_QUERY` 와 같아야 한다.
- */
-@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  body {
-    overflow-y: clip;
-  }
-}
 
 html[data-canvas-mode="room"] {
   --cv-top: var(--nav-h, 97px);
