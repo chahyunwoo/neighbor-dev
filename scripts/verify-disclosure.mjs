@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   CHECK_NAMES,
+  checkCardBody,
   checkMetricEvidence,
   checkNoPdfGeneration,
   checkPeriodCutoff,
@@ -109,12 +110,17 @@ function main() {
     problems.push(`층배정: ${v.id} — ${v.reason}`)
   }
 
-  // 13. 게재 컷 — 2025.04 이전 건이 실렸는가
+  // 13. 카드 본문 — 카드로 그려지는데 본문이 없는가 (#84)
+  for (const v of checkCardBody(all)) {
+    problems.push(`카드본문: ${v.id} — 카드로 그려지는데 cardBody 가 없다`)
+  }
+
+  // 14. 게재 컷 — 2025.04 이전 건이 실렸는가
   for (const v of checkPeriodCutoff(all)) {
     problems.push(`게재컷: ${v.id} — ${v.reason}`)
   }
 
-  // 14. 소스에 PDF 생성 의존성이 들어왔는가 (CLAUDE.md 4번)
+  // 15. 소스에 PDF 생성 의존성이 들어왔는가 (CLAUDE.md 4번)
   for (const dep of checkNoPdfGeneration(readManifests())) {
     problems.push(`PDF생성의존성: ${dep} — 이력서 PDF 기능은 이 사이트에 구현하지 않는다`)
   }

@@ -174,9 +174,15 @@ function DetailCard({ project }: { project: DetailProject }) {
        */}
       {domains.length ? <p className={styles.cardDomain}>{domains.join(' · ')}</p> : null}
       <h3 className={styles.cardTitle}>{project.label}</h3>
-      {project.problem ? (
+      {/*
+       * 🔴 **본문은 `cardBody` 다 — `problem` 으로 폴백하지 않는다**(#84).
+       *    제목을 발주자 언어로 바꿔놓고(#80) 두 줄 아래서 `KO/KI 배리어` 가
+       *    나오던 것이 이 자리였다. `problem` 은 상세 화면의 사실 기록이고
+       *    두 자리의 독자가 다르다 — 없으면 본문 없이 둔다.
+       */}
+      {project.cardBody ? (
         <p className={styles.cardProblem}>
-          <RichText>{project.problem}</RichText>
+          <RichText>{project.cardBody}</RichText>
         </p>
       ) : null}
       <div className={styles.cardFoot}>

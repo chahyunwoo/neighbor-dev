@@ -74,6 +74,28 @@ function labelOf(project, indexEntry) {
     .trim()
 }
 
+/**
+ * 카드 본문 한 문장(#84). **제목과 두 자리의 독자가 다르다** —
+ * 카드는 목록을 훑는 발주자가 읽고, 상세의 「무엇이 문제였나」(`problem`)는
+ * 더 읽으러 들어온 사람이 읽는다. 그래서 `problem` 을 잘라 쓰지 않고 따로 둔다.
+ *
+ * 🔴 **`??` 를 쓰지 않는다** — `"cardBody": ""` 가 통과해 카드 본문이 빈 채
+ *    자리만 차지한다. 정본은 사람이 쓰는 파일이라 실제로 일어난다.
+ * 🔴 **`problem` 으로 폴백하지 않는다** — 폴백하면 #84 가 고치려던 개발자
+ *    언어가 조용히 되돌아온다. 없으면 없는 채로 두고, 검사기가 말하게 한다
+ *    (`checkCardBody`).
+ *
+ * ⚠️ **익명 맵을 두지 않는다.** `labelOf` 는 개인 사이트 4건의 라벨을
+ *    `anonymousLabelFor` 로 덮지만, 그 4건은 카드가 아니라 한 줄 행(`OwnRow`)
+ *    으로 그려져 **본문 자체가 화면에 없다**. 정본에도 그 4건의 `cardBody` 가
+ *    없다 — 여기 맵을 두면 어디에도 안 쓰이는 문장을 번들에 싣게 된다.
+ *    개인 도메인이 섞여 들어오는 경로는 `sanitizeDeep` 이 받는다.
+ */
+function cardBodyOf(project) {
+  const body = typeof project.cardBody === 'string' ? project.cardBody.trim() : ''
+  return body || undefined
+}
+
 /** metric 에서 클라이언트 트래커 접두사가 박힌 것은 항목 통째로 제외한다. */
 function usableMetrics(metrics) {
   return (metrics ?? []).filter((m) => {
@@ -118,6 +140,7 @@ function project2public(project, indexEntry, tier) {
     commissioned: isCommissioned(project),
     stack: flattenStack(project.stack),
     role: project.role,
+    cardBody: cardBodyOf(project),
     problem: project.problem ?? indexEntry?.problemSummary,
     decisions: project.decisions,
     metrics: usableMetrics(project.metrics),

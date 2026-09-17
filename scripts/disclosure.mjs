@@ -295,13 +295,35 @@ export function scanText(text, extraCompanyNames = [], only = null) {
  * 지난 세션의 사고가 정확히 이것이므로 구조로 검사한다.
  */
 export function checkTierRules(projects) {
-  const DETAIL_ONLY = ['problem', 'decisions', 'metrics', 'role', 'scale']
+  const DETAIL_ONLY = ['cardBody', 'problem', 'decisions', 'metrics', 'role', 'scale']
   const violations = []
   for (const p of projects) {
     if (p.tier !== 'summary') continue
     for (const f of DETAIL_ONLY) {
       if (p[f] !== undefined) violations.push({ id: p.id, field: f })
     }
+  }
+  return violations
+}
+
+/**
+ * 카드로 그려지는 건에 본문(`cardBody`)이 있는지 본다 (#84).
+ *
+ * 🔴 **없으면 조용하다.** 카드 본문은 `problem` 으로 폴백하지 않으므로,
+ *    정본에 `cardBody` 를 안 적은 채 새 건을 올리면 도메인·제목·기간·기술만
+ *    남은 카드가 그대로 나간다. `grid-auto-rows: 1fr` 이라 높이도 안 변해
+ *    눈으로도 티가 안 난다. 그래서 검사기가 말하게 한다.
+ *
+ * ⚠️ **`commissioned` 만 본다.** 직접 만든 것(`OwnRow`)은 한 줄 행이라
+ *    본문을 아예 그리지 않는다 — 거기까지 요구하면 안 쓰는 데이터를 쓰게 된다.
+ *    `OwnRow` 에 본문을 넣게 되면 그때 이 조건을 푼다.
+ */
+export function checkCardBody(projects) {
+  const violations = []
+  for (const p of projects) {
+    if (p.tier !== 'detail' || p.commissioned !== true) continue
+    if (typeof p.cardBody === 'string' && p.cardBody.trim()) continue
+    violations.push({ id: p.id })
   }
   return violations
 }
