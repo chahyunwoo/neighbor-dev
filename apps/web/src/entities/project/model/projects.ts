@@ -18,6 +18,17 @@ export interface BaseProject {
   period: string
   domain: string[]
   stack: string[]
+  /**
+   * 의뢰받아 만든 일인가. 직접 만든 것(개인 사이트·도구)과 가른다.
+   *
+   * 🔴 **`client` 값 자체는 여기 오지 않는다.** 익명 표기라도 여러 건을
+   *    나란히 놓으면 조합으로 좁혀진다 — `build-data.mjs` 의 `isCommissioned`
+   *    가 정본에서 불리언 하나만 뽑는다.
+   *
+   * 🔴 화면은 이 값으로 **비중**을 가른다(`/work`). 공개 수준(`tier`)과는
+   *    다른 축이다 — 개인 프로젝트도 `detail` 이라 상세는 다 있다.
+   */
+  commissioned: boolean
 }
 
 /** 경력 요약 층. **상세 필드가 없다.** 이것이 타입 수준의 게이트다. */
