@@ -12,7 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { anonymousLabelFor, publicIdFor, sanitizeDeep } from './sanitize.mjs'
-import { readSourceIndex, readSourceProjects } from './source.mjs'
+import { assertCleanSource, readSourceIndex, readSourceProjects } from './source.mjs'
 import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -157,6 +157,17 @@ function project2public(project, indexEntry, tier) {
 }
 
 function main() {
+  /*
+   * 🔴 **정본이 깨끗한지 먼저 본다** (이슈 #90).
+   *    미커밋 변경이 섞이면 **같은 커밋에서 돌려도 파생물이 달라진다.**
+   *    실측 2026-09-17: 정본의 미커밋 순서 변경이 `main` 에 실려 배포됐고,
+   *    게이트(`verify-jargon`)가 병합 **뒤에** 잡았다.
+   *
+   *    `--strict` 면 멈춘다 — `.githooks/pre-push` 가 그걸로 부른다.
+   *    푸시가 곧 Vercel 배포이므로 나가는 자리에서는 경고가 아니라 차단이어야 한다.
+   */
+  assertCleanSource({ strict: process.argv.includes('--strict') })
+
   const projects = readProjects()
   const index = readSourceIndex()
   const byId = new Map(index.projects.map((p) => [p.id, p]))
@@ -237,4 +248,14 @@ function main() {
   )
 }
 
-main()
+/*
+ * 🔴 **스택 트레이스를 사람에게 보이지 않는다.** `assertCleanSource` 가 던지는 것은
+ *    프로그램 오류가 아니라 **사람이 읽고 조치할 안내**다. 트레이스가 섞이면 정작
+ *    읽어야 할 줄이 묻힌다.
+ */
+try {
+  main()
+} catch (e) {
+  process.stderr.write(`${e instanceof Error ? e.message : String(e)}\n`)
+  process.exit(1)
+}

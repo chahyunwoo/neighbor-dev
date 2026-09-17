@@ -13,6 +13,7 @@
  *    남았고, 셋의 실패 동작(throw / 빈 배열 / 빈 배열)이 제각각이었다.
  */
 
+import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -80,6 +81,75 @@ export function portfolioSourceDir() {
       '🔴 이 검사를 건너뛰고 진행하지 않는다 — 클라이언트 실명 유출 검사가 여기에 달려 있다.',
     ].join('\n'),
   )
+}
+
+/**
+ * 정본에 **커밋되지 않은 변경**이 있는가. 있으면 그 파일 목록을 돌려준다 (이슈 #90).
+ *
+ * 🔴 왜 보는가: `build-data.mjs` 는 정본을 파일 시스템에서 그대로 읽는다. 정본에
+ *    미커밋 변경이 있으면 그것이 파생물에 들어가고, **같은 커밋에서 돌려도 결과가
+ *    달라진다.** 실측 2026-09-17: 정본의 미커밋 domain 순서 변경이 `main` 에
+ *    실려 배포됐고, `/work` 기술용어가 상한을 넘겨 게이트가 병합 **뒤에** 잡았다.
+ *    (게다가 `pnpm verify` 가 `pnpm data` 를 포함하므로 손으로 고쳐도 되돌아간다.)
+ *
+ * ⚠️ **정본이 git 저장소가 아니거나 git 을 못 쓰면 `null`** 을 돌려준다.
+ *    "변경 없음(빈 배열)" 과 **가르는 것이 중요하다** — 둘을 같게 만들면
+ *    확인 실패가 통과로 읽힌다(CLAUDE.md: 0 은 "없다" 가 아니라 "못 읽었다" 일 수 있다).
+ *
+ * 🔴 **`projects/*.json` 만 본다.** 정본의 `index.json` 은 사람이 쓰는 파일이 아니라
+ *    launchd 작업(`com.chahyunwoo.portfolio-sync`)이 `projects/` 를 감시해 다시
+ *    만드는 **파생물**이다. 그것까지 잡으면 파이프라인이 돌 때마다 푸시가 막혀
+ *    사람이 이 게이트를 꺼 버린다 — 실측 2026-09-17: 되돌리기 검증으로
+ *    `projects/*.json` 을 건드릴 때마다 `index.json` 이 재생성돼 훅이 두 번 막았다.
+ *
+ *    잡으려는 것은 **사람이 고치다 만 상태**이지 자동 생성물의 갱신이 아니다.
+ * ⚠️ 그래서 `index.json` 이 흔들리는 것은 여기서 못 잡는다. 그쪽은
+ *    파이프라인 저장소가 책임진다(그 출력이 곧 정본이다).
+ * @returns {string[] | null} 변경된 경로들, 또는 확인 불가 시 null
+ */
+export function dirtySourceFiles() {
+  const dir = portfolioSourceDir()
+  let out
+  try {
+    // -z 로 받는다 — 한글 파일명이 `"\352\270\260…"` 로 이스케이프되는 것을 피한다
+    // (이 저장소의 pre-commit 훅이 같은 함정을 밟았다).
+    out = execFileSync('git', ['-C', dir, 'status', '--porcelain', '-z'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+  } catch {
+    return null // git 저장소가 아니거나 git 을 못 쓴다 — "깨끗함" 과 가른다
+  }
+  return out
+    .split('\0')
+    .filter(Boolean)
+    .map((line) => line.slice(3)) // "XY path"
+    .filter((f) => f.startsWith('projects/') && f.endsWith('.json'))
+}
+
+/**
+ * 정본이 더러우면 경고한다. `strict` 면 멈춘다.
+ *
+ * 🔴 **푸시가 곧 배포다.** 개발 중에는 경고로 두되, 나가는 자리
+ *    (`--strict`·`.githooks/pre-push`)에서는 막는다.
+ */
+export function assertCleanSource({ strict = false } = {}) {
+  const dirty = dirtySourceFiles()
+  if (dirty === null) {
+    process.stderr.write(
+      '⚠️ 정본의 git 상태를 확인하지 못했다 — 파생물의 재현성을 보장할 수 없다.\n',
+    )
+    return
+  }
+  if (dirty.length === 0) return
+  const msg = [
+    `🔴 정본에 커밋되지 않은 변경이 ${dirty.length}건 있다:`,
+    ...dirty.slice(0, 8).map((f) => `     · ${f}`),
+    ...(dirty.length > 8 ? [`     … 외 ${dirty.length - 8}건`] : []),
+    '   이 상태로 만든 파생물은 **재현되지 않는다** — 정본을 커밋하거나 되돌린 뒤 다시 돌린다.',
+  ].join('\n')
+  if (strict) throw new Error(msg)
+  process.stderr.write(`${msg}\n`)
 }
 
 /** 정본의 `projects/*.json` 을 전부 읽는다. `id` 는 파일명에서 온다. */
