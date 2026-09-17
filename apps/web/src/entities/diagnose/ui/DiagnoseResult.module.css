@@ -6,16 +6,31 @@
  * ⚠️ `align-items: start` — 카드마다 길이가 달라서, 이게 없으면 같은 행의
  *    카드가 제일 긴 것에 맞춰 늘어난다.
  */
+/*
+ * 🔴 **grid 가 아니라 columns 다.** grid 로 두면 **행 높이가 그 행의 최대에
+ *    맞춰져** 짧은 카드 아래가 통째로 빈다 — `align-items: start` 가 있어도
+ *    카드가 안 늘어날 뿐 **자리는 남는다**(사용자 지적: "섹션도 짧으면 남고").
+ *    실측: 02 기술(3줄) 아래가 01 범위(6줄)만큼 비었다.
+ *
+ *    `columns` 는 카드를 **흐르게** 채워서 빈 자리가 안 생긴다.
+ *    읽는 순서가 행 우선 → 열 우선으로 바뀌는데, 카드에 `01 02 03 04` 번호가
+ *    붙어 있어 헷갈리지 않는다.
+ *
+ * ⚠️ `break-inside: avoid` 가 카드에 있어야 한 카드가 두 열에 걸쳐 잘리지 않는다.
+ */
 .wrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  align-items: start;
-  gap: 10px;
+  columns: 2;
+  column-gap: 10px;
+}
+@media (max-width: 900px) {
+  .wrap {
+    columns: 1;
+  }
 }
 
 .intro {
   /* 머리말은 폭을 다 쓴다 — 결과 전체에 걸리는 말이다. */
-  grid-column: 1 / -1;
+  column-span: all;
   margin: 0 0 4px;
   font-size: 16px;
   line-height: 1.8;
@@ -27,6 +42,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* 🔴 한 카드가 두 열에 걸쳐 잘리지 않게 한다. */
+  break-inside: avoid;
+  margin: 0 0 10px;
   padding: 20px 22px;
   border: 1px solid var(--line);
   border-left: 2px solid var(--blue-line);
