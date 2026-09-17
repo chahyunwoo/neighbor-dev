@@ -10,9 +10,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
+
 const SRC = 'apps/web/src'
+const SRCS = [SRC]
 /** 위에서 아래로. 아래일수록 하위 레이어다. */
-const ORDER = ['app', 'widgets', 'features', 'entities', 'shared']
+const ORDER = ['app', 'pages', 'widgets', 'features', 'entities', 'shared']
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -24,6 +26,7 @@ function walk(dir, out = []) {
 }
 
 const problems = []
+for (const SRC of SRCS)
 for (const file of walk(SRC)) {
   const rel = relative(SRC, file)
   const [layer, slice] = rel.split('/')
@@ -38,9 +41,18 @@ for (const file of walk(SRC)) {
   for (const m of src.matchAll(/from '([^']+)'/g)) {
     const spec = m[1]
 
-    // 상대경로 — 같은 폴더(./) 만 허용
+    // 상대경로 — **같은 슬라이스(shared 는 같은 세그먼트) 안에 머무르면 허용**한다.
+    // 밖으로 나가면 위반이다. 2026-09-17 정정: 예전엔 `../` 를 전부 막았는데,
+    // 그러면 `shared/ui/error/x.tsx` 가 `shared/ui/inner-container` 를 부를 길이 없다 —
+    // 절대경로는 이 게이트가 막고, 배럴(`@/shared/ui`)은 **순환 import** 가 된다(index 가 error 를 다시 내보낸다).
     if (spec.startsWith('../')) {
-      problems.push(`상대경로: ${rel} → ${spec}`)
+      const here = relative(SRC, join(file, '..', spec)).split('/')
+      const mineParts = rel.split('/')
+      // shared 는 layer+segment(2단계), 나머지는 layer+slice(2단계)까지 같으면 같은 울타리 안이다
+      const same = here[0] === mineParts[0] && here[1] === mineParts[1]
+      if (!same) {
+        problems.push(`${SRC}: 슬라이스 밖으로 나가는 상대경로: ${rel} → ${spec}`)
+      }
       continue
     }
     if (!spec.startsWith('@/')) continue
@@ -52,7 +64,7 @@ for (const file of walk(SRC)) {
 
     // 단방향: 하위(인덱스 큼)가 상위(인덱스 작음)를 부르면 위반
     if (there < here) {
-      problems.push(`단방향 위반: ${layer} → ${depLayer}  (${rel} → ${spec})`)
+      problems.push(`${SRC}: 단방향 위반: ${layer} → ${depLayer}  (${rel} → ${spec})`)
       continue
     }
     /*
@@ -62,7 +74,7 @@ for (const file of walk(SRC)) {
      *    나뉘는 레이어다. `shared/ui` 가 `shared/lib` 를 쓰는 것은 정상이다.
      */
     if (there === here && depSlice !== slice && layer !== 'shared') {
-      problems.push(`같은 레이어 횡단: ${rel} → ${spec}`)
+      problems.push(`${SRC}: 같은 레이어 횡단: ${rel} → ${spec}`)
       continue
     }
     /*
@@ -81,16 +93,16 @@ for (const file of walk(SRC)) {
     if (depLayer === 'shared') {
       // 통짜 `@/shared` 도 막는다. 세그먼트를 명시해야 한다.
       if (!depSlice) {
-        problems.push(`통짜 @/shared 금지(세그먼트를 쓴다): ${rel} → ${spec}`)
+        problems.push(`${SRC}: 통짜 @/shared 금지(세그먼트를 쓴다): ${rel} → ${spec}`)
         continue
       }
       if (rest.length > 0 && !spec.endsWith('.css')) {
-        problems.push(`shared 세그먼트 내부 직접 참조: ${rel} → ${spec}`)
+        problems.push(`${SRC}: shared 세그먼트 내부 직접 참조: ${rel} → ${spec}`)
       }
       continue
     }
     if (there > here && rest.length > 0 && !spec.endsWith('.css')) {
-      problems.push(`슬라이스 내부 직접 참조: ${rel} → ${spec}`)
+      problems.push(`${SRC}: 슬라이스 내부 직접 참조: ${rel} → ${spec}`)
     }
   }
 }
