@@ -3,9 +3,19 @@ import type { ReactNode } from 'react'
 import { TransitionRoot } from '@/features/page-transition'
 import { MotionRoot } from '@/features/reveal'
 import { CanvasRoot, RoomProvider } from '@/features/room-3d'
+import { siteUrl } from '@/shared/lib'
+import { JsonLd } from '@/shared/ui'
 import '@/shared/styles/tokens.css'
 
 export const metadata: Metadata = {
+  /*
+   * 🔴 **`metadataBase` 가 없으면 canonical·og:url 이 아예 안 생긴다.**
+   *    Next 는 상대 URL 을 절대 URL 로 바꿀 기준이 없으면 그 태그를 통째로
+   *    빼버린다 — 경고 한 줄 없이 사라지므로 "설정했다" 로 착각하기 쉽다.
+   *    도메인은 소스에 박지 않고 환경변수로 받는다(`shared/lib/site-url.ts`).
+   */
+  metadataBase: new URL(siteUrl()),
+  alternates: { canonical: '/' },
   title: {
     default: '이웃집 개발자',
     template: '%s · 이웃집 개발자',
@@ -18,7 +28,10 @@ export const metadata: Metadata = {
     description: '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.',
     type: 'website',
     locale: 'ko_KR',
+    url: '/',
+    siteName: '이웃집 개발자',
   },
+  twitter: { card: 'summary_large_image' },
   robots: { index: true, follow: true },
 }
 
@@ -87,6 +100,26 @@ export default function RootLayout({ children }: { children: ReactNode }) {
          * 🔴 `RoomProvider` 가 `{children}` 과 `<CanvasRoot />` 를 **둘 다**
          *    감싼다. 화면이 선언한 모드를 캔버스가 읽어야 하기 때문이다.
          */}
+        {/*
+         * 조직 정보 — 검색 결과에 이름·소개가 붙는다.
+         *
+         * 🔴 **사명·개인 도메인·저장소 링크를 넣지 않는다.** 화면에 안 보여도
+         *    HTML 에 실리고 `verify-rendered` 가 그것을 훑는다.
+         *    `sameAs`(SNS·저장소 링크)를 비워 둔 것은 빠뜨린 게 아니라 방침이다
+         *    — 기획서 7절이 개인 사이트와 완전 분리를 정했다.
+         */}
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'ProfessionalService',
+            name: '이웃집 개발자',
+            url: siteUrl(),
+            description: '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.',
+            areaServed: 'KR',
+            knowsLanguage: ['ko'],
+            serviceType: ['웹 개발', '앱 개발', '백엔드 개발', '시스템 구축'],
+          }}
+        />
         <RoomProvider>
           <MotionRoot>
             <TransitionRoot>{children}</TransitionRoot>

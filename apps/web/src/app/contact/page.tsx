@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import { ContactForm } from '@/entities/contact'
+import { pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '일 맡기기',
   description: '무엇을 만들지 정해지지 않아도 괜찮습니다. 범위를 같이 정리하는 것부터 합니다.',
-}
+  path: '/contact',
+})
 
 /** api 상태는 서버에서 본다. 브라우저에는 api 주소를 내보내지 않는다. */
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:3201'

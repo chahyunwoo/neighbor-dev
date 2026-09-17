@@ -9,15 +9,17 @@ import {
   type SummaryProject,
 } from '@/entities/project'
 import { Reveal, RevealGroup, RevealItem } from '@/features/reveal'
+import { pageMetadata } from '@/shared/lib'
 import { RichText } from '@/shared/ui'
 import styles from '@/shared/ui/styles/list-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '만든 것',
   description: '사례 상세와 경력 요약. 클라이언트사명은 전부 익명, 수치는 재현 명령이 있는 것만.',
-}
+  path: '/work',
+})
 
 /**
  * 화이트보드 — 만든 것.
