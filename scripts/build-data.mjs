@@ -56,6 +56,28 @@ function usableMetrics(metrics) {
   })
 }
 
+/**
+ * **의뢰받아 만든 일인가.** 직접 만든 것(개인 사이트·도구)과 가른다.
+ *
+ * 🔴 **`client` 값 자체는 내보내지 않는다.** 익명 표기(`중소기업 P사`)라도
+ *    화면에 실을 이유가 없고, 여러 건을 나란히 놓으면 조합으로 좁혀진다.
+ *    **불리언 하나만** 내보낸다.
+ *
+ * 🔴 왜 필요한가: 사례 상세 10건 중 **8건이 본인 개인 사이트·도구**라
+ *    비개발자 방문자에게는 "자기 블로그를 여덟 번 만들었네" 로 읽힌다.
+ *    기획서 3절이 정확히 그 위험을 적어놨다 —
+ *    *"사례 상세를 개인 프로젝트로만 채우면 취미 개발자로 읽힐 위험이 있다."*
+ *    → 의뢰받은 일을 앞에 세운다.
+ *
+ * ⚠️ 판정은 **정본의 `client`** 로만 한다. 라벨 문자열("개인 기술 …")로
+ *    맞히면 라벨을 다듬는 순간 조용히 어긋난다.
+ */
+const SELF_CLIENTS = new Set(['1인 기업 N사', '개인 프로젝트'])
+function isCommissioned(project) {
+  const c = project.client
+  return typeof c === 'string' ? !SELF_CLIENTS.has(c.trim()) : true
+}
+
 function project2public(project, indexEntry, tier) {
   const full = {
     // 🔴 저장소명을 URL 로 내보내지 않는다(`publicIdFor` 주석 참고).
@@ -64,6 +86,7 @@ function project2public(project, indexEntry, tier) {
     label: labelOf(project, indexEntry),
     period: project.period,
     domain: indexEntry?.domain ?? [],
+    commissioned: isCommissioned(project),
     stack: flattenStack(project.stack),
     role: project.role,
     problem: project.problem ?? indexEntry?.problemSummary,
@@ -113,7 +136,11 @@ function main() {
    * ⚠️ 정렬은 **id 와 짝을 유지한 채** 한다. 따로 정렬하면 감사 명단의
    *    id 가 엉뚱한 항목에 붙어 검사가 조용히 틀린 것을 본다.
    */
-  const sortKey = (p) => p.period ?? ''
+  /*
+   * 🔴 **의뢰받은 일이 먼저다.** 그 안에서 최신순.
+   *    전에는 기간만 봐서 개인 사이트 6건이 위를 다 덮었다.
+   */
+  const sortKey = (p) => `${p.commissioned ? '1' : '0'}\u0000${p.period ?? ''}`
   const pairSort = (items, ids) => {
     const pairs = items.map((v, i) => [v, ids[i]])
     pairs.sort((a, b) => sortKey(b[0]).localeCompare(sortKey(a[0])))

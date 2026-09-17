@@ -56,6 +56,7 @@ export const ALLOWED_FIELDS = {
     'label',
     'period',
     'domain',
+    'commissioned',
     'stack',
     'role',
     'problem',
@@ -79,5 +80,5 @@ export const ALLOWED_FIELDS = {
    *    → 목록 key 가 필요하면 `label+period` 처럼 **드러내지 않는 값**을 쓴다.
    *    (사례 상세 10건은 `clientSafe:true` 이고 URL 이 필요해서 `id` 를 남긴다.)
    */
-  [TIER.SUMMARY]: ['tier', 'label', 'period', 'domain', 'stack'],
+  [TIER.SUMMARY]: ['tier', 'label', 'period', 'domain', 'stack', 'commissioned'],
 }
