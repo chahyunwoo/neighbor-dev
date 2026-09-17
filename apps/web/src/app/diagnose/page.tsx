@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import { DiagnoseForm } from '@/entities/diagnose'
+import { pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '미리 진단해보기',
   description:
     '요구사항을 적으면 기술 스택·대략 기간·리스크를 정리해드립니다. 금액은 말하지 않습니다.',
-}
+  path: '/diagnose',
+})
 
 /**
  * 🔴 서버에서만 읽는다. `NEXT_PUBLIC_` 접두사를 쓰지 않는 것이 요점이다 —

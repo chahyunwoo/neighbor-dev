@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import { displayStack, getSummaryProjects, StackTags } from '@/entities/project'
 import { RevealGroup, RevealItem } from '@/features/reveal'
+import { pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/list-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '이름 못 밝히는 일들',
   description: '계약상 화면과 세부 판단을 공개할 수 없는 건들. 도메인과 기술까지만 적었습니다.',
-}
+  path: '/career',
+})
 
 /**
  * 서랍 — 경력 요약 층.

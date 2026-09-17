@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import { getCounts } from '@/entities/project'
 import { ROOM_OBJECTS } from '@/entities/room'
+import { pageMetadata } from '@/shared/lib'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '같이 일하는 사람들',
   description: '2026년 1월 출범. 넷이서 기획부터 배포까지 함께 합니다.',
-}
+  path: '/team',
+})
 
 /**
  * 테이블 — 같이 일하는 사람들.

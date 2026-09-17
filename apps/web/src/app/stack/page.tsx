@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import { getAllProjects, getStackFrequency } from '@/entities/project'
 import { Reveal } from '@/features/reveal'
+import { pageMetadata } from '@/shared/lib'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: '쓰는 기술',
   description: '실제 프로젝트에서 쓴 기술과 그 횟수. 목록이 아니라 빈도입니다.',
-}
+  path: '/stack',
+})
 
 /**
  * 책장 — 쓰는 기술.

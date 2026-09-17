@@ -6,5 +6,6 @@
  *    `@/shared/components/ui`·`@/shared/lib/utils` 처럼 세그먼트로 부른다.
  *    통짜로 두면 무관한 모듈까지 한 파일에 묶여 순환 참조가 생기기 쉽다.
  */
+export { JsonLd } from './JsonLd'
 export { RichText } from './RichText'
 export { SplitText } from './SplitText'

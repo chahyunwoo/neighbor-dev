@@ -8,7 +8,8 @@ import {
   ProjectLens,
   StackTags,
 } from '@/entities/project'
-import { RichText } from '@/shared/ui'
+import { pageMetadata } from '@/shared/lib'
+import { JsonLd, RichText } from '@/shared/ui'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 import styles from './page.module.css'
@@ -31,11 +32,26 @@ export const dynamicParams = false
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params
   const project = getProject(id)
-  if (project?.tier !== 'detail') return { title: '없는 사례' }
-  return {
-    title: project.label,
-    description: project.problem?.slice(0, 150) ?? project.label,
+  // 🔴 없는 사례는 색인시키지 않는다. 남는 URL 이 검색 결과에 뜨면 방문자가 막힌다.
+  if (project?.tier !== 'detail') {
+    return { title: '없는 사례', robots: { index: false, follow: false } }
   }
+  return pageMetadata({
+    title: project.label,
+    // 설명은 문장 중간에서 자르지 않는다 — 공유 카드에 말이 끊긴 채로 뜬다.
+    description: summarize(project.problem, project.label),
+    path: `/work/${id}`,
+  })
+}
+
+/** 첫 문장까지만. 없으면 길이로 자르되 단어 경계를 지킨다. */
+function summarize(problem: string | undefined, fallback: string): string {
+  const t = problem?.trim()
+  if (!t) return fallback
+  const stop = t.search(/[.!?。]\s|다\.\s/)
+  const first = stop > 0 ? t.slice(0, stop + 2).trim() : t
+  if (first.length <= 160) return first
+  return `${first.slice(0, 157).replace(/\s+\S*$/, '')}…`
 }
 
 export default async function ProjectPage({ params }: Params) {
@@ -49,6 +65,24 @@ export default async function ProjectPage({ params }: Params) {
   return (
     <>
       <Nav />
+      {/*
+       * 사례 구조화 데이터.
+       *
+       * 🔴 **`client`(사명)를 넣지 않는다.** 공개 데이터에 애초에 없지만
+       *    (`build-data.mjs` 가 불리언만 뽑는다) 여기서 다시 확인해 둔다.
+       *    도메인·기간·기술은 화면에 이미 나가 있는 것이라 추가 노출이 아니다.
+       */}
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'CreativeWork',
+          name: project.label,
+          about: project.domain,
+          keywords: project.stack.join(', '),
+          inLanguage: 'ko',
+          creator: { '@type': 'Organization', name: '이웃집 개발자' },
+        }}
+      />
       <PageShell
         from="monitor"
         fig="[ fig. 2-1 · 모니터 · 사례 ]"
