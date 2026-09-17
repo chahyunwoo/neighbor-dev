@@ -42,6 +42,24 @@ export function DiagnoseForm() {
    *    알릴 자리가 없어진다.** 텍스트만 갈아끼운다.
    */
   const [live, setLive] = useState('')
+  /**
+   * 입력 칸을 **적은 만큼 늘린다.**
+   *
+   * 🔴 전에는 `resize: vertical` 로 사용자가 끌어 늘이게 했는데, 늘이면 그
+   *    아래가 통째로 밀리고 되돌릴 방법도 없었다(사용자 지적).
+   *    끌게 하는 대신 내용에 맞춘다 — 상한은 CSS 의 `max-height`(420px)이고,
+   *    넘으면 그때부터 칸 안에서 스크롤된다.
+   *
+   * ⚠️ `scrollHeight` 를 읽기 전에 **높이를 먼저 비워야** 한다. 안 그러면
+   *    지금 높이가 바닥이 되어 **줄어들지 않는다**(글을 지워도 칸이 그대로).
+   */
+  const box = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [])
 
   const toggleScope = useCallback((item: string) => {
     setDropped((prev) => {
@@ -188,9 +206,15 @@ export function DiagnoseForm() {
           </label>
           <textarea
             id="requirement"
+            ref={box}
             className={styles.textarea}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value)
+              const el = e.currentTarget
+              el.style.height = 'auto'
+              el.style.height = `${el.scrollHeight}px`
+            }}
             placeholder={
               '예) 동네 헬스장에서 쓸 회원 관리 웹을 만들고 싶습니다.\n회원 등록하고, 출석 체크하고, 이용권 남은 기간을 보는 정도요.\n관리자는 두세 명이고 회원은 300명쯤 됩니다.'
             }
