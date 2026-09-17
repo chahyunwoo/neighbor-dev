@@ -151,6 +151,44 @@ else:
 
 restore()
 
+# ── G4. 클라이언트 내부 식별자 검사가 *지금 실제로* 잡는가 (#86) ─────────
+#
+# 🔴 실측 2026-09-17: 사례 상세 1건의 `decisions` 에 클라이언트 API 엔드포인트
+#    경로와 서버 응답 스펙 키 나열이 그대로 실려 **배포까지 나갔다.**
+#    `verify-disclosure` 가 보던 축은 사명·개인도메인·저장소명·사설IP·시크릿이라
+#    **남의 시스템 구조를 보는 축이 아예 없었다.** 검사기는 내내 초록이었다.
+#
+# M1~M8 방식(소스를 망가뜨린다)으로는 못 본다 — 정상 데이터에는 그 구절이
+# 이제 없어서 무엇을 망가뜨려도 위반이 안 난다. G1 과 같은 **기준선 검사**다.
+#
+# ⚠️ 탐침 값은 실제 유출 값이 아니라 **형태만 같은 가짜**를 쓴다. 이 파일도
+#    PUBLIC 저장소에 올라간다 — 진짜 값을 적으면 여기가 새 유출 지점이 된다.
+INJECT2 = os.path.join(BK, 'inject-client.mjs')
+io.open(INJECT2,'w',encoding='utf-8').write("""
+import { readFileSync, writeFileSync } from 'node:fs'
+const p = 'data/generated/projects.json'
+const d = JSON.parse(readFileSync(p, 'utf8'))
+// 형태만 같은 가짜 — 실제 클라이언트 값이 아니다.
+d.detail[0].__probeApi = '서버 메타데이터 응답(`/v9/probe/...`)으로 렌더링'
+d.detail[0].__probeSpec = '서버가 내려주는 `{alpha, bravo, charlie, delta}` 스펙'
+writeFileSync(p, JSON.stringify(d, null, 2))
+""")
+rci2,_ = run('node scripts/build-data.mjs')
+rcj2,outj2 = run(f'node {INJECT2}')
+if rcj2 != 0:
+    res.append(('G4 클라이언트 내부 식별자 검사가 실제로 잡는가','❌ 주입 실패',outj2.strip()[:160]))
+else:
+    rcg2,outg2 = run('node scripts/verify-disclosure.mjs')
+    got_api  = '클라이언트API경로' in outg2
+    got_spec = '응답스펙키나열' in outg2
+    caught = (rcg2 != 0) and got_api and got_spec
+    detail = ('기대=클라이언트API경로+응답스펙키나열 | API경로=%s 스펙키=%s | ' % (got_api, got_spec)
+              + (' / '.join(l.strip().lstrip('🔴 ') for l in outg2.splitlines() if '🔴' in l)[:140]
+                 or outg2.strip()[:120]))
+    res.append(('G4 클라이언트 내부 식별자 검사가 실제로 잡는가','✅ 잡힘' if caught else '❌ 못 잡음', detail))
+
+restore()
+
 # ── G2·G3. 번들 청크 검사가 *지금 실제로* 잡는가 (#78) ──────────────────
 #
 # 🔴 실측 2026-09-17: 검사용 감사 명단이 `'use client'` 인 3D 씬을 통해 JS 청크에
