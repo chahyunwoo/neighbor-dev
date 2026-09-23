@@ -1,0 +1,55 @@
+# /repo-init 템플릿 — 검증과 배포. 근거와 실측은 ~/.claude/reference/ci-비용.md
+# <> 로 감싼 곳만 저장소에 맞게 채운다. 구조는 바꾸지 않는다.
+# 🔴 배포가 없는 저장소는 deploy 잡을 통째로 지운다. 빈 껍데기로 남기지 않는다.
+name: CI
+
+# 🔴 paths-ignore 를 기본으로 두지 않는다. CI 를 브랜치 보호의 **필수 체크**로 걸면,
+#    문서만 고친 PR 은 워크플로가 아예 안 떠서 체크가 Pending 에 머물고 **병합이 막힌다.**
+#    비용이 정말 문제면(= hosted 러너인 공개 레포) 필수 체크에서 빼고 나서 넣는다.
+on:
+  pull_request:
+  push:
+    # 🔴 branches 를 빼지 않는다. 빼면 feature 푸시마다 pull_request 와 같은 커밋에 두 번 돈다.
+    # 🔴 배포 브랜치가 기본 브랜치와 다르면(stg 등) 여기 **함께** 적는다.
+    #    빠지면 그 브랜치에 CI 가 안 돌고, deploy 는 needs 로 묶여 있으므로 배포도 영영 안 난다.
+    branches: [main]
+  workflow_dispatch:
+
+# 기본 토큰을 읽기로 내린다. 쓰기가 필요한 잡에서만 그 잡에 permissions 를 올려 쓴다.
+permissions:
+  contents: read
+
+concurrency:
+  # 🔴 푸시를 **커밋마다 다른 그룹**으로 보낸다. 한 그룹에는 pending 이 하나만 남고,
+  #    새 실행이 큐에 들어오면 앞의 pending 은 `cancel-in-progress` 와 무관하게 취소된다.
+  #    배포 브랜치에 연속으로 밀면 **가운데 배포가 조용히 사라진다.**
+  #    PR 은 head_ref 로 묶여 같은 PR 의 옛 실행만 취소된다.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # 🔴 검증 잡을 쪼개지 않는다 — 잡마다 분 단위 올림이라 4초짜리도 1분이고, 설치가 잡마다 다시 돈다.
+  #    lint·typecheck·test 는 한 잡 안에서 순서대로 돌린다.
+  ci:
+    # 비공개 → self-hosted(맥미니, arm64 리눅스 컨테이너) · 공개 → ubuntu-latest(무료 무제한)
+    # ⚠️ 공개 레포에 self-hosted 를 쓰지 않는다. 포크 PR 이 러너에서 임의 코드를 돌린다.
+    # ⚠️ 러너를 등록하기 전에는 ubuntu-latest 로 둔다. 없는 라벨은 큐에서 영영 안 나온다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with: { node-version: 22, cache: pnpm }
+
+      # pnpm verify 에서 data·data:verify 만 뺐다 — 로컬 정본(portfolio-source)을 읽어 러너에선 못 돈다.
+      - name: 검증
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+          pnpm fsd:verify
+          pnpm anim:verify
+          pnpm room:verify
