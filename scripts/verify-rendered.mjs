@@ -20,7 +20,7 @@
  *     pnpm --filter @neighbor/web build
  *     node scripts/verify-rendered.mjs --bundles-only   # 서버 없이 — 디스크만 읽는다
  *
- *     pnpm --filter @neighbor/web start &
+ *     PORT=21200 pnpm --filter @neighbor/web start &
  *     node scripts/verify-rendered.mjs                  # 화면 + 번들
  *
  * 🔴 **번들 검사는 서버를 타지 않는다.** 처음엔 화면 루프 뒤에 뒀는데, 서버가
@@ -94,7 +94,7 @@ function assertProd(html) {
   console.error('   모든 화면이 오탐으로 빨개진다(이슈 #32). 결과를 믿을 수 없다.')
   console.error('')
   console.error('   pnpm --filter @neighbor/web build')
-  console.error('   pnpm --filter @neighbor/web start &')
+  console.error('   PORT=21200 pnpm --filter @neighbor/web start &')
   console.error('   node scripts/verify-rendered.mjs')
   process.exit(2)
 }

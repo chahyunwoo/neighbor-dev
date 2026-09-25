@@ -7,8 +7,8 @@
  * 🔴 **api·web 이 떠 있어야 한다.** 안 떠 있으면 `/contact` 가 폼 대신
  *    "접수 창구에 연결할 수 없습니다" 를 보여주고, 그걸 정상으로 착각한다.
  *
- *   pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
- *   pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+ *   pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
+ *   pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
  *   node scripts/probes/run-all.mjs
  */
 import { execFileSync } from 'node:child_process'

@@ -31,8 +31,8 @@ pnpm probe    # 브라우저 프로브 11종 (api·web 이 떠 있어야 한다)
 
 ```bash
 # 프로브를 돌리려면 둘 다 떠 있어야 한다
-pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
-pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
+pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
 pnpm probe
 ```
 

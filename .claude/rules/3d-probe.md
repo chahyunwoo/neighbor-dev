@@ -28,9 +28,9 @@ room-3d·프로브 스크립트를 만질 때만 로드된다(경로 조건부, 
 
 ```bash
 pnpm verify                      # lint · typecheck · test · 방 검사 · 데이터 검사
-pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
+pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
 curl -s http://localhost:21201/diagnose/status
-pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
 node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 ```
 

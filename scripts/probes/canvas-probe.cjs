@@ -9,7 +9,7 @@
  *    요소도 그냥 눌러버려 "덮여서 클릭이 안 되는" 상태를 못 잡는다
  *    (실측 2026-09-09: 화이트보드·테이블 마커가 정확히 그 상태였다).
  *
- * 쓰는 법: pnpm --filter @neighbor/web start 로 3200 을 띄운 뒤
+ * 쓰는 법: PORT=21200 pnpm --filter @neighbor/web start 로 띄운 뒤
  *     node .wip/canvas-probe.cjs
  */
 
