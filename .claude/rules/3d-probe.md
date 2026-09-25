@@ -28,9 +28,9 @@ room-3d·프로브 스크립트를 만질 때만 로드된다(경로 조건부, 
 
 ```bash
 pnpm verify                      # lint · typecheck · test · 방 검사 · 데이터 검사
-pnpm --filter @neighbor/api build && node apps/api/dist/main.js &
-curl -s http://localhost:3201/diagnose/status
-pnpm --filter @neighbor/web build && pnpm --filter @neighbor/web start &
+pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
+curl -s http://localhost:21201/diagnose/status
+pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
 node scripts/verify-rendered.mjs # 렌더된 화면을 공개 검사기로
 ```
 
@@ -266,7 +266,7 @@ JS 를 **끈** 사람은 `layout.tsx` 의 noscript 가 구해 주지만, JS 가 
 
 ## 🔴 프로브는 주소를 `_pw.cjs` 한 곳에서 받는다 (2026-09-17)
 
-프로브 22종 중 **11종이 `http://localhost:3200` 을 박아 두고** `WEB_BASE_URL`
+프로브 22종 중 **11종이 옛 web 포트 `http://localhost:3200` 을 박아 두고** `WEB_BASE_URL`
 을 안 봤다. 그래서 다른 포트에 띄우고 검사하면 **조용히 다른 서버를 검사했다** —
 실측: **죽은 포트를 지정했는데** `verify-clamp` 가 `7/7 열림 · 전부 통과` 를 냈다.
 

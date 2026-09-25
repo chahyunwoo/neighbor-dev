@@ -128,14 +128,14 @@ shared/    가장 아래. 어느 도메인에도 안 속한다
 
 ## 포트
 
-web `3200` · api `3201`. **DB 는 없다** — `apps/api` 에 DB 드라이버가 없다
+블록 `21200` (mac) / `21300` (mini). 자리 규약·전체 표는 `~/.claude/reference/포트-배정.md`.
+web 21200 · api 21201. **DB 는 없다** — `apps/api` 에 DB 드라이버가 없다
 (`grep -rn "prisma\|typeorm\|DATABASE_URL" apps/api/src -i` → 0건).
-옛 기술에 있던 `5433` 은 지금 `wolca-postgres`(Docker) 가 쓴다.
 
-api 가 3100 이었는데 **2026-09-16 실측에서 남이 쥐고 있어 3201 로 비켰다** —
-`3100`·`3101` 을 다른 저장소의 dev 서버가 9/14 부터 점유 중이다.
-포트는 고정값이 아니라 **띄우기 전에 매번 세는 것**이다. 남의 것을 끄지 않는다.
-`pgrep -x cloudflared` 를 쓴다 — `ps aux | grep` 은 자기 명령줄을 세어 오답을 낸다.
+바뀐 것은 **dev 경로뿐**이다(2026-09-25, 옛 web 3200 · api 3201). `start` 스크립트의 `${PORT:-3200}` 과
+`apps/api/src/main.ts` 의 기본값 3201 은 자체 호스팅 배포가 기댈 수 있어 그대로 뒀다 —
+api 는 `dev` 스크립트가 `API_PORT=21201` 을 준다(`@nestjs/config` 는 이미 있는 환경변수를 `.env` 로 덮지 않는다).
+띄우기 전에 센다(`lsof -nP -iTCP -sTCP:LISTEN`). 남의 것을 끄지 않는다.
 
 ## ⚠️ 모니터 토글 — 기획서 원안에서 축이 바뀌었다 (2026-09-09)
 
@@ -166,7 +166,7 @@ print('decisions 키:', list(d['decisions'][0].keys()))"
 `.panel[hidden]{display:none}` 이 필요하다(`display:flex` 가 기본값을 이긴다).
 
 ```bash
-curl -s http://localhost:3200/work/claude-board | grep -c '어떻게 판단했나\|무엇이 나왔나'
+curl -s http://localhost:21200/work/claude-board | grep -c '어떻게 판단했나\|무엇이 나왔나'
 ```
 
 ## 작업 사이클

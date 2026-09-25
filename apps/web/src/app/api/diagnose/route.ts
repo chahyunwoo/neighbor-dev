@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server'
  */
 
 /** 서버에서만 읽는다. NEXT_PUBLIC_ 접두사를 쓰지 않는 것이 요점이다. */
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3201'
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
 
 export async function POST(request: Request) {
   let body: unknown

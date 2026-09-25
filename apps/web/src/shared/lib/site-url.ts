@@ -20,7 +20,7 @@ export function siteUrl(): string {
   const vercel = (process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || '').trim()
   if (vercel) return `https://${vercel.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`
 
-  return 'http://localhost:3200'
+  return 'http://localhost:21200'
 }
 
 /** 경로를 절대 URL 로. `/` 로 시작하지 않으면 붙여준다. */
