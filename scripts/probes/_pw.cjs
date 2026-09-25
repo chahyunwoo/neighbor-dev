@@ -53,7 +53,7 @@ const LAUNCH = { headless: true, args: GPU_ARGS }
  *    "검사기가 초록인데 화면이 깨져 있다" 중 제일 나쁜 형태다 —
  *    **검사기가 아예 다른 것을 보고 있다.**
  */
-const BASE = process.env.WEB_BASE_URL || 'http://localhost:3200'
+const BASE = process.env.WEB_BASE_URL || 'http://localhost:21200'
 
 function load() {
   const tries = []

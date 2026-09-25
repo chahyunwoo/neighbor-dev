@@ -2,7 +2,7 @@
   "name": "@neighbor/api",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "API_PORT=21201 nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",

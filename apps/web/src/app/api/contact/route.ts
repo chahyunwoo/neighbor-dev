@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
  *    자가진단 프록시와 같은 이유·같은 구조다.
  */
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3201'
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
 
 export async function POST(request: Request) {
   let body: unknown

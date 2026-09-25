@@ -42,5 +42,5 @@ ERROR [ExceptionHandler] UnknownDependenciesException:
 ```bash
 pnpm --filter @neighbor/api build
 node apps/api/dist/main.js &
-curl -s http://localhost:3201/diagnose/status
+curl -s http://localhost:21201/diagnose/status
 ```

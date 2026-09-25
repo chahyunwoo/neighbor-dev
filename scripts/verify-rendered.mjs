@@ -35,7 +35,7 @@ import { fileURLToPath } from 'node:url'
 import { BUNDLE_CHECKS, scanText } from './disclosure.mjs'
 import { realCompanyNames } from './source.mjs'
 
-const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:3200'
+const BASE = process.env.WEB_BASE_URL ?? 'http://localhost:21200'
 
 const argv = process.argv.slice(2)
 const BUNDLES_ONLY = argv.includes('--bundles-only')
