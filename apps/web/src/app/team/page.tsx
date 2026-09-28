@@ -6,8 +6,9 @@ import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = pageMetadata({
-  title: '같이 일하는 사람들',
-  description: '2026년 1월 출범. 넷이서 기획부터 배포까지 함께 합니다.',
+  title: '팀 소개',
+  description:
+    '2026년 1월 설립한 4인 개발팀입니다. PM, 프론트엔드, 백엔드, 디자인이 직접 개발합니다.',
   path: '/team',
 })
 
@@ -34,10 +35,9 @@ export default function TeamPage() {
       <Nav />
       <PageShell
         from="team"
-        fig="[ fig. 6 · 테이블 · 4인 ]"
         crumb="테이블"
-        title="같이 일하는 사람들"
-        lede="2026년 1월에 출범했습니다. 넷이서 기획부터 배포까지 함께 합니다."
+        title="팀 소개"
+        lede="2026년 1월 설립. PM, 프론트엔드, 백엔드, 디자인 4인이 직접 개발합니다."
       >
         <div className="flex flex-col gap-10">
           <section>
@@ -57,38 +57,35 @@ export default function TeamPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">일하는 방식</h2>
+            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">진행 방식</h2>
             <div className="flex flex-col gap-4 text-base leading-[1.85] font-light text-fg-muted">
               <p>
-                <strong className="font-medium text-fg-strong">PM 이 전 영역을 직접 봅니다.</strong>{' '}
-                넘길 곳이 없어서가 아니라, 넘긴 뒤에도 책임이 남아서입니다.
-                기획·설계·프론트·백엔드를 같은 사람이 쥐고 있으면 "그건 프론트 문제입니다" 같은 말이
-                나올 자리가 없습니다.
+                PM이 기획과 설계를 맡고 개발에도 직접 참여합니다. 요구사항 정의부터 납품까지 한
+                사람이 책임지고 관리합니다.
               </p>
               <p>
-                화면만 받거나 서버만 받는 일도 합니다. 다만 그때도 반대편을 읽고 시작합니다 —
-                경계에서 생기는 문제가 대부분이고, 그 경계는 한쪽만 봐서는 안 보입니다.
+                프론트엔드나 백엔드 한쪽만 맡는 프로젝트도 진행합니다. 이때도 API 명세, 인증 방식,
+                데이터 구조처럼 연동되는 부분을 먼저 검토하고 착수합니다.
               </p>
               <p>
-                지금까지 {counts.detail + counts.summary}건을 납품했습니다. 그중 {counts.detail}건은
-                무엇을 어떻게 판단했는지까지 공개하고 있습니다 —{' '}
+                지금까지 {counts.detail + counts.summary}건을 납품했습니다. 이 중 {counts.detail}
+                건은 설계 판단과 결과 지표까지{' '}
                 <a href="/work" className="text-amber hover:text-amber-bright">
-                  그동안 만든 것
+                  수행 사례
                 </a>
-                에서 보실 수 있습니다.
+                에 공개하고 있습니다.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">받지 않는 일</h2>
+            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">
+              진행하지 않는 프로젝트
+            </h2>
             <div className="flex flex-col gap-4 text-base leading-[1.85] font-light text-fg-muted">
               <p>
-                무엇을 만들지 정해지지 않은 상태는 괜찮습니다 — 정리부터 같이 합니다. 다만{' '}
-                <strong className="font-medium text-fg-strong">
-                  범위를 정하지 않고 시작하자는 제안
-                </strong>
-                은 받지 않습니다. 그렇게 시작한 일은 양쪽 다 손해로 끝납니다.
+                요구사항이 정리되지 않은 문의는 범위 정의부터 함께 진행합니다. 범위 합의 없이
+                개발부터 시작하는 계약은 받지 않습니다.
               </p>
             </div>
           </section>

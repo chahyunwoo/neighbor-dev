@@ -121,14 +121,6 @@ html[data-canvas-mode="room"] .page {
   pointer-events: auto;
 }
 
-.caption {
-  font-family: var(--font-sans);
-  font-size: var(--text-micro);
-  color: var(--fg-ghost);
-  letter-spacing: 0.07em;
-  padding-top: 26px;
-}
-
 .copy {
   display: flex;
   flex-direction: column;

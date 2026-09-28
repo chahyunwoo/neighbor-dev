@@ -83,13 +83,7 @@ export default async function ProjectPage({ params }: Params) {
           creator: { '@type': 'Organization', name: '이웃집 개발자' },
         }}
       />
-      <PageShell
-        from="monitor"
-        fig="[ fig. 2-1 · 모니터 · 사례 ]"
-        crumb="모니터"
-        title={project.label}
-        lede={project.period}
-      >
+      <PageShell from="monitor" crumb="모니터" title={project.label} lede={project.period}>
         <div className={styles.body}>
           <Problem project={project} />
           <Role project={project} />

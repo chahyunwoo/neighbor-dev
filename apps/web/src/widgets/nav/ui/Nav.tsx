@@ -11,11 +11,11 @@ export function Nav() {
         <span>이웃집 개발자</span>
       </Link>
       <div className={styles.links}>
-        <Link href="/">둘러보기</Link>
-        <Link href="/work">만든 것</Link>
-        <Link href="/career">같이 일하기</Link>
+        <Link href="/work">수행 사례</Link>
+        <Link href="/stack">기술 스택</Link>
+        <Link href="/team">팀 소개</Link>
         <Link href="/contact" className={styles.cta}>
-          문 두드리기
+          프로젝트 문의
           <svg
             width="13"
             height="13"

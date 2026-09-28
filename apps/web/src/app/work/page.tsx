@@ -16,8 +16,9 @@ import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = pageMetadata({
-  title: '만든 것',
-  description: '사례 상세와 경력 요약. 클라이언트사명은 전부 익명, 수치는 재현 명령이 있는 것만.',
+  title: '수행 사례',
+  description:
+    '2025년 4월 이후 수행한 프로젝트. 고객사명은 익명으로 표기하고, 수치는 재현 가능한 것만 싣습니다.',
   path: '/work',
 })
 
@@ -58,10 +59,9 @@ export default function WorkPage() {
       <PageShell
         from="whiteboard"
         wide
-        fig={`[ fig. 2 · 화이트보드 · ${detail.length + summary.length}건 ]`}
         crumb="화이트보드"
-        title="그동안 만든 것"
-        lede="클라이언트사명은 전부 익명으로 씁니다. 수치는 지금도 다시 돌려볼 수 있는 것만 실었습니다."
+        title="수행 사례"
+        lede="고객사명은 모두 익명으로 표기합니다. 수치는 지금도 다시 측정할 수 있는 것만 실었습니다."
       >
         {/*
          * 🔴 **등장 연출을 실제로 건다.** `features/reveal` 이 만들어져 있었는데
@@ -78,9 +78,9 @@ export default function WorkPage() {
          */}
         <section className={styles.section}>
           <Reveal className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>의뢰받아 만든 것</h2>
+            <h2 className={styles.sectionTitle}>외주 프로젝트</h2>
             <span className={styles.sectionNote}>
-              {commissioned.length}건 · 문제와 그때 내린 판단까지
+              {commissioned.length}건 · 과제, 설계 판단, 결과
             </span>
           </Reveal>
           {/* 카드는 하나씩 차례로 들어온다(`RevealGroup` 의 stagger). */}
@@ -95,8 +95,8 @@ export default function WorkPage() {
 
         <section className={styles.section}>
           <Reveal className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>의뢰받아 만든 것 — 상세는 못 적습니다</h2>
-            <span className={styles.sectionNote}>{summary.length}건 · 분야와 기간만</span>
+            <h2 className={styles.sectionTitle}>외주 프로젝트 · 요약 공개</h2>
+            <span className={styles.sectionNote}>{summary.length}건 · 업종과 기간</span>
           </Reveal>
           <RevealGroup className={styles.rows}>
             {summary.map((p) => (
@@ -107,9 +107,8 @@ export default function WorkPage() {
             ))}
           </RevealGroup>
           <p className={styles.note}>
-            위 {summary.length}건은 계약상 화면과 세부 판단을 공개할 수 없습니다.
-            <br />
-            분야와 기간까지만 적었습니다 — 없는 일을 지어내지 않기 위해 남겨둡니다.
+            위 {summary.length}건은 계약상 화면과 세부 설계를 공개할 수 없어 업종과 기간만
+            표기합니다.
           </p>
         </section>
 
@@ -121,8 +120,8 @@ export default function WorkPage() {
          */}
         <section className={styles.section}>
           <Reveal className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>직접 만들어 쓰는 것</h2>
-            <span className={styles.sectionNote}>{own.length}건 · 이 사이트를 포함해</span>
+            <h2 className={styles.sectionTitle}>자체 프로젝트</h2>
+            <span className={styles.sectionNote}>{own.length}건 · 이 사이트 포함</span>
           </Reveal>
           <RevealGroup className={styles.rows}>
             {own.map((p) => (
