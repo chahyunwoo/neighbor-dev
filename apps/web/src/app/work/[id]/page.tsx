@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const project = getProject(id)
   // 🔴 없는 사례는 색인시키지 않는다. 남는 URL 이 검색 결과에 뜨면 방문자가 막힌다.
   if (project?.tier !== 'detail') {
-    return { title: '없는 사례', robots: { index: false, follow: false } }
+    return { title: '사례를 찾을 수 없음', robots: { index: false, follow: false } }
   }
   return pageMetadata({
     title: project.label,
@@ -109,7 +109,7 @@ function Problem({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>무엇이 문제였나</h2>
+        <h2 className={styles.blockTitle}>과제</h2>
       </div>
       <p className={styles.prose}>
         <RichText>{project.problem}</RichText>
@@ -123,7 +123,7 @@ function Role({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>맡은 범위</h2>
+        <h2 className={styles.blockTitle}>담당 범위</h2>
         {project.scale ? <span className={styles.blockNote}>{project.scale}</span> : null}
       </div>
       <p className={styles.prose}>
@@ -139,7 +139,7 @@ function Decisions({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       {/* 제목은 토글 탭이 준다. 여기서 다시 붙이면 두 번 읽힌다. */}
-      <p className={styles.blockNote}>선택한 것과 버린 것, 그리고 그 대가</p>
+      <p className={styles.blockNote}>선택안 · 대안 · 근거 · 비용</p>
       <div className={styles.list}>
         {decisions.map((d) => (
           <article key={d.선택} className={styles.decision}>
@@ -151,11 +151,11 @@ function Decisions({ project }: { project: DetailProject }) {
               <span className={styles.decisionVal}>
                 <RichText>{d.대안}</RichText>
               </span>
-              <span className={styles.decisionKey}>이유</span>
+              <span className={styles.decisionKey}>근거</span>
               <span className={styles.decisionVal}>
                 <RichText>{d.이유}</RichText>
               </span>
-              <span className={styles.decisionKey}>대가</span>
+              <span className={styles.decisionKey}>비용</span>
               <span className={styles.decisionVal}>
                 <RichText>{d.트레이드오프}</RichText>
               </span>
@@ -173,7 +173,7 @@ function Metrics({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       {/* 재현 명령이 붙지 않은 수치는 빌드 단계에서 이미 빠졌다. */}
-      <p className={styles.blockNote}>전부 지금 다시 돌려볼 수 있는 것</p>
+      <p className={styles.blockNote}>모두 재현 명령과 함께 표기</p>
       <div className={styles.list}>
         {metrics.map((m) => (
           <div key={m.항목} className={styles.metric}>
@@ -202,7 +202,7 @@ function Stack({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>쓴 기술</h2>
+        <h2 className={styles.blockTitle}>사용 기술</h2>
       </div>
       <div className={styles.stack}>
         <StackTags names={names} peek={6} label={project.label} />

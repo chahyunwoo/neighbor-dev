@@ -49,7 +49,7 @@ export function ContactForm() {
       }
       setResult({
         kind: 'ok',
-        text: '보냈습니다. 하루 안에 답장드리겠습니다 — 주말이면 조금 늦어질 수 있어요.',
+        text: '접수되었습니다. 영업일 기준 1일 이내에 답변드리겠습니다.',
       })
       setName('')
       setEmail('')
@@ -66,21 +66,21 @@ export function ContactForm() {
       <div className={styles.row}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="contact-name">
-            어떻게 부르면 될까요
+            이름 또는 회사명
           </label>
           <input
             id="contact-name"
             className={styles.input}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="이름 또는 회사"
+            placeholder="예) 홍길동"
             disabled={pending}
             autoComplete="name"
           />
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="contact-email">
-            답장을 어디로 보낼까요
+            회신 받을 이메일
           </label>
           <input
             id="contact-email"
@@ -97,7 +97,7 @@ export function ContactForm() {
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="contact-message">
-          무엇을 만들고 싶으신가요. 정리되지 않아도 괜찮습니다.
+          문의 내용
         </label>
         <textarea
           id="contact-message"
@@ -119,11 +119,11 @@ export function ContactForm() {
 
       <div className={styles.foot}>
         <span className={styles.note}>
-          받은 내용은 답장에만 씁니다. 저장하지 않습니다.
+          문의 내용은 회신에만 사용하며 저장하지 않습니다.
           {tooLong ? ` · ${MAX_MESSAGE.toLocaleString()}자 안쪽으로 적어주세요` : ''}
         </span>
         <button className={styles.submit} type="submit" disabled={pending || invalid}>
-          {pending ? '보내는 중…' : '문 두드리기'}
+          {pending ? '보내는 중…' : '문의 보내기'}
         </button>
       </div>
     </form>

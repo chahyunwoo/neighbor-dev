@@ -37,7 +37,7 @@ export function ProjectLens({ decisionCount, metricCount, decisions, metrics }: 
   return (
     <div>
       <div className={styles.head}>
-        <span className={styles.headLabel}>보는 방식</span>
+        <span className={styles.headLabel}>보기</span>
         <div className={styles.toggle} role="tablist" aria-label="사례를 보는 방식">
           <button
             type="button"
@@ -47,7 +47,7 @@ export function ProjectLens({ decisionCount, metricCount, decisions, metrics }: 
             aria-controls="lens-decisions"
             onClick={() => setLens('decisions')}
           >
-            어떻게 판단했나
+            설계 판단
             <span className={styles.count}>{decisionCount}</span>
           </button>
           <button
@@ -58,7 +58,7 @@ export function ProjectLens({ decisionCount, metricCount, decisions, metrics }: 
             aria-controls="lens-metrics"
             onClick={() => setLens('metrics')}
           >
-            무엇이 나왔나
+            결과 지표
             <span className={styles.count}>{metricCount}</span>
           </button>
         </div>
@@ -74,7 +74,7 @@ export function ProjectLens({ decisionCount, metricCount, decisions, metrics }: 
         {decisionCount > 0 ? (
           decisions
         ) : (
-          <p className={styles.empty}>이 건은 판단 기록을 공개하지 않습니다.</p>
+          <p className={styles.empty}>이 프로젝트는 설계 판단을 공개하지 않습니다.</p>
         )}
       </div>
       <div className={styles.panel} id="lens-metrics" role="tabpanel" hidden={lens !== 'metrics'}>
@@ -82,7 +82,7 @@ export function ProjectLens({ decisionCount, metricCount, decisions, metrics }: 
           metrics
         ) : (
           <p className={styles.empty}>
-            재현 명령이 있는 수치만 싣습니다. 이 건은 그 조건을 만족하는 수치가 없습니다.
+            재현 명령이 있는 수치만 싣습니다. 이 프로젝트에는 해당 수치가 없습니다.
           </p>
         )}
       </div>

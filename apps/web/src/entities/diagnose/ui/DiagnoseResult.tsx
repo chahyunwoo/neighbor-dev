@@ -97,7 +97,7 @@ function ScopePanel({
 
   return (
     <>
-      <p className={styles.hint}>1차에서 뺄 것을 눌러보세요. 복사할 때 반영됩니다.</p>
+      <p className={styles.hint}>1차 개발에서 제외할 항목을 선택하세요. 복사할 때 반영됩니다.</p>
       <ul className={styles.scopeList}>
         {items.map((item, i) => {
           const raw = lines[i] ?? ''

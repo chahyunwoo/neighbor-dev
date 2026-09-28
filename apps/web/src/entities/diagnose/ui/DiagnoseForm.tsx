@@ -202,7 +202,7 @@ export function DiagnoseForm() {
       <form className={styles.wrap} onSubmit={submit}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="requirement">
-            만들고 싶은 것을 적어주세요. 정리되지 않아도 괜찮습니다.
+            만들고 싶은 서비스를 적어주세요. 정리되지 않은 상태여도 됩니다.
           </label>
           <textarea
             id="requirement"
@@ -227,7 +227,7 @@ export function DiagnoseForm() {
             {tooShort && text.length > 0 ? ` · ${MIN}자 이상 적어주세요` : ''}
           </span>
           <button className={styles.submit} type="submit" disabled={pending || tooShort || tooLong}>
-            {pending ? '정리하는 중…' : '진단해보기'}
+            {pending ? '분석 중…' : '진단 시작'}
           </button>
         </div>
       </form>
@@ -253,7 +253,7 @@ export function DiagnoseForm() {
         <div>
           <div className={styles.resultHead}>
             <span className={styles.resultTitle}>
-              {streaming ? '[ 정리하는 중… ]' : '[ 자가진단 결과 · 저장하지 않습니다 ]'}
+              {streaming ? '분석 중…' : '진단 결과 · 저장되지 않음'}
             </span>
             {!streaming ? (
               <span className={styles.actions}>
@@ -261,7 +261,7 @@ export function DiagnoseForm() {
                   {copied ? '복사됨' : '복사'}
                 </button>
                 <button className={styles.send} type="button" onClick={goToContact}>
-                  복사해서 문의하기 →
+                  결과 복사 후 문의하기 →
                 </button>
               </span>
             ) : null}
@@ -289,12 +289,7 @@ export function DiagnoseForm() {
  * ⚠️ 문구는 **하는 일을 순서대로** 적는다. 지어낸 단계가 아니라 프롬프트가
  *    실제로 시키는 순서다(기획서 5절: 범위 → 기술 → 기간 → 위험).
  */
-const STEPS = [
-  '적어주신 내용을 읽는 중',
-  '범위를 나누는 중',
-  '기술과 기간을 보는 중',
-  '위험한 곳을 찾는 중',
-]
+const STEPS = ['입력 내용 분석', '개발 범위 분할', '기술 스택·기간 산정', '리스크 검토']
 
 /**
  * 지금 읽어 줄 문구. **폼 바깥의 상시 라이브 영역**이 이 값을 읽는다.
@@ -350,7 +345,7 @@ function Analyzing({ onStep }: { onStep: (s: string) => void }) {
         {STEPS[i]}
         <span className={styles.dots} aria-hidden="true" />
       </p>
-      <p className={styles.analyzingNote}>저장하지 않습니다 · 금액은 말하지 않습니다</p>
+      <p className={styles.analyzingNote}>입력 내용 저장 안 함 · 견적 금액 미포함</p>
     </div>
   )
 }
