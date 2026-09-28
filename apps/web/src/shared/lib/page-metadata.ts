@@ -29,7 +29,7 @@ export function pageMetadata({
     description,
     alternates: { canonical: path },
     openGraph: {
-      title: `${title} · ${SITE_NAME}`,
+      title: `${SITE_NAME} | ${title}`,
       description,
       url: path,
       type: 'website',

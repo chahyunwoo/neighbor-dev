@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   title: {
     default: '이웃집 개발자',
-    template: '%s · 이웃집 개발자',
+    template: '이웃집 개발자 | %s',
   },
   description:
     '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다. 만든 것과 그때 내린 판단을 그대로 보여드립니다.',
