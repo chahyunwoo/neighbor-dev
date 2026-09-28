@@ -26,9 +26,10 @@ const FX = 0.3
 const FZ = 0.55
 
 /** 문 구멍 — 왼쪽 벽의 z 구간과 높이. */
-const DOOR_Z0 = -2.12
-const DOOR_Z1 = -1.08
-const DOOR_H = 2.1
+// 문 모델(`doorway`) 경계 실측과 같다. 크면 문 둘레 틈으로 배경이 보인다(낮에 드러났다).
+const DOOR_Z0 = -2.096
+const DOOR_Z1 = -1.1
+const DOOR_H = 2.07
 
 /** 밤 기준 색. 낮에는 아래 낮 색으로 비율만큼 섞는다(프로토타입 `applyLight`). */
 const FLOOR_COLOR = 0x1e1811

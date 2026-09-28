@@ -61,7 +61,8 @@ export const LAYOUT: readonly Placement[] = [
     hotspot: 'drawer',
   },
   { model: 'lampSquareFloor', position: [-2.85, 0, 0.75], rotationY: 16, scale: S },
-  { model: 'doorway', position: [-2.89, 0, -1.1], rotationY: 90, scale: S, hotspot: 'door' },
+  // 문틀 두께(0.233) 가운데를 왼쪽 벽 가운데(x -3.1)에 맞춘다. 전에는 12cm 방 쪽으로 튀어나왔다.
+  { model: 'doorway', position: [-3.0085, 0, -1.1], rotationY: 90, scale: S, hotspot: 'door' },
 
   // ===== 뒷벽 창 — 바닥에 서는 벽 패널이다(유리는 y1.11~2.47) =====
   { model: 'wallWindow', position: [1.27, 0, 3.32], rotationY: 0, scale: S },
