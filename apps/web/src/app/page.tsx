@@ -1,4 +1,3 @@
-import { getCounts } from '@/entities/project'
 import { ROOM_OBJECTS } from '@/entities/room'
 import { TransitionTitle } from '@/features/page-transition'
 import { Hero } from '@/widgets/hero'
@@ -13,8 +12,6 @@ import styles from './page.module.css'
  * 소스**로 못박았기 때문이다 — 바닥을 먼저 세워야 3D 가 표현 계층에 머문다.
  */
 export default function HomePage() {
-  const counts = getCounts()
-
   return (
     <div className={styles.page}>
       <div className={styles.lamp} aria-hidden="true" />
@@ -52,11 +49,7 @@ export default function HomePage() {
         <p className={styles.footCopy}>
           웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.
         </p>
-        <div className={styles.footStats}>
-          <span>9년</span>
-          <span>{counts.detail + counts.summary}건</span>
-          <span>NestJS · Next.js · Spring Boot</span>
-        </div>
+        <p className={styles.footLegal}>© {new Date().getFullYear()} 이웃집 개발자</p>
       </footer>
     </div>
   )
