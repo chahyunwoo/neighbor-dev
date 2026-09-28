@@ -55,7 +55,7 @@
   background: var(--blue-wash);
   border: 1px solid var(--blue-line);
   color: var(--blue);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 600;
 }

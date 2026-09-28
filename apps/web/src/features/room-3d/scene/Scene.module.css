@@ -129,7 +129,7 @@
   transition: opacity 0.2s;
 }
 .markerName b {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 500;
   color: var(--color-amber);

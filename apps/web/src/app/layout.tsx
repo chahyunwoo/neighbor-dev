@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from 'next'
+import { IBM_Plex_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { TransitionRoot } from '@/features/page-transition'
 import { MotionRoot } from '@/features/reveal'
 import { CanvasRoot, RoomProvider } from '@/features/room-3d'
 import { siteUrl } from '@/shared/lib'
 import { JsonLd } from '@/shared/ui'
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import '@/shared/styles/tokens.css'
+
+const plexMono = IBM_Plex_Mono({
+  weight: ['400', '500', '600'],
+  subsets: ['latin'],
+  variable: '--font-plex-mono',
+})
 
 export const metadata: Metadata = {
   /*
@@ -42,14 +50,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={plexMono.variable}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap"
-        />
         {/*
          * 🔴 **JS 가 없으면 등장 연출을 통째로 무효화한다.**
          *

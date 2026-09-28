@@ -54,8 +54,8 @@
   --color-blue-wash: rgba(107, 163, 232, 0.07);
 
   /* 타이포 */
-  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 
   /*
    * 글자 크기 — 2026-09-09 상향.
@@ -102,8 +102,8 @@
   --blue: var(--color-blue);
   --blue-line: var(--color-blue-line);
   --blue-wash: var(--color-blue-wash);
-  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
   --pad-x: 56px;
   --radius: 3px;
   /*

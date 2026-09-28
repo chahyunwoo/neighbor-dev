@@ -122,7 +122,7 @@ html[data-canvas-mode="room"] .page {
 }
 
 .caption {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-micro);
   color: var(--fg-ghost);
   letter-spacing: 0.07em;

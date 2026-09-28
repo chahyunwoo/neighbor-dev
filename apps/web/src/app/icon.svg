@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -4 76 72" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+  <title>이웃집 개발자</title>
+  <rect x="-6" y="-4" width="76" height="72" rx="14" fill="#0b0a0c"/>
+  <path d="M6 30 L32 9 L58 30" stroke="#e8a87c" stroke-width="4.4"/>
+  <path d="M20 40 L26 46 L20 52" stroke="#e7e9ee" stroke-width="4.4"/>
+  <path d="M34 52 L44 52" stroke="#e7e9ee" stroke-width="4.4"/>
+</svg>

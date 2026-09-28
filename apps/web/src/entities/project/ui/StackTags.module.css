@@ -14,7 +14,7 @@
 }
 
 .tag {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   padding: 3px 8px;
   border: 1px solid var(--line);
@@ -42,7 +42,7 @@
 }
 
 .more {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   padding: 3px 8px;
   border: 1px solid var(--line);

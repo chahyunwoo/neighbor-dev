@@ -76,7 +76,7 @@
   padding: 16px 18px;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.85;
   color: var(--fg-faint);

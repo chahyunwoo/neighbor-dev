@@ -26,7 +26,7 @@
 }
 
 .blockNote {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
 }
@@ -69,7 +69,7 @@
 }
 
 .decisionKey {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
   padding-top: 3px;
@@ -137,7 +137,7 @@
 }
 
 .tag {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   padding: 4px 9px;
   border: 1px solid var(--line);
