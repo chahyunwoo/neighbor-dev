@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { anchorOf } from './anchors'
 import { DEFAULTS, DEG, METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
-import { reactionOf, useReaction } from './useReaction'
+import { reactionOf } from './reaction'
+import { useReaction } from './useReaction'
 
 /**
  * Kenney 가구 하나.
@@ -77,6 +78,11 @@ export function Furniture({
     ? placement.scale
     : [placement.scale, placement.scale, placement.scale]
 
+  const center = useMemo<[number, number, number]>(() => {
+    const c = new THREE.Box3().setFromObject(scene).getCenter(new THREE.Vector3())
+    return [c.x * scale[0], c.y * scale[1], c.z * scale[2]]
+  }, [scene, scale[0], scale[1], scale[2]])
+
   // 🔴 열린 물건은 실제로 움직인다 — 서랍이 빠지고 문이 열린다(`useReaction`).
   //    핫스팟이 없는 가구는 반응하지 않는다(null 이면 훅이 아무것도 안 한다).
   useReaction(
@@ -84,6 +90,7 @@ export function Furniture({
     { position: placement.position, rotationY: placement.rotationY },
     hotspot ? reactionOf(hotspot) : null,
     hotspot != null && hotspot === openId,
+    center,
   )
 
   return (

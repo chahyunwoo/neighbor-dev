@@ -48,14 +48,14 @@ export const LAYOUT: readonly Placement[] = [
   // ===== 왼쪽 벽면 =====
   {
     model: 'bookcaseOpen',
-    position: [-2.59, 0, 2.19],
+    position: [-2.53, 0, 2.11],
     rotationY: 90,
     scale: S,
     hotspot: 'bookshelf',
   },
   {
     model: 'sideTableDrawers',
-    position: [-2.67, 0, 0.07],
+    position: [-2.61, 0, 0.07],
     rotationY: 90,
     scale: S,
     hotspot: 'drawer',
