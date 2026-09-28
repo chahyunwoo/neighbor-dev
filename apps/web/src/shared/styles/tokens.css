@@ -343,6 +343,21 @@ body {
   font-family: var(--font-sans);
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  /* 한국어는 기본값이 글자 단위로 끊는다. 어절 단위로 끊고, 한 어절이 줄보다 길 때만 쪼갠다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
 }
 
 a {
