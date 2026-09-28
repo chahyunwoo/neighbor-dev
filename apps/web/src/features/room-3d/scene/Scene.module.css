@@ -147,3 +147,57 @@
 .marker[data-open="true"] .markerName {
   opacity: 1;
 }
+
+/* 책상 램프 스위치 — 전등갓을 감싸는 원이 숨 쉬듯 깜빡이고, 아래에 문구가 붙는다(시안 .lamptip). */
+.lampSwitch {
+  position: relative;
+  display: block;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.lampRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 214, 150, 0.3);
+  box-shadow: 0 0 18px 3px rgba(255, 200, 130, 0.14);
+  animation: lampBreath 3.6s ease-in-out infinite;
+  transition:
+    inset 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+@keyframes lampBreath {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+.lampSwitch:hover .lampRing,
+.lampSwitch:focus-visible .lampRing {
+  inset: -8px;
+  border-color: rgba(255, 224, 170, 0.85);
+  box-shadow: 0 0 30px 8px rgba(255, 205, 140, 0.4);
+  animation: none;
+  opacity: 1;
+}
+.lampLabel {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  margin-top: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffd9a8;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95);
+}

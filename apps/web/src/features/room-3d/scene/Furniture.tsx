@@ -1,6 +1,7 @@
 'use client'
 
 import { useGLTF } from '@react-three/drei'
+import type { ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { anchorOf } from './anchors'
@@ -23,7 +24,10 @@ export function Furniture({
   placement,
   openId,
   onAnchor,
+  onPick,
 }: {
+  /** 이 물건을 눌렀을 때. 있으면 포인터가 손 모양이 된다. */
+  onPick?: (() => void) | undefined
   placement: Placement
   /** 지금 열려 있는 물건. 이 물건이면 반응한다(서랍이 빠지고 문이 열린다). */
   openId?: string | null
@@ -94,9 +98,20 @@ export function Furniture({
   )
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: DOM 이 아니라 three 객체다. 키보드로는 램프 위 스위치 버튼을 쓴다
     <primitive
       ref={ref}
       object={object}
+      onClick={
+        onPick
+          ? (e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation()
+              onPick()
+            }
+          : undefined
+      }
+      onPointerOver={onPick ? () => (document.body.style.cursor = 'pointer') : undefined}
+      onPointerOut={onPick ? () => (document.body.style.cursor = '') : undefined}
       position={placement.position}
       rotation={[0, placement.rotationY * DEG, 0]}
       scale={scale}

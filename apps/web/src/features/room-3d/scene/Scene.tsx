@@ -13,6 +13,8 @@ import {
   type OrbitControlsLike,
   PANEL_WIDTH,
 } from './CameraRig'
+import { BLOOM_NIGHT, DaylightSync } from './DaylightSync'
+import { setDaylightTarget } from './daylight'
 import {
   MONITOR_POSITION,
   Monitor,
@@ -51,6 +53,9 @@ for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
  *    쥐고 있고, 목록 폴백·서버 렌더 HTML 이 같은 데이터를 쓴다(기획서 4절).
  *    여기서 링크를 새로 만들지 않는다 — 만들면 세 경로가 어긋난다.
  */
+/** 책상 램프 전등갓 중심. 배치된 모델 경계 상자 실측(y 0.787~1.322)의 위쪽 1/3. */
+const LAMP_SWITCH: [number, number, number] = [-2.726, 1.16, 2.757]
+
 export function Scene({
   openId,
   seen,
@@ -58,7 +63,13 @@ export function Scene({
   onEntered,
   onIntroStart,
   mode = 'room',
+  night = true,
+  onToggleLight,
 }: {
+  /** 밤(기본)인가. 바뀌면 1.1초에 걸쳐 조명이 넘어간다. */
+  night?: boolean
+  /** 책상 램프를 눌렀다 — 불을 켜고 끈다(홈 전용). */
+  onToggleLight?: () => void
   /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
   openId: string | null
   /** 이미 열어본 것 — 흐려져서 "남은 것" 이 눈에 띈다(시안 .mk.seen). */
@@ -116,6 +127,11 @@ export function Scene({
    *    ⚠️ 페이지 배경(`mode === 'page'`)은 입장 연출이 없으므로 처음부터 제약을 건다.
    */
   const [entered, setEntered] = useState(mode === 'page')
+
+  const bloomRef = useRef<React.ComponentRef<typeof Bloom>>(null)
+  useEffect(() => {
+    setDaylightTarget(night)
+  }, [night])
   const handleEntered = useCallback(() => {
     setEntered(true)
     onEntered()
@@ -226,6 +242,7 @@ export function Scene({
       {/* 비율은 `CameraRig` 가 보이는 영역 기준으로 매 프레임 정한다. drei 는 렌더마다 캔버스 비율로 덮어쓴다. */}
       <PerspectiveCamera makeDefault manual fov={CAMERA_FOV} />
       <color attach="background" args={[ROOM_BG]} />
+      <DaylightSync bloom={bloomRef} />
       <Lights />
 
       {/*
@@ -239,6 +256,7 @@ export function Scene({
           placement={p}
           openId={introDoor && p.hotspot === 'door' ? 'door' : openId}
           onAnchor={report}
+          onPick={mode === 'room' && p.model === 'lampSquareTable' ? onToggleLight : undefined}
         />
       ))}
 
@@ -248,6 +266,16 @@ export function Scene({
 
       {/* 방 껍데기 — 벽이 빛을 되돌려 방을 밝힌다. 장식이 아니다. */}
       <Shell />
+
+      {/* 책상 램프 전등갓 위의 스위치. 램프 모델을 눌러도 같다. */}
+      {mode === 'room' && entered && openId === null && onToggleLight ? (
+        <Html position={LAMP_SWITCH} center zIndexRange={[10, 0]}>
+          <button type="button" className={styles.lampSwitch} onClick={onToggleLight}>
+            <span className={styles.lampRing} aria-hidden="true" />
+            <b className={styles.lampLabel}>{night ? '불을 켜보세요' : '불을 꺼보세요'}</b>
+          </button>
+        </Html>
+      ) : null}
 
       {/* 🔴 페이지에서는 마커를 그리지 않는다 — 배경이고, 누를 것은 본문에 있다. */}
       {(mode === 'room' ? hotspots : []).map(({ at, meta }) => (
@@ -320,7 +348,13 @@ export function Scene({
 
       {/* 포스트프로세싱은 데스크톱에서만 켠다 — 부모가 그 판단을 한다. */}
       <EffectComposer>
-        <Bloom intensity={0.7} luminanceThreshold={0.55} luminanceSmoothing={0.3} mipmapBlur />
+        <Bloom
+          ref={bloomRef}
+          intensity={BLOOM_NIGHT}
+          luminanceThreshold={0.55}
+          luminanceSmoothing={0.3}
+          mipmapBlur
+        />
       </EffectComposer>
     </>
   )

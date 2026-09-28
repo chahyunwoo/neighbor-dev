@@ -44,7 +44,7 @@ const COUNT = () => {
         continue
       }
       if (prevTop !== null && r.top > prevTop + 2 && HANGUL.test(t[i]) && HANGUL.test(t[i - 1])) {
-        hits.push(t.slice(Math.max(0, i - 6), i) + ' / ' + t.slice(i, i + 6))
+        hits.push(`${t.slice(Math.max(0, i - 6), i)} / ${t.slice(i, i + 6)}`)
       }
       prevTop = r.top
     }

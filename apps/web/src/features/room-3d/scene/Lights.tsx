@@ -1,5 +1,9 @@
 'use client'
 
+import { useFrame } from '@react-three/fiber'
+import { useRef } from 'react'
+import type * as THREE from 'three'
+import { DAY_MUL, daylight, mixDay } from './daylight'
 import { DESK_TOP } from './layout'
 
 /**
@@ -19,17 +23,56 @@ import { DESK_TOP } from './layout'
 /** 뒷벽 z. 프로토타입의 FZ + RD/2 와 같다(0.55 + 5.6/2). */
 const BACK_WALL_Z = 3.35
 
+/** 밤(기본) 세기. 낮에는 `DAY_MUL` 을 곱한다. */
+const NIGHT = {
+  ambient: 0.14,
+  hemi: 0.18,
+  key: 22,
+  sun: 0.36,
+  fill: 0.17,
+  win: 4.5,
+  mon: 3.2,
+  lamp: 2.2,
+  door: 2.4,
+  floor: 2.8,
+  board: 12,
+  meet: 16,
+} as const
+
+type LightKey = keyof typeof NIGHT
+
 export function Lights() {
+  const refs = useRef<Partial<Record<LightKey, THREE.Light | null>>>({})
+  const at = (k: LightKey) => (l: THREE.Light | null) => {
+    refs.current[k] = l
+  }
+  const applied = useRef(daylight.t)
+
+  useFrame(() => {
+    if (applied.current === daylight.t) return
+    applied.current = daylight.t
+    for (const k of Object.keys(NIGHT) as LightKey[]) {
+      const l = refs.current[k]
+      if (l) l.intensity = mixDay(NIGHT[k], DAY_MUL[k])
+    }
+  })
+
   return (
     <>
       {/* 바탕 — 아주 약하게. 이것만으로는 아무것도 안 보인다. */}
-      <ambientLight color={0x39415a} intensity={0.14} />
-      <hemisphereLight color={0x6e82a8} groundColor={0x1a140e} intensity={0.18} />
+      <ambientLight ref={at('ambient')} color={0x39415a} intensity={NIGHT.ambient} />
+      <hemisphereLight
+        ref={at('hemi')}
+        color={0x6e82a8}
+        groundColor={0x1a140e}
+        intensity={NIGHT.hemi}
+      />
 
       {/* 키 라이트 — 책상을 비추는 따뜻한 등. 그림자를 만든다. */}
       <Spot
+        lightRef={at('key')}
         color={0xffb067}
-        intensity={22}
+        intensity={NIGHT.key}
         distance={4.4}
         angle={Math.PI / 5.4}
         penumbra={0.82}
@@ -41,8 +84,9 @@ export function Lights() {
 
       {/* 해 — 창 밖에서 드는 찬 빛. 방 전체 그림자를 잡는다. */}
       <directionalLight
+        ref={at('sun')}
         color={0xaec4e8}
-        intensity={0.36}
+        intensity={NIGHT.sun}
         position={[3.0, 6.2, 1.2]}
         castShadow
         shadow-mapSize={[1024, 1024]}
@@ -53,40 +97,50 @@ export function Lights() {
         shadow-bias={-0.0016}
       />
       {/* 필 — 그림자 쪽을 살짝 들어 올린다. 그림자를 만들지 않는다. */}
-      <directionalLight color={0x5e8aa8} intensity={0.17} position={[5.5, 3.2, -3.5]} />
+      <directionalLight
+        ref={at('fill')}
+        color={0x5e8aa8}
+        intensity={NIGHT.fill}
+        position={[5.5, 3.2, -3.5]}
+      />
 
       {/* 물건이 스스로 내는 빛 — 창·모니터·램프·문 */}
       <pointLight
+        ref={at('win')}
         color={0x9db6e8}
-        intensity={4.5}
+        intensity={NIGHT.win}
         distance={5.5}
         decay={1.9}
         position={[2.3, 1.7, 2.85]}
       />
       <pointLight
+        ref={at('mon')}
         color={0x58b8e8}
-        intensity={3.2}
+        intensity={NIGHT.mon}
         distance={3.4}
         decay={2.0}
         position={[-1.79, DESK_TOP + 0.34, 2.45]}
       />
       <pointLight
+        ref={at('lamp')}
         color={0xe8a87c}
-        intensity={2.2}
+        intensity={NIGHT.lamp}
         distance={2.6}
         decay={2.2}
         position={[-2.32, DESK_TOP + 0.3, 2.62]}
       />
       <pointLight
+        ref={at('door')}
         color={0x9fd0e8}
-        intensity={2.4}
+        intensity={NIGHT.door}
         distance={3.2}
         decay={2.2}
         position={[-2.8, 0.35, -0.6]}
       />
       <pointLight
+        ref={at('floor')}
         color={0xe89a62}
-        intensity={2.8}
+        intensity={NIGHT.floor}
         distance={3.6}
         decay={2.2}
         position={[-2.7, 1.72, 0.9]}
@@ -94,8 +148,9 @@ export function Lights() {
 
       {/* 화이트보드 — 벽에 걸린 것을 읽을 수 있게 따로 비춘다. */}
       <Spot
+        lightRef={at('board')}
         color={0xdce6f5}
-        intensity={12}
+        intensity={NIGHT.board}
         distance={5.2}
         angle={Math.PI / 3.2}
         penumbra={0.85}
@@ -106,8 +161,9 @@ export function Lights() {
 
       {/* 회의 구역 천장등 — 없으면 그 구역이 통째로 안 보인다(프로토타입 실측). */}
       <Spot
+        lightRef={at('meet')}
         color={0xffd9a8}
-        intensity={16}
+        intensity={NIGHT.meet}
         distance={5.2}
         angle={Math.PI / 4.0}
         penumbra={0.72}
@@ -131,8 +187,10 @@ function Spot({
   target,
   position,
   castShadow = false,
+  lightRef,
   ...props
 }: {
+  lightRef: (l: THREE.Light | null) => void
   color: number
   intensity: number
   distance: number
@@ -145,6 +203,7 @@ function Spot({
 }) {
   return (
     <spotLight
+      ref={lightRef}
       {...props}
       position={position}
       castShadow={castShadow}
