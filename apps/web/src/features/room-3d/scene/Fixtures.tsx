@@ -1,6 +1,6 @@
 'use client'
 
-import { useThree } from '@react-three/fiber'
+import { type ThreeEvent, useThree } from '@react-three/fiber'
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { getDetailProjects } from '@/entities/project'
@@ -123,3 +123,66 @@ export const MONITOR_POSITION: [number, number, number] = [-1.79, DESK_TOP, 2.62
 export const WHITEBOARD_POSITION: [number, number, number] = [-1.78, 1.9, 3.26]
 /** 뒷벽에 걸리므로 회전이 없다. */
 export const WHITEBOARD_ROTATION_Y = 0
+
+/** 회의 테이블 위 펜던트 전구의 이름. `DaylightSync` 가 낮/밤에 따라 발광을 바꾼다. */
+export const PENDANT_BULB = 'pendantBulb'
+/** 천장 높이. `Shell` 의 WH 와 같다. */
+const CEILING_Y = 3.0
+
+/**
+ * 회의 테이블 위 천장 펜던트 — 누르면 불을 켜고 끈다. 프로토타입 `lampSwitch` 의 치수 그대로다.
+ * 이 구역을 실제로 비추는 천장 스포트(`Lights` 의 회의등)와 같은 자리에 매단다.
+ */
+export function Pendant({
+  position,
+  onPick,
+}: {
+  position: [number, number, number]
+  onPick?: (() => void) | undefined
+}) {
+  const cord = CEILING_Y - position[1] - 0.11
+  return (
+    <group
+      position={position}
+      {...(onPick && {
+        onClick: (e: ThreeEvent<MouseEvent>) => {
+          e.stopPropagation()
+          onPick()
+        },
+        onPointerOver: () => {
+          document.body.style.cursor = 'pointer'
+        },
+        onPointerOut: () => {
+          document.body.style.cursor = ''
+        },
+      })}
+    >
+      {/* 천장 줄 — 갓 위(0.11)부터 천장까지 */}
+      <mesh position={[0, 0.11 + cord / 2, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, cord, 8]} />
+        <meshStandardMaterial color={0x2a2e36} roughness={0.8} />
+      </mesh>
+      {/* 갓 — 안쪽이 보이게 양면 */}
+      <mesh position={[0, 0.1, 0]} castShadow>
+        <coneGeometry args={[0.3, 0.24, 26, 1, true]} />
+        <meshStandardMaterial
+          color={0x2e3440}
+          roughness={0.5}
+          metalness={0.35}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* 전구 */}
+      <mesh position={[0, 0.02, 0]}>
+        <sphereGeometry args={[0.075, 18, 14]} />
+        <meshStandardMaterial
+          name={PENDANT_BULB}
+          color={0xffe0b8}
+          roughness={0.35}
+          emissive={0xffc98a}
+          emissiveIntensity={2.2}
+        />
+      </mesh>
+    </group>
+  )
+}

@@ -18,6 +18,7 @@ import { setDaylightTarget } from './daylight'
 import {
   MONITOR_POSITION,
   Monitor,
+  Pendant,
   WHITEBOARD_POSITION,
   WHITEBOARD_ROTATION_Y,
   Whiteboard,
@@ -53,8 +54,15 @@ for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
  *    쥐고 있고, 목록 폴백·서버 렌더 HTML 이 같은 데이터를 쓴다(기획서 4절).
  *    여기서 링크를 새로 만들지 않는다 — 만들면 세 경로가 어긋난다.
  */
-/** 책상 램프 전등갓 중심. 배치된 모델 경계 상자 실측(y 0.787~1.322)의 위쪽 1/3. */
-const LAMP_SWITCH: [number, number, number] = [-2.726, 1.16, 2.757]
+/**
+ * 회의 테이블 위 펜던트. x·z 는 프로토타입 `lampSwitch`·회의등(`Lights`)과 같다.
+ * 높이는 식탁 펜던트처럼 상판(0.67) 위 0.85m 로 내렸다 — 천장(2.3)에 붙이면 천장이 없는 이 구도에서
+ * 뒤쪽 책상 위에 뜬 것처럼 보인다.
+ */
+const PENDANT_Y = 1.55
+const PENDANT_POSITION: [number, number, number] = [1.19, PENDANT_Y, -0.25]
+/** 스위치 안내는 전구 바로 아래에 둔다(프로토타입: 위치 y − 0.06). */
+const PENDANT_SWITCH: [number, number, number] = [1.19, PENDANT_Y - 0.06, -0.25]
 
 export function Scene({
   openId,
@@ -68,7 +76,7 @@ export function Scene({
 }: {
   /** 밤(기본)인가. 바뀌면 1.1초에 걸쳐 조명이 넘어간다. */
   night?: boolean
-  /** 책상 램프를 눌렀다 — 불을 켜고 끈다(홈 전용). */
+  /** 회의 테이블 위 펜던트를 눌렀다 — 불을 켜고 끈다(홈 전용). */
   onToggleLight?: () => void
   /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
   openId: string | null
@@ -256,7 +264,6 @@ export function Scene({
           placement={p}
           openId={introDoor && p.hotspot === 'door' ? 'door' : openId}
           onAnchor={report}
-          onPick={mode === 'room' && p.model === 'lampSquareTable' ? onToggleLight : undefined}
         />
       ))}
 
@@ -267,9 +274,11 @@ export function Scene({
       {/* 방 껍데기 — 벽이 빛을 되돌려 방을 밝힌다. 장식이 아니다. */}
       <Shell />
 
-      {/* 책상 램프 전등갓 위의 스위치. 램프 모델을 눌러도 같다. */}
+      <Pendant position={PENDANT_POSITION} onPick={mode === 'room' ? onToggleLight : undefined} />
+
+      {/* 펜던트 전구의 스위치. 펜던트 모델을 눌러도 같다. */}
       {mode === 'room' && entered && openId === null && onToggleLight ? (
-        <Html position={LAMP_SWITCH} center zIndexRange={[10, 0]}>
+        <Html position={PENDANT_SWITCH} center zIndexRange={[10, 0]}>
           <button type="button" className={styles.lampSwitch} onClick={onToggleLight}>
             <span className={styles.lampRing} aria-hidden="true" />
             <b className={styles.lampLabel}>{night ? '불을 켜보세요' : '불을 꺼보세요'}</b>

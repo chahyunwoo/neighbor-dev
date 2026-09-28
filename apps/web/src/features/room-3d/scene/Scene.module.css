@@ -148,7 +148,7 @@
   opacity: 1;
 }
 
-/* 책상 램프 스위치 — 전등갓을 감싸는 원이 숨 쉬듯 깜빡이고, 아래에 문구가 붙는다(시안 .lamptip). */
+/* 펜던트 스위치 — 전등을 감싸는 원이 숨 쉬듯 깜빡이고, 위에 문구가 붙는다(아래는 테이블 마커 자리다). */
 .lampSwitch {
   position: relative;
   display: block;
@@ -191,8 +191,8 @@
 .lampLabel {
   position: absolute;
   left: 50%;
-  top: 100%;
-  margin-top: 8px;
+  bottom: 100%;
+  margin-bottom: 8px;
   transform: translateX(-50%);
   white-space: nowrap;
   font-family: var(--font-sans);
