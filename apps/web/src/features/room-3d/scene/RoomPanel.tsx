@@ -122,7 +122,7 @@ export function RoomPanel({
             {item.rows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 border-t border-line py-3.5">
                 <dt className="text-base font-light text-fg-muted">{k}</dt>
-                <dd className="text-right font-mono text-small text-fg-faint">{v}</dd>
+                <dd className="text-right font-sans text-small text-fg-faint">{v}</dd>
               </div>
             ))}
           </dl>

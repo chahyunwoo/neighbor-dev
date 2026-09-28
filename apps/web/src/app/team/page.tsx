@@ -41,7 +41,7 @@ export default function TeamPage() {
       >
         <div className="flex flex-col gap-10">
           <section>
-            <h2 className="mb-4 font-mono text-micro tracking-[0.1em] text-amber">구성</h2>
+            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">구성</h2>
             <dl className="border-t border-line">
               {(team?.rows ?? []).map(([role, detail]) => (
                 <div
@@ -50,14 +50,14 @@ export default function TeamPage() {
                            border-b border-line py-4"
                 >
                   <dt className="text-base font-normal text-fg-strong">{role}</dt>
-                  <dd className="font-mono text-small text-fg-faint">{detail}</dd>
+                  <dd className="font-sans text-small text-fg-faint">{detail}</dd>
                 </div>
               ))}
             </dl>
           </section>
 
           <section>
-            <h2 className="mb-4 font-mono text-micro tracking-[0.1em] text-amber">일하는 방식</h2>
+            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">일하는 방식</h2>
             <div className="flex flex-col gap-4 text-base leading-[1.85] font-light text-fg-muted">
               <p>
                 <strong className="font-medium text-fg-strong">PM 이 전 영역을 직접 봅니다.</strong>{' '}
@@ -81,7 +81,7 @@ export default function TeamPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 font-mono text-micro tracking-[0.1em] text-amber">받지 않는 일</h2>
+            <h2 className="mb-4 font-sans text-micro tracking-[0.1em] text-amber">받지 않는 일</h2>
             <div className="flex flex-col gap-4 text-base leading-[1.85] font-light text-fg-muted">
               <p>
                 무엇을 만들지 정해지지 않은 상태는 괜찮습니다 — 정리부터 같이 합니다. 다만{' '}
