@@ -58,7 +58,8 @@ async function shotNow(pg) {
         '.canvas-shell{opacity:1!important}body>*:not(.canvas-shell){visibility:hidden!important}'
       document.head.appendChild(s)
     }
-    const r = document.querySelector('.canvas-shell').getBoundingClientRect()
+    // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+    const r = document.querySelector('.canvas-frame').getBoundingClientRect()
     return { x: r.x, y: r.y, width: r.width, height: r.height }
   })
   const shot = (await pg.screenshot({ clip: box })).toString('base64')

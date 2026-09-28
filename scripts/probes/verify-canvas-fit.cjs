@@ -19,7 +19,8 @@ const READ = () => {
   const cs = getComputedStyle(document.documentElement)
   const foot = document.querySelector('footer')
   const nav = document.querySelector('nav')
-  const c = document.querySelector('canvas')?.getBoundingClientRect()
+  // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+  const c = document.querySelector('.canvas-frame')?.getBoundingClientRect()
   return {
     varFoot: cs.getPropertyValue('--foot-h').trim(),
     varNav: cs.getPropertyValue('--nav-h').trim(),

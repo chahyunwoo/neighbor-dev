@@ -71,7 +71,8 @@ const ok = (c, l, d) => {
     )
     // 캔버스 밖으로 나간 마커가 없는지
     const out = await pg.evaluate(() => {
-      const c = document.querySelector('canvas').getBoundingClientRect()
+      // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+      const c = document.querySelector('.canvas-frame').getBoundingClientRect()
       let n = 0
       document.querySelectorAll('button[class*="marker"]').forEach((el) => {
         const r = el.getBoundingClientRect()

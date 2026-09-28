@@ -1,10 +1,10 @@
 'use client'
 
 import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '@/entities/room'
+import { readFrame } from '@/features/room-3d/model/frame'
 import { anchorFromBox } from './anchors'
 import {
   CameraRig,
@@ -223,7 +223,8 @@ export function Scene({
        *    위치에 고정됐고 `onEntered` 가 영영 안 불려 **카피·목록·어둠막이
        *    통째로 안 보였다.** 카메라 위치는 `CameraRig` 가 쥔다.
        */}
-      <PerspectiveCamera makeDefault fov={CAMERA_FOV} />
+      {/* 비율은 `CameraRig` 가 보이는 영역 기준으로 매 프레임 정한다. drei 는 렌더마다 캔버스 비율로 덮어쓴다. */}
+      <PerspectiveCamera makeDefault manual fov={CAMERA_FOV} />
       <color attach="background" args={[ROOM_BG]} />
       <Lights />
 
@@ -353,10 +354,7 @@ export function Scene({
  *    "물건 위에 떠 있다" 가 유지된다. 밖으로 나간 것만 끌어온다.
  */
 function useEdgeClamp() {
-  const { gl } = useThree()
-
   useEffect(() => {
-    const canvas = gl.domElement
     /*
      * ⚠️ 마커 래퍼는 `canvas.parentElement` **바로 밑이 아니다** — 드리가
      *    자기 컨테이너 div 를 한 겹 더 끼운다(실측: 래퍼 7개가 잡히는데
@@ -371,8 +369,8 @@ function useEdgeClamp() {
       raf = requestAnimationFrame(tick)
       const coverTo = document.documentElement.dataset.panelOpen === 'true' ? PANEL_WIDTH : 0
       cover = Math.abs(coverTo - cover) < 0.5 ? coverTo : cover + (coverTo - cover) * 0.12
-      const w = canvas.clientWidth
-      const h = canvas.clientHeight
+      // 캔버스는 뷰포트 전체다. 접는 경계는 3D 가 보이는 영역이다.
+      const { x: fx, y: fy, w, h } = readFrame()
       if (!w || !h) return
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
@@ -406,11 +404,11 @@ function useEdgeClamp() {
          *    책장(x=80)·테이블(x=91)이 그래서 5/7 이었다.
          *    `UI_LEFT` 는 `CameraRig` 의 `UI_WIDTH` 와 같은 값이다.
          */
-        const left = Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
+        const left = fx + Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
         // 패널은 캔버스를 줄이지 않고 덮는다. 그 밑으로 접으면 마커가 패널 뒤에 숨는다.
-        const right = w - cover - EDGE_PAD
+        const right = fx + w - cover - EDGE_PAD
         const cx = Math.min(right, Math.max(left, x))
-        const cy = Math.min(h - EDGE_PAD, Math.max(EDGE_PAD, y))
+        const cy = Math.min(fy + h - EDGE_PAD, Math.max(fy + EDGE_PAD, y))
         const clamped = cx !== x || cy !== y
 
         /*
@@ -458,7 +456,6 @@ function useEdgeClamp() {
        * ⚠️ DOM 순서대로 훑고 **아래로만** 민다. 순서가 프레임마다 바뀌면
        *    마커가 떨려서 오히려 더 안 눌린다(한 번 그렇게 만들어 7/7 → 5/7).
        */
-      const canvasBox = canvas.getBoundingClientRect()
       const taken: { x: number; y: number }[] = []
       for (const el of wraps) {
         if (el.dataset.edge !== 'true') {
@@ -481,7 +478,7 @@ function useEdgeClamp() {
         ) {
           shift += EDGE_GAP
           // 아래로 넘치면 포기한다 — 화면 밖으로 내보내면 더 나쁘다.
-          if (at.y + shift > canvasBox.bottom - EDGE_PAD) {
+          if (at.y + shift > fy + h - EDGE_PAD) {
             shift = 0
             break
           }
@@ -492,5 +489,5 @@ function useEdgeClamp() {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [gl])
+  }, [])
 }
