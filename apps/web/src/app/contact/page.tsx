@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { ContactForm } from '@/entities/contact'
-import { pageMetadata } from '@/shared/lib'
+import { COMPANY, pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
@@ -80,6 +80,9 @@ export default async function ContactPage() {
                   : '오늘 받을 수 있는 문의를 다 받았습니다. 내일 다시 열립니다.'}
             </div>
           )}
+          <p className={styles.direct}>
+            메일로 바로 보내셔도 됩니다 — <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
+          </p>
         </div>
       </PageShell>
     </>

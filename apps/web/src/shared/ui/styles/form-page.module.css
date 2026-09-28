@@ -81,3 +81,10 @@
   line-height: 1.85;
   color: var(--fg-faint);
 }
+
+/* 폼을 거치지 않고 메일로 바로 연락하는 길. 접수가 닫혀 있어도 보인다. */
+.direct {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--fg-faint);
+}

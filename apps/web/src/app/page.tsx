@@ -1,5 +1,6 @@
 import { ROOM_OBJECTS } from '@/entities/room'
 import { TransitionTitle } from '@/features/page-transition'
+import { COMPANY } from '@/shared/lib'
 import { Hero } from '@/widgets/hero'
 import { Nav } from '@/widgets/nav'
 import styles from './page.module.css'
@@ -49,7 +50,15 @@ export default function HomePage() {
         <p className={styles.footCopy}>
           웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.
         </p>
-        <p className={styles.footLegal}>© {new Date().getFullYear()} 이웃집 개발자</p>
+        <div className={styles.footLegal}>
+          <p>
+            {COMPANY.name} · 대표 {COMPANY.owner} · 사업자등록번호 {COMPANY.bizNo}
+          </p>
+          <p>
+            <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> · © {new Date().getFullYear()}{' '}
+            이웃집 개발자
+          </p>
+        </div>
       </footer>
     </div>
   )

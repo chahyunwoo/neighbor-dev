@@ -164,7 +164,9 @@ const CHECKS = [
     (t) =>
       [...t.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-zA-Z]{2,}(?![\w+-])/g)]
         .map((m) => m[0])
-        .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a)),
+        .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a))
+        // 사업용 공개 주소 — apps/web/src/shared/lib/company.ts 와 같다.
+        .filter((a) => a.toLowerCase() !== 'hello@iutzip.dev'),
   ],
   [
     '내부URL',
