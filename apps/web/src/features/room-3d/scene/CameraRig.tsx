@@ -218,7 +218,7 @@ function ease(t: number): number {
  */
 const UI_WIDTH = 520
 /** 열렸을 때 오른쪽 패널이 먹는 폭. `RoomPanel` 과 같아야 한다. */
-const PANEL_WIDTH = 480
+export const PANEL_WIDTH = 480
 
 /**
  * 페이지에서 **캔버스 왼쪽이 마스크로 지워지는 비율.**
@@ -238,6 +238,11 @@ const PANEL_WIDTH = 480
  *    아예 안 덮는다.** 덮는 것은 마스크뿐이다.
  */
 const PAGE_MASK_LEFT = 0.42
+
+/** 패널이 캔버스 오른쪽을 덮는 폭. 캔버스는 줄이지 않는다 — 줄이면 매 프레임 드로잉 버퍼·렌더 타깃을 다시 만든다. */
+function panelCover(mode: 'room' | 'page', open: boolean): number {
+  return mode === 'room' && open ? PANEL_WIDTH : 0
+}
 
 /**
  * 페이지에서 물건에 다가가는 거리의 하한.
@@ -551,7 +556,7 @@ export function CameraRig({
        */
       const persp = camera as THREE.PerspectiveCamera
       const fitH = focus.radius / Math.sin((persp.fov * Math.PI) / 180 / 2)
-      const fitW = fitH / (size.width / size.height)
+      const fitW = fitH / ((size.width - panelCover(mode, true)) / size.height)
       // 🔴 초점 상태의 거리 제약 안으로 접는다. 안 그러면 물건에 코를 박는다.
       const raw = Math.max(fitH, fitW) / FILL / 2
       // 🔴 하한을 넉넉히 잡는다. 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로
@@ -765,10 +770,10 @@ export function CameraRig({
      *       패널이 열리면 오른쪽 480px 이 덮인다.
      * - 페이지: 본문은 캔버스 **밖**에 있다. 덮는 것은 왼쪽 마스크뿐이다.
      */
-    const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
+    const right = panelCover(mode, focus != null)
     const left = mode === 'page' ? w * PAGE_MASK_LEFT : UI_WIDTH
-    // `(left + (w - right)) / 2 - w / 2` 를 약분한 것이다 — `w` 는 상쇄된다.
-    const shift = (left - right) / 2
+    // 패널이 캔버스를 줄이던 때의 구도를 그대로 낸다: 줄어든 캔버스 중심(-right/2)에서 `(left - right) / 2`.
+    const shift = (left - right) / 2 - right / 2
     shiftRef.current = shift
     /*
      * 🔴 **여기서 즉시 걸지 않는다.** `useFrame` 이 매 프레임 목표로 다가간다

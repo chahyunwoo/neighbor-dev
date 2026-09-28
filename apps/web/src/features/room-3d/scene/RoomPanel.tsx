@@ -76,7 +76,7 @@ export function RoomPanel({
         ref={ref}
         tabIndex={-1}
         aria-label={`${item.name} — ${item.opens}`}
-        className="fixed top-[78px] right-0 bottom-[74px] z-4 flex w-[480px] max-w-full flex-col
+        className="fixed top-[78px] right-0 bottom-[var(--foot-h,70px)] z-4 flex w-[480px] max-w-full flex-col
                    border-l border-line bg-[rgba(12,11,15,0.975)] outline-none
                    motion-safe:animate-[panelIn_.44s_cubic-bezier(.4,.05,.2,1)]"
       >

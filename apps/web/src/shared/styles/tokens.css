@@ -198,11 +198,6 @@ html[data-canvas-mode="room"] {
   --cv-pe: auto;
 }
 
-/* 패널이 열리면 오른쪽을 그만큼 비운다(마커가 패널 뒤로 숨지 않게). */
-html[data-canvas-mode="room"][data-panel-open="true"] {
-  --cv-right: var(--panel-w);
-}
-
 /*
  * 페이지 — 오른쪽에 흐릿하게. 본문이 주인공이라 클릭을 받지 않는다.
  * `min(56vw, 780px)` 를 left 로 역산한다.
@@ -282,7 +277,7 @@ html[data-canvas-mode="off"] {
    */
   opacity: 0;
   pointer-events: var(--cv-pe, none);
-  /* 패널이 열리면 오른쪽이 좁아진다. 시안 실측 .44s. */
+  /* 라우트 전환 때 네 변이 움직인다. 시안 실측 .44s. 패널은 캔버스를 줄이지 않고 덮는다. */
   transition:
     right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
     left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),

@@ -6,7 +6,13 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '@/entities/room'
 import { anchorFromBox } from './anchors'
-import { CameraRig, type FocusTarget, FREE_LIMITS, type OrbitControlsLike } from './CameraRig'
+import {
+  CameraRig,
+  type FocusTarget,
+  FREE_LIMITS,
+  type OrbitControlsLike,
+  PANEL_WIDTH,
+} from './CameraRig'
 import {
   MONITOR_POSITION,
   Monitor,
@@ -359,8 +365,12 @@ function useEdgeClamp() {
     const root = document
 
     let raf = 0
+    /** 패널이 덮는 폭. 한 번에 바꾸면 가장자리 마커가 한 프레임에 튄다 — `CameraRig` 의 투영 보정과 같은 비율로 따라간다. */
+    let cover = 0
     const tick = () => {
       raf = requestAnimationFrame(tick)
+      const coverTo = document.documentElement.dataset.panelOpen === 'true' ? PANEL_WIDTH : 0
+      cover = Math.abs(coverTo - cover) < 0.5 ? coverTo : cover + (coverTo - cover) * 0.12
       const w = canvas.clientWidth
       const h = canvas.clientHeight
       if (!w || !h) return
@@ -397,7 +407,9 @@ function useEdgeClamp() {
          *    `UI_LEFT` 는 `CameraRig` 의 `UI_WIDTH` 와 같은 값이다.
          */
         const left = Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
-        const cx = Math.min(w - EDGE_PAD, Math.max(left, x))
+        // 패널은 캔버스를 줄이지 않고 덮는다. 그 밑으로 접으면 마커가 패널 뒤에 숨는다.
+        const right = w - cover - EDGE_PAD
+        const cx = Math.min(right, Math.max(left, x))
         const cy = Math.min(h - EDGE_PAD, Math.max(EDGE_PAD, y))
         const clamped = cx !== x || cy !== y
 
