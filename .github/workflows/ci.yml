@@ -12,7 +12,7 @@ on:
     # 🔴 branches 를 빼지 않는다. 빼면 feature 푸시마다 pull_request 와 같은 커밋에 두 번 돈다.
     # 🔴 배포 브랜치가 기본 브랜치와 다르면(stg 등) 여기 **함께** 적는다.
     #    빠지면 그 브랜치에 CI 가 안 돌고, deploy 는 needs 로 묶여 있으므로 배포도 영영 안 난다.
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 # 기본 토큰을 읽기로 내린다. 쓰기가 필요한 잡에서만 그 잡에 permissions 를 올려 쓴다.

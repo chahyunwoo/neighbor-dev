@@ -177,11 +177,14 @@ curl -s http://localhost:21200/work/claude-board | grep -c '설계 판단\|결�
 | | |
 |---|---|
 | 트래커 | GitHub Issues (`chahyunwoo/neighbor-dev`) |
-| 분기 기준 | `main` |
-| 승격 경로 | `feature/* → main` |
-| 병합 위임 | **전부 위임** |
+| 분기 기준 | `dev` (GitHub 기본 브랜치) |
+| 승격 경로 | `feature/* → dev → main` |
+| 병합 위임 | `feature/* → dev` 는 위임. **`dev → main` 은 현우님 승인 후** — main 병합이 곧 배포다 |
 | 리뷰어 | 전역 `code-reviewer` + `node scripts/verify-fsd.mjs`(FSD 레이어·슬라이스 public API 를 기계로 검사한다) |
 | 검증 | `.claude/verify.sh` |
 | 푸시 = 배포? | **예 — `main` 푸시가 곧 Vercel 배포다.** |
+
+`stg` 는 두지 않는다(2026-09-29 현우님 결정). 기여자 1명이고 동시에 도는 feature 가 없어, `dev` 가
+배포 직전 확인 단계를 겸한다. 전역 표준(`main ← stg ← dev`)에서 빠진 것이지 빠뜨린 것이 아니다.
 
 🔴 **이 저장소는 PUBLIC 이다.** 커밋 한 번이 곧 공개다 — 자세한 것은 위 「공개 금지」 절.
