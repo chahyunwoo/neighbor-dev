@@ -21,8 +21,8 @@ async function bootstrap() {
    *
    * ⚠️ 값은 **신뢰할 프록시 홉 수**다. `true`(무조건 신뢰)로 두지 않는다 —
    *    그러면 아무나 `X-Forwarded-For` 를 위조해 제한을 우회한다.
-   *    우리 구성은 web 프록시 1홉이 기본이고, 앞에 리버스 프록시를 하나 더
-   *    두면 2가 된다. 환경변수로 조절한다.
+   *    우리 구성은 web 프록시 1홉이 기본이고, 앞에 리버스 프록시(cloudflared
+   *    터널 포함)를 하나 더 두면 2가 된다. 환경변수로 조절한다.
    *
    * 확인: 서로 다른 X-Forwarded-For 로 제한값+1 번 호출해 마지막만 막히는가.
    */
@@ -49,8 +49,8 @@ async function bootstrap() {
   //      "api 가 0 에서 듣는다" 가 찍히고 **랜덤 포트**에 떠서 web 이 못 찾는다.
   const port = Number(process.env.API_PORT || 3201)
 
-  // 개발 환경에서만 문서를 연다. 운영에서는 웹 서버만 부르는 내부 api 라 공개 문서가 필요 없다.
-  if (process.env.NODE_ENV !== 'production') {
+  // 문서는 API_DOCS=1 일 때만 연다(기본 꺼짐). Swagger 는 Express 미들웨어라 내부 토큰 가드가 걸리지 않는다.
+  if (process.env.API_DOCS === '1') {
     const doc = SwaggerModule.createDocument(
       app,
       new DocumentBuilder().setTitle('neighbor-dev api').build(),
