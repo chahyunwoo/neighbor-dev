@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ContactForm } from '@/entities/contact'
+import { apiFetch } from '@/shared/api'
 import { COMPANY, pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
@@ -11,15 +12,12 @@ export const metadata: Metadata = pageMetadata({
   path: '/contact',
 })
 
-/** api 상태는 서버에서 본다. 브라우저에는 api 주소를 내보내지 않는다. */
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
-
 /** 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
 export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
   try {
-    const res = await fetch(`${API_BASE}/contact/status`, { cache: 'no-store' })
+    const res = await apiFetch('/contact/status', { cache: 'no-store' })
     return res.ok ? await res.json() : null
   } catch {
     return null

@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
 async function bootstrap() {
@@ -47,8 +48,20 @@ async function bootstrap() {
   //      빈 문자열이라 `??` 를 통과하고, `Number('')` 은 0 이 된다 — 실측하면
   //      "api 가 0 에서 듣는다" 가 찍히고 **랜덤 포트**에 떠서 web 이 못 찾는다.
   const port = Number(process.env.API_PORT || 3201)
-  await app.listen(port)
-  new Logger('bootstrap').log(`api 가 ${port} 에서 듣는다`)
+
+  // 개발 환경에서만 문서를 연다. 운영에서는 웹 서버만 부르는 내부 api 라 공개 문서가 필요 없다.
+  if (process.env.NODE_ENV !== 'production') {
+    const doc = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder().setTitle('neighbor-dev api').build(),
+    )
+    SwaggerModule.setup('docs', app, doc)
+  }
+
+  // 모든 네트워크에 열지 않는다. 운영은 같은 기계의 터널만 붙는다. 컨테이너 안에서만 API_HOST 로 넓힌다.
+  const host = process.env.API_HOST || '127.0.0.1'
+  await app.listen(port, host)
+  new Logger('bootstrap').log(`api 가 ${host}:${port} 에서 듣는다`)
 }
 
 void bootstrap()

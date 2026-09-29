@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiFetch } from '@/shared/api'
 
 /**
  * 자가진단 프록시.
@@ -11,9 +12,6 @@ import { NextResponse } from 'next/server'
  * 부수 효과로 CORS 도 필요 없어진다 — 같은 출처가 된다.
  */
 
-/** 서버에서만 읽는다. NEXT_PUBLIC_ 접두사를 쓰지 않는 것이 요점이다. */
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
-
 export async function POST(request: Request) {
   let body: unknown
   try {
@@ -23,7 +21,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/diagnose`, {
+    const res = await apiFetch('/diagnose', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
