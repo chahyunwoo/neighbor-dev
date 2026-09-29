@@ -11,6 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { briefMetricBacked } from './disclosure.mjs'
 import { anonymousLabelFor, publicIdFor, sanitizeDeep } from './sanitize.mjs'
 import { assertCleanSource, readSourceIndex, readSourceProjects } from './source.mjs'
 import { ALLOWED_FIELDS, TIER, tierOf } from './tiers.mjs'
@@ -131,19 +132,24 @@ function isCommissioned(project) {
 
 const BRIEF_LISTS = ['problem', 'role', 'decisions', 'metrics']
 
-/** 정본의 `brief`. 모양이 하나라도 어긋나면 통째로 뺀다 — 반쯤 그려진 요약보다 원문이 낫다. */
+/**
+ * 정본의 `brief`. 모양이 하나라도 어긋나면(빈 목록 포함) 통째로 뺀다 — 반쯤 그려진 요약보다 원문이 낫다.
+ * 지표 줄은 재현 명령이 있는 지표에 숫자가 전부 있을 때만 싣는다(`briefMetricBacked`).
+ */
 function briefOf(project) {
   const b = project.brief
   if (!b || typeof b.summary !== 'string' || !b.summary.trim()) return undefined
+  const lists = {}
   for (const k of BRIEF_LISTS) {
     if (!Array.isArray(b[k]) || !b[k].every((x) => typeof x === 'string' && x.trim())) {
       return undefined
     }
+    lists[k] = b[k].map((x) => x.trim())
   }
-  return {
-    summary: b.summary.trim(),
-    ...Object.fromEntries(BRIEF_LISTS.map((k) => [k, b[k].map((x) => x.trim())])),
-  }
+  const usable = usableMetrics(project.metrics)
+  lists.metrics = lists.metrics.filter((line) => briefMetricBacked(line, usable))
+  if (BRIEF_LISTS.some((k) => lists[k].length === 0)) return undefined
+  return { summary: b.summary.trim(), ...lists }
 }
 
 function project2public(project, indexEntry, tier) {
