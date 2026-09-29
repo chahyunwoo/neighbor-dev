@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { DiagnoseForm } from '@/entities/diagnose'
+import { apiFetch } from '@/shared/api'
 import { pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
@@ -17,14 +18,12 @@ export const metadata: Metadata = pageMetadata({
  *    그 접두사를 붙이면 값이 브라우저 번들에 박혀 api 주소가 공개된다.
  *    방문자 요청은 `app/api/diagnose/route.ts` 프록시를 거친다.
  */
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
-
 /** 매 요청마다 api 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
 export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
   try {
-    const res = await fetch(`${API_BASE}/diagnose/status`, { cache: 'no-store' })
+    const res = await apiFetch('/diagnose/status', { cache: 'no-store' })
     if (!res.ok) return null
     return await res.json()
   } catch {

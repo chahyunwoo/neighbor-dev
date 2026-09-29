@@ -6,7 +6,7 @@
  *    `await res.json()` 으로 받으면 스트리밍이 통째로 뭉쳐 온다.
  */
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
+import { apiFetch } from '@/shared/api'
 
 export async function POST(request: Request) {
   let body: unknown
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const upstream = await fetch(`${API_BASE}/diagnose/stream`, {
+    const upstream = await apiFetch('/diagnose/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

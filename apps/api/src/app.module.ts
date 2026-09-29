@@ -1,9 +1,11 @@
 import { join } from 'node:path'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { APP_GUARD } from '@nestjs/core'
 import { ContactModule } from './contact/contact.module'
 import { DiagnoseModule } from './diagnose/diagnose.module'
 import { HealthController } from './health.controller'
+import { InternalTokenGuard } from './internal-token'
 
 /**
  * 🔴 env 경로를 **`__dirname` 기준 절대경로**로 잡는다.
@@ -31,5 +33,7 @@ const API_ROOT = join(__dirname, '..')
     ContactModule,
   ],
   controllers: [HealthController],
+  // 터널 주소로 직접 들어온 요청을 막는다(`internal-token.ts`).
+  providers: [{ provide: APP_GUARD, useClass: InternalTokenGuard }],
 })
 export class AppModule {}

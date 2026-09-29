@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { apiFetch } from '@/shared/api'
 
 /**
  * 문의 프록시.
@@ -7,8 +8,6 @@ import { NextResponse } from 'next/server'
  *    박히고, 배포하면 그게 곧 자체 호스팅 구성 노출이다(기획서 8절).
  *    자가진단 프록시와 같은 이유·같은 구조다.
  */
-
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
 
 export async function POST(request: Request) {
   let body: unknown
@@ -19,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/contact`, {
+    const res = await apiFetch('/contact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
