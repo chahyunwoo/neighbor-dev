@@ -74,7 +74,7 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
     opens: '기술 스택',
     href: '/stack',
     accent: 'blue',
-    sub: '납품 프로젝트에서 사용한 기술을 분야별로 정리했습니다.',
+    sub: '수행 프로젝트에서 사용한 기술을 분야별로 정리했습니다.',
     rows: [
       ['백엔드', 'NestJS · Spring Boot · FastAPI'],
       ['프론트엔드', 'Next.js · React · TanStack'],

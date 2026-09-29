@@ -138,145 +138,6 @@
       "scale": "Java 1,730줄 + 프론트 1,697줄 + Swift 894줄 · 테스트 54개 · 문서 2,332줄"
     },
     {
-      "id": "booking-settlement",
-      "tier": "detail",
-      "label": "예약은 되는데 정산은 엑셀로 하던 일",
-      "period": "2025.11 ~ 2026.09 (백엔드 완료, 프론트 착수 전)",
-      "domain": [
-        "예약",
-        "예약시스템",
-        "부킹",
-        "정산",
-        "수수료정산",
-        "파트너정산",
-        "결제연동",
-        "PG연동",
-        "웹훅",
-        "멀티테넌트",
-        "SaaS",
-        "백오피스",
-        "관리자페이지",
-        "회원권",
-        "횟수권",
-        "환불",
-        "대사",
-        "원장",
-        "동시성제어",
-        "필라테스",
-        "공유미용실",
-        "스포츠센터",
-        "골프장",
-        "학원"
-      ],
-      "commissioned": true,
-      "stack": [
-        "Java 21",
-        "Spring Boot 4.1.1",
-        "Spring Security (세션 + 쿠키, CSRF)",
-        "Spring JDBC (JdbcTemplate)",
-        "PostgreSQL 17 (btree_gist, numeric, 제약 트리거)",
-        "Flyway (마이그레이션 14개)",
-        "Gradle 9.7.1 멀티모듈 (Wrapper)",
-        "Lombok",
-        "JUnit 5 / AssertJ",
-        "Testcontainers (PostgreSQL)",
-        "토스페이먼츠 (테스트 키)",
-        "Docker (Testcontainers 실행 기반)",
-        "GitHub Issues / PR 기반 이슈 추적"
-      ],
-      "role": "설계·백엔드 단독 개발. 구체적으로 (1) 제품 방향 결정을 위한 도메인 전수조사 — 예약·정산 구조를 쓰는 여러 업종의 요구사항 1,300건을 수집·집계해 도메인 빈도·규모·스택 수요를 근거로 '예약+정산' 코어를 선택, (2) 도메인 모델링 — 예약 상태 머신, 복식 원장, 크레딧(회원권), 정산 회차·이월, 대사 불일치 5유형 설계, (3) 동시성 제어 — PostgreSQL 배타 제약(EXCLUDE USING gist) 기반 좌석 분해 점유와 홀드 승격, (4) 결제 파이프라인 — PG 어댑터 추상화, 웹훅 멱등 관문, 승인·커밋 불일치 복구 배치, 부분환불 누계 상한, (5) 정산 엔진 — 파트너 요율 기간 스냅샷, 매출 인식, PG 수수료 배치, 회차 확정과 확정 후 환불 이월, (6) 인증·인가 — 세션+쿠키, 역할 4종, 테넌트 격리 판정을 한 곳(TenantGuard)으로 통합, (7) 코어/프리셋 분리 — 확장점 설계와 2차 프리셋으로 '코어 커밋 0건' 실증, (8) 검증 체계 — 되돌리기(뮤테이션) 검증과 전수 게이트 테스트 설계. 프론트엔드는 아직 착수 전이라 이 저장소에 코드가 없다.",
-      "cardBody": "예약을 받는 제품은 많아도 대부분 정산에서 멈추고 사업자는 엑셀로 돌아간다. 예약부터 정산까지 한 곳에서 끝내되 업종은 갈아끼울 수 있게 했다.",
-      "brief": {
-        "summary": "예약부터 결제·정산·대사까지 한 곳에서 처리하고 업종을 교체할 수 있는 백엔드 코어입니다.",
-        "problem": [
-          "예약 제품 대부분이 정산 단계에서 멈춰 사업자가 엑셀로 돌아감",
-          "중복 예약·웹훅 중복 반영·승인/커밋 불일치로 인한 원장 불일치 위험"
-        ],
-        "role": [
-          "예약·결제·정산 설계: Java 21 / Spring Boot, PostgreSQL (단독 개발)",
-          "동시성·멱등성: 배타 제약 좌석 점유, 웹훅 멱등 관문, 복구 배치",
-          "코어/프리셋 분리, 되돌리기 검증과 전수 게이트 테스트"
-        ],
-        "decisions": [
-          "중복 예약을 PostgreSQL 배타 제약으로 차단 → 앱 로직 대신 DB 불변식으로 보장",
-          "PENDING 커밋 후 PG 승인, 멱등은 유니크 제약 관문 → 중복 반영·복구 누락 방지",
-          "정산 계산·대사 판정을 순수 함수로 분리 → 계산 로직을 테스트로 고정"
-        ],
-        "metrics": [
-          "테스트 437건 (전체 통과, 실패·에러 0)",
-          "main 15,993줄 187파일 / test 14,338줄 53파일",
-          "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증"
-        ]
-      },
-      "problem": "시설·인력의 시간 슬롯을 팔고 받은 돈을 강사·파트너·지점에 나누는 사업자를 위한 시스템을 만들되, 한 업종에 고정된 시스템이 아니라 업종을 갈아끼울 수 있는 재사용 코어로 만드는 것이 목표였다. 예약만 하는 제품은 흔하지만 대부분 정산 지점에서 멈추고 사업자는 엑셀로 돌아간다. 기술적으로는 (a) 같은 시간·같은 좌석을 두 명이 잡는 중복 예약, (b) PG 웹훅 중복 발송으로 인한 원장 이중 반영, (c) 승인은 됐는데 우리 DB 커밋이 실패한 불일치, (d) 부분 환불이 원금을 넘는 초과 환불, (e) 확정된 정산 회차에 뒤늦게 도착한 환불의 이월 처리가 핵심 난제였다. 이들은 전부 틀렸을 때 조용히 번지고 발견 시점엔 원장이 이미 오염돼 있어 되돌리기가 어렵다.",
-      "decisions": [
-        {
-          "선택": "슬롯 중복 예약 방지를 애플리케이션 락이나 SELECT ... FOR UPDATE가 아니라 PostgreSQL의 `EXCLUDE USING gist (resource_id WITH =, seat_no WITH =, during WITH &&)` 배타 제약으로 DB에 맡겼다. 좌석은 capacity만큼 행으로 분해해 넣고, 홀드→예약 승격은 두 문장이 아니라 UPDATE 한 문장으로 처리했다.",
-          "대안": "비관적 락(SELECT ... FOR UPDATE)으로 리소스 행을 잡고 애플리케이션에서 겹침을 계산하는 방식, 또는 Redis 분산 락.",
-          "이유": "중복 예약은 오프라인에서 고객 두 명이 같은 시간에 오는 사고가 되므로 애플리케이션 로직이 아니라 DB 불변식으로 막아야 한다. 승격을 UPDATE 한 문장으로 둔 이유는, 배타 제약의 대상 상태 목록에 HELD와 CONFIRMED가 둘 다 있어서 점유 집합이 바뀌지 않기 때문이다 — '홀드 만료 + 예약 INSERT' 두 문장으로 짜면 그 틈에 남이 가져가는데, 그때는 이미 PG 승인이 끝나 되돌릴 수 없다.",
-          "트레이드오프": "배타 제약은 즉시 거부가 아니라 **블로킹한다** — 충돌 상대가 커밋/롤백할 때까지 기다린다(실측: 상대가 5초 뒤 커밋하면 4초 대기 후 거부). 그래서 모든 요청이 같은 좌석을 먼저 노리면 사실상 직렬화되고 커넥션 풀이 대기 스레드로 가득 찬다. 시작 좌석 무작위 분산과 `lock_timeout`을 함께 넣어야 했다. 또 실패한 INSERT가 트랜잭션 전체를 죽이므로(`current transaction is aborted`) '실패하면 다음 좌석' 루프를 한 트랜잭션 안에서 짤 수 없어 시도마다 새 트랜잭션을 여는 구조가 됐다. 그리고 락 대기 초과(55P03)는 '찼다'가 아니라 '모른다'인데, 이를 만석으로 뭉개면 정원이 남았는데 409가 나가는 오판이 생긴다.",
-          "재현": "grep -n 'EXCLUDE USING gist' api/src/main/resources/db/migration/V1__init.sql → 127행"
-        },
-        {
-          "선택": "결제 반영 순서를 'PENDING 커밋 → PG 승인(트랜잭션 밖) → 반영(트랜잭션 1개)'으로 고정하고, 웹훅 멱등은 `UNIQUE (provider, event_id)` 제약을 관문으로 두되 **처리 로직을 인자로 받는 형태**로 감쌌다. `boolean isDuplicate()`를 공개하지 않았다. 환불도 같은 형태로 '예약(누계 증가) → PG → 확정' 순서를 강제했다.",
-          "대안": "PG를 먼저 호출하고 성공하면 DB에 기록하는 방식(가장 단순), 멱등 판정을 `if (isDuplicate()) return;`으로 호출부마다 푸는 방식.",
-          "이유": "PENDING 커밋이 없으면 '승인 성공 + 반영 실패' 시 우리 DB에 흔적이 없어 복구할 대상 자체가 존재하지 않는다. 멱등 관문이 boolean을 공개하면 호출부마다 if를 풀어 쓰게 되고, 새 핸들러 하나가 빼먹으면 조용히 중복 반영된다 — 에러가 안 나므로 아무도 모른다. 환불 순서를 뒤집은 이유는 실측으로 드러났다: PG를 먼저 부르고 상한을 나중에 검사하면 동시 요청 20건이 **전부 PG에 도달해 실제로 돈이 나가고** 우리 DB는 4건만 받아들인다. 원장은 깨끗한데 PG에서 돈이 빠져나간 상태다.",
-          "트레이드오프": "트랜잭션이 세 조각으로 나뉘어 중간 상태(PENDING)가 DB에 남고, 그 상태를 청소할 복구 배치가 별도로 필요해졌다. 복구 배치는 '오래 PENDING이면 실패겠지'라고 우리 DB만 보고 판단할 수 없어 반드시 PG에 재조회해야 하고(그러지 않으면 승인된 결제를 실패로 기록해 대사가 어긋난다), PG 취소 내역에는 우리 refund 행을 가리키는 식별자가 없어서 부분 환불이 여러 건이고 금액까지 같으면 **어느 취소가 내 것인지 원리적으로 알 수 없다**. 그래서 배치를 '구멍을 메우는 것'이 아니라 '애매하지 않은 것과 애매한 것을 가르는 것'으로 설계하고, 애매한 건은 자동 판정을 포기해 수동 검토로 남기는 컬럼을 따로 뒀다.",
-          "재현": "grep -n 'payment_webhook_event_id_unique' api/src/main/resources/db/migration/V2__payment_and_ledger.sql → 111행"
-        },
-        {
-          "선택": "정산 금액 계산과 대사 판정을 Spring 의존이 전혀 없는 순수 함수(`SettlementCalculation`, `ReconciliationMatcher`)로 `core-domain`에 분리했다. 반올림은 파트너 몫과 원천징수 두 지점에서만, 둘 다 `RoundingMode.FLOOR`로 한다.",
-          "대안": "정산 계산을 서비스 레이어나 SQL 집계로 두는 방식(조회와 계산을 한 번에 끝낼 수 있어 더 짧다).",
-          "이유": "되돌리기(뮤테이션) 검증이 제값을 하려면 판정이 단독으로 결과를 결정해야 한다. 계산이 어댑터에 섞여 있으면 DB CHECK나 상태 머신이 같은 결과를 내주기 때문에, 계산 로직을 지워도 테스트가 초록으로 남는다. 실제로 순수 함수로 뽑은 뒤 판정 분기를 하나씩 지웠더니 **전부 갈렸다**. FLOOR로 통일한 이유는 파트너 몫과 원천징수를 모두 내리면 플랫폼 몫이 나머지를 흡수해 '지급 + 원천세 + 플랫폼 = 기준액'이 항상 성립하기 때문이다 — 100건을 합산해도 1원이 새지 않는다.",
-          "트레이드오프": "계산에 필요한 값을 전부 인자로 모아 넘겨야 해서 조회 쿼리와 DTO가 늘었고, 여러 서브쿼리가 같은 질문에 답하게 되면서 그 기준이 미세하게 갈리는 새로운 실패 모드가 생겼다 — 실제로 `settled_*`와 `last_refund`가 하나는 DRAFT 제외, 하나는 포함이었을 때 그 비대칭이 특정 항목 금액을 정확히 두 번 깎았다(파트너 몫 -198 vs 정답 2,202). 예외도 제약 위반도 없이 지급액만 틀리고, 항목 **개수**는 어느 구현에서도 같아서 개수로는 안 보이고 합계로 봐야 갈렸다. 이 계열 버그를 잡느라 이 슬라이스는 리뷰 4회전이 필요했고, 매 회전마다 직전 수정이 만든 버그가 나왔다.",
-          "재현": "ls core-domain/src/main/java/kr/hyunwoo/booking/domain/settlement/SettlementCalculation.java core-domain/src/main/java/kr/hyunwoo/booking/domain/reconciliation/ReconciliationMatcher.java"
-        }
-      ],
-      "metrics": [
-        {
-          "항목": "테스트 수 (전체 통과, 실패·에러 0)",
-          "값": "437건 (core-domain 146 / core-app 30 / api 258 / preset-golf 3)",
-          "재현": "./gradlew clean build 후 `grep -ho 'tests=\"[0-9]*\"' */build/test-results/test/*.xml | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s}'` → 437, 같은 방식으로 failures/errors 합계 → 0"
-        },
-        {
-          "항목": "코드 규모 (main / test)",
-          "값": "main 15,993줄 187파일 / test 14,338줄 53파일",
-          "재현": "find . -name '*.java' -path '*/src/main/*' -exec cat {} + | wc -l → 15993 · find . -name '*.java' -path '*/src/test/*' -exec cat {} + | wc -l → 14338"
-        },
-        {
-          "항목": "DB 마이그레이션",
-          "값": "Flyway 14개 (V1~V14)",
-          "재현": "ls api/src/main/resources/db/migration/*.sql | wc -l → 14"
-        },
-        {
-          "항목": "REST 엔드포인트",
-          "값": "32개 (컨트롤러 11개)",
-          "재현": "grep -rhcE '@(Get|Post|Put|Patch|Delete)Mapping' --include='*.java' api/src/main | awk '{s+=$1} END {print s}' → 32 · find . -name '*Controller.java' -path '*/src/main/*' | wc -l → 11"
-        },
-        {
-          "항목": "동시성 검증 테스트",
-          "값": "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증",
-          "재현": "grep -rln 'CountDownLatch\\|ExecutorService' --include='*.java' */src/test | grep -v build → ReservationConcurrencyTest, CreditConcurrencyTest, RefundConcurrencyTest, WebhookIdempotencyTest"
-        },
-        {
-          "항목": "전수 게이트 테스트 (규칙이 실제로 배선됐는지 소스를 훑어 판정)",
-          "값": "5개 — 보안 규칙·테넌트 격리·@Valid·프리셋 격리·PG 어댑터 계약",
-          "재현": "find . -name '*CoverageTest.java' -o -name '*ContractTest.java' | grep -v build → SecurityRuleCoverageTest, TenantGuardCoverageTest, ValidCoverageTest, TossPaymentGatewayContractTest, GolfPresetContractTest"
-        },
-        {
-          "항목": "코어/프리셋 분리 실증 (2차 프리셋 추가 시 코어 수정 없음)",
-          "값": "preset-golf는 자바 파일 3개(용어·정책·계약테스트)로 끝났고, api 모듈은 preset-fitness만 의존한다",
-          "재현": "find preset-golf -name '*.java' | grep -v build | wc -l → 3 · grep -n 'preset' api/build.gradle → runtimeOnly project(':preset-fitness') 한 줄뿐"
-        },
-        {
-          "항목": "제품 방향 결정에 쓴 도메인 조사 표본",
-          "값": "요구사항 1,300건 (두 개의 수집 경로: 1,000건 + 300건)",
-          "재현": "python3 -c \"import json; print(len(json.load(open('research/projects.json'))), len(json.load(open('research/projects_term.json'))))\" → 1000 300"
-        }
-      ],
-      "scale": "Java 21 · Spring Boot 4 · PostgreSQL 17 멀티모듈 · main 15,993줄 · 테스트 437건 · REST 32개 · 마이그레이션 14개"
-    },
-    {
       "id": "qs-fe",
       "tier": "detail",
       "label": "메일로 주고받던 상품 견적을 한 화면에서",
@@ -1226,6 +1087,145 @@
         }
       ],
       "scale": "소스 1,193줄 · 테스트 45개 · 티어 구간 31개 · 테마 9종"
+    },
+    {
+      "id": "booking-settlement",
+      "tier": "detail",
+      "label": "예약은 되는데 정산은 엑셀로 하던 일",
+      "period": "2025.11 ~ 2026.09 (백엔드 완료, 프론트 착수 전)",
+      "domain": [
+        "예약",
+        "예약시스템",
+        "부킹",
+        "정산",
+        "수수료정산",
+        "파트너정산",
+        "결제연동",
+        "PG연동",
+        "웹훅",
+        "멀티테넌트",
+        "SaaS",
+        "백오피스",
+        "관리자페이지",
+        "회원권",
+        "횟수권",
+        "환불",
+        "대사",
+        "원장",
+        "동시성제어",
+        "필라테스",
+        "공유미용실",
+        "스포츠센터",
+        "골프장",
+        "학원"
+      ],
+      "commissioned": false,
+      "stack": [
+        "Java 21",
+        "Spring Boot 4.1.1",
+        "Spring Security (세션 + 쿠키, CSRF)",
+        "Spring JDBC (JdbcTemplate)",
+        "PostgreSQL 17 (btree_gist, numeric, 제약 트리거)",
+        "Flyway (마이그레이션 14개)",
+        "Gradle 9.7.1 멀티모듈 (Wrapper)",
+        "Lombok",
+        "JUnit 5 / AssertJ",
+        "Testcontainers (PostgreSQL)",
+        "토스페이먼츠 (테스트 키)",
+        "Docker (Testcontainers 실행 기반)",
+        "GitHub Issues / PR 기반 이슈 추적"
+      ],
+      "role": "설계·백엔드 단독 개발. 구체적으로 (1) 제품 방향 결정을 위한 도메인 전수조사 — 예약·정산 구조를 쓰는 여러 업종의 요구사항 1,300건을 수집·집계해 도메인 빈도·규모·스택 수요를 근거로 '예약+정산' 코어를 선택, (2) 도메인 모델링 — 예약 상태 머신, 복식 원장, 크레딧(회원권), 정산 회차·이월, 대사 불일치 5유형 설계, (3) 동시성 제어 — PostgreSQL 배타 제약(EXCLUDE USING gist) 기반 좌석 분해 점유와 홀드 승격, (4) 결제 파이프라인 — PG 어댑터 추상화, 웹훅 멱등 관문, 승인·커밋 불일치 복구 배치, 부분환불 누계 상한, (5) 정산 엔진 — 파트너 요율 기간 스냅샷, 매출 인식, PG 수수료 배치, 회차 확정과 확정 후 환불 이월, (6) 인증·인가 — 세션+쿠키, 역할 4종, 테넌트 격리 판정을 한 곳(TenantGuard)으로 통합, (7) 코어/프리셋 분리 — 확장점 설계와 2차 프리셋으로 '코어 커밋 0건' 실증, (8) 검증 체계 — 되돌리기(뮤테이션) 검증과 전수 게이트 테스트 설계. 프론트엔드는 아직 착수 전이라 이 저장소에 코드가 없다.",
+      "cardBody": "예약을 받는 제품은 많아도 대부분 정산에서 멈추고 사업자는 엑셀로 돌아간다. 예약부터 정산까지 한 곳에서 끝내되 업종은 갈아끼울 수 있게 했다.",
+      "brief": {
+        "summary": "예약부터 결제·정산·대사까지 한 곳에서 처리하고 업종을 교체할 수 있는 백엔드 코어입니다.",
+        "problem": [
+          "예약 제품 대부분이 정산 단계에서 멈춰 사업자가 엑셀로 돌아감",
+          "중복 예약·웹훅 중복 반영·승인/커밋 불일치로 인한 원장 불일치 위험"
+        ],
+        "role": [
+          "예약·결제·정산 설계: Java 21 / Spring Boot, PostgreSQL (단독 개발)",
+          "동시성·멱등성: 배타 제약 좌석 점유, 웹훅 멱등 관문, 복구 배치",
+          "코어/프리셋 분리, 되돌리기 검증과 전수 게이트 테스트"
+        ],
+        "decisions": [
+          "중복 예약을 PostgreSQL 배타 제약으로 차단 → 앱 로직 대신 DB 불변식으로 보장",
+          "PENDING 커밋 후 PG 승인, 멱등은 유니크 제약 관문 → 중복 반영·복구 누락 방지",
+          "정산 계산·대사 판정을 순수 함수로 분리 → 계산 로직을 테스트로 고정"
+        ],
+        "metrics": [
+          "테스트 437건 (전체 통과, 실패·에러 0)",
+          "main 15,993줄 187파일 / test 14,338줄 53파일",
+          "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증"
+        ]
+      },
+      "problem": "시설·인력의 시간 슬롯을 팔고 받은 돈을 강사·파트너·지점에 나누는 사업자를 위한 시스템을 만들되, 한 업종에 고정된 시스템이 아니라 업종을 갈아끼울 수 있는 재사용 코어로 만드는 것이 목표였다. 예약만 하는 제품은 흔하지만 대부분 정산 지점에서 멈추고 사업자는 엑셀로 돌아간다. 기술적으로는 (a) 같은 시간·같은 좌석을 두 명이 잡는 중복 예약, (b) PG 웹훅 중복 발송으로 인한 원장 이중 반영, (c) 승인은 됐는데 우리 DB 커밋이 실패한 불일치, (d) 부분 환불이 원금을 넘는 초과 환불, (e) 확정된 정산 회차에 뒤늦게 도착한 환불의 이월 처리가 핵심 난제였다. 이들은 전부 틀렸을 때 조용히 번지고 발견 시점엔 원장이 이미 오염돼 있어 되돌리기가 어렵다.",
+      "decisions": [
+        {
+          "선택": "슬롯 중복 예약 방지를 애플리케이션 락이나 SELECT ... FOR UPDATE가 아니라 PostgreSQL의 `EXCLUDE USING gist (resource_id WITH =, seat_no WITH =, during WITH &&)` 배타 제약으로 DB에 맡겼다. 좌석은 capacity만큼 행으로 분해해 넣고, 홀드→예약 승격은 두 문장이 아니라 UPDATE 한 문장으로 처리했다.",
+          "대안": "비관적 락(SELECT ... FOR UPDATE)으로 리소스 행을 잡고 애플리케이션에서 겹침을 계산하는 방식, 또는 Redis 분산 락.",
+          "이유": "중복 예약은 오프라인에서 고객 두 명이 같은 시간에 오는 사고가 되므로 애플리케이션 로직이 아니라 DB 불변식으로 막아야 한다. 승격을 UPDATE 한 문장으로 둔 이유는, 배타 제약의 대상 상태 목록에 HELD와 CONFIRMED가 둘 다 있어서 점유 집합이 바뀌지 않기 때문이다 — '홀드 만료 + 예약 INSERT' 두 문장으로 짜면 그 틈에 남이 가져가는데, 그때는 이미 PG 승인이 끝나 되돌릴 수 없다.",
+          "트레이드오프": "배타 제약은 즉시 거부가 아니라 **블로킹한다** — 충돌 상대가 커밋/롤백할 때까지 기다린다(실측: 상대가 5초 뒤 커밋하면 4초 대기 후 거부). 그래서 모든 요청이 같은 좌석을 먼저 노리면 사실상 직렬화되고 커넥션 풀이 대기 스레드로 가득 찬다. 시작 좌석 무작위 분산과 `lock_timeout`을 함께 넣어야 했다. 또 실패한 INSERT가 트랜잭션 전체를 죽이므로(`current transaction is aborted`) '실패하면 다음 좌석' 루프를 한 트랜잭션 안에서 짤 수 없어 시도마다 새 트랜잭션을 여는 구조가 됐다. 그리고 락 대기 초과(55P03)는 '찼다'가 아니라 '모른다'인데, 이를 만석으로 뭉개면 정원이 남았는데 409가 나가는 오판이 생긴다.",
+          "재현": "grep -n 'EXCLUDE USING gist' api/src/main/resources/db/migration/V1__init.sql → 127행"
+        },
+        {
+          "선택": "결제 반영 순서를 'PENDING 커밋 → PG 승인(트랜잭션 밖) → 반영(트랜잭션 1개)'으로 고정하고, 웹훅 멱등은 `UNIQUE (provider, event_id)` 제약을 관문으로 두되 **처리 로직을 인자로 받는 형태**로 감쌌다. `boolean isDuplicate()`를 공개하지 않았다. 환불도 같은 형태로 '예약(누계 증가) → PG → 확정' 순서를 강제했다.",
+          "대안": "PG를 먼저 호출하고 성공하면 DB에 기록하는 방식(가장 단순), 멱등 판정을 `if (isDuplicate()) return;`으로 호출부마다 푸는 방식.",
+          "이유": "PENDING 커밋이 없으면 '승인 성공 + 반영 실패' 시 우리 DB에 흔적이 없어 복구할 대상 자체가 존재하지 않는다. 멱등 관문이 boolean을 공개하면 호출부마다 if를 풀어 쓰게 되고, 새 핸들러 하나가 빼먹으면 조용히 중복 반영된다 — 에러가 안 나므로 아무도 모른다. 환불 순서를 뒤집은 이유는 실측으로 드러났다: PG를 먼저 부르고 상한을 나중에 검사하면 동시 요청 20건이 **전부 PG에 도달해 실제로 돈이 나가고** 우리 DB는 4건만 받아들인다. 원장은 깨끗한데 PG에서 돈이 빠져나간 상태다.",
+          "트레이드오프": "트랜잭션이 세 조각으로 나뉘어 중간 상태(PENDING)가 DB에 남고, 그 상태를 청소할 복구 배치가 별도로 필요해졌다. 복구 배치는 '오래 PENDING이면 실패겠지'라고 우리 DB만 보고 판단할 수 없어 반드시 PG에 재조회해야 하고(그러지 않으면 승인된 결제를 실패로 기록해 대사가 어긋난다), PG 취소 내역에는 우리 refund 행을 가리키는 식별자가 없어서 부분 환불이 여러 건이고 금액까지 같으면 **어느 취소가 내 것인지 원리적으로 알 수 없다**. 그래서 배치를 '구멍을 메우는 것'이 아니라 '애매하지 않은 것과 애매한 것을 가르는 것'으로 설계하고, 애매한 건은 자동 판정을 포기해 수동 검토로 남기는 컬럼을 따로 뒀다.",
+          "재현": "grep -n 'payment_webhook_event_id_unique' api/src/main/resources/db/migration/V2__payment_and_ledger.sql → 111행"
+        },
+        {
+          "선택": "정산 금액 계산과 대사 판정을 Spring 의존이 전혀 없는 순수 함수(`SettlementCalculation`, `ReconciliationMatcher`)로 `core-domain`에 분리했다. 반올림은 파트너 몫과 원천징수 두 지점에서만, 둘 다 `RoundingMode.FLOOR`로 한다.",
+          "대안": "정산 계산을 서비스 레이어나 SQL 집계로 두는 방식(조회와 계산을 한 번에 끝낼 수 있어 더 짧다).",
+          "이유": "되돌리기(뮤테이션) 검증이 제값을 하려면 판정이 단독으로 결과를 결정해야 한다. 계산이 어댑터에 섞여 있으면 DB CHECK나 상태 머신이 같은 결과를 내주기 때문에, 계산 로직을 지워도 테스트가 초록으로 남는다. 실제로 순수 함수로 뽑은 뒤 판정 분기를 하나씩 지웠더니 **전부 갈렸다**. FLOOR로 통일한 이유는 파트너 몫과 원천징수를 모두 내리면 플랫폼 몫이 나머지를 흡수해 '지급 + 원천세 + 플랫폼 = 기준액'이 항상 성립하기 때문이다 — 100건을 합산해도 1원이 새지 않는다.",
+          "트레이드오프": "계산에 필요한 값을 전부 인자로 모아 넘겨야 해서 조회 쿼리와 DTO가 늘었고, 여러 서브쿼리가 같은 질문에 답하게 되면서 그 기준이 미세하게 갈리는 새로운 실패 모드가 생겼다 — 실제로 `settled_*`와 `last_refund`가 하나는 DRAFT 제외, 하나는 포함이었을 때 그 비대칭이 특정 항목 금액을 정확히 두 번 깎았다(파트너 몫 -198 vs 정답 2,202). 예외도 제약 위반도 없이 지급액만 틀리고, 항목 **개수**는 어느 구현에서도 같아서 개수로는 안 보이고 합계로 봐야 갈렸다. 이 계열 버그를 잡느라 이 슬라이스는 리뷰 4회전이 필요했고, 매 회전마다 직전 수정이 만든 버그가 나왔다.",
+          "재현": "ls core-domain/src/main/java/kr/hyunwoo/booking/domain/settlement/SettlementCalculation.java core-domain/src/main/java/kr/hyunwoo/booking/domain/reconciliation/ReconciliationMatcher.java"
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "테스트 수 (전체 통과, 실패·에러 0)",
+          "값": "437건 (core-domain 146 / core-app 30 / api 258 / preset-golf 3)",
+          "재현": "./gradlew clean build 후 `grep -ho 'tests=\"[0-9]*\"' */build/test-results/test/*.xml | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s}'` → 437, 같은 방식으로 failures/errors 합계 → 0"
+        },
+        {
+          "항목": "코드 규모 (main / test)",
+          "값": "main 15,993줄 187파일 / test 14,338줄 53파일",
+          "재현": "find . -name '*.java' -path '*/src/main/*' -exec cat {} + | wc -l → 15993 · find . -name '*.java' -path '*/src/test/*' -exec cat {} + | wc -l → 14338"
+        },
+        {
+          "항목": "DB 마이그레이션",
+          "값": "Flyway 14개 (V1~V14)",
+          "재현": "ls api/src/main/resources/db/migration/*.sql | wc -l → 14"
+        },
+        {
+          "항목": "REST 엔드포인트",
+          "값": "32개 (컨트롤러 11개)",
+          "재현": "grep -rhcE '@(Get|Post|Put|Patch|Delete)Mapping' --include='*.java' api/src/main | awk '{s+=$1} END {print s}' → 32 · find . -name '*Controller.java' -path '*/src/main/*' | wc -l → 11"
+        },
+        {
+          "항목": "동시성 검증 테스트",
+          "값": "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증",
+          "재현": "grep -rln 'CountDownLatch\\|ExecutorService' --include='*.java' */src/test | grep -v build → ReservationConcurrencyTest, CreditConcurrencyTest, RefundConcurrencyTest, WebhookIdempotencyTest"
+        },
+        {
+          "항목": "전수 게이트 테스트 (규칙이 실제로 배선됐는지 소스를 훑어 판정)",
+          "값": "5개 — 보안 규칙·테넌트 격리·@Valid·프리셋 격리·PG 어댑터 계약",
+          "재현": "find . -name '*CoverageTest.java' -o -name '*ContractTest.java' | grep -v build → SecurityRuleCoverageTest, TenantGuardCoverageTest, ValidCoverageTest, TossPaymentGatewayContractTest, GolfPresetContractTest"
+        },
+        {
+          "항목": "코어/프리셋 분리 실증 (2차 프리셋 추가 시 코어 수정 없음)",
+          "값": "preset-golf는 자바 파일 3개(용어·정책·계약테스트)로 끝났고, api 모듈은 preset-fitness만 의존한다",
+          "재현": "find preset-golf -name '*.java' | grep -v build | wc -l → 3 · grep -n 'preset' api/build.gradle → runtimeOnly project(':preset-fitness') 한 줄뿐"
+        },
+        {
+          "항목": "제품 방향 결정에 쓴 도메인 조사 표본",
+          "값": "요구사항 1,300건 (두 개의 수집 경로: 1,000건 + 300건)",
+          "재현": "python3 -c \"import json; print(len(json.load(open('research/projects.json'))), len(json.load(open('research/projects_term.json'))))\" → 1000 300"
+        }
+      ],
+      "scale": "Java 21 · Spring Boot 4 · PostgreSQL 17 멀티모듈 · main 15,993줄 · 테스트 437건 · REST 32개 · 마이그레이션 14개"
     }
   ],
   "summary": [

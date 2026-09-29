@@ -68,8 +68,8 @@ export default function TeamPage() {
                 데이터 구조처럼 연동되는 부분을 먼저 검토하고 착수합니다.
               </p>
               <p>
-                지금까지 {counts.detail + counts.summary}건을 납품했습니다. 이 중 {counts.detail}
-                건은 설계 판단과 결과 지표까지{' '}
+                지금까지 수행한 {counts.detail + counts.summary}건(자체 프로젝트 포함) 중{' '}
+                {counts.detail}건은 설계 판단과 결과 지표까지{' '}
                 <a href="/work" className="text-amber hover:text-amber-bright">
                   수행 사례
                 </a>

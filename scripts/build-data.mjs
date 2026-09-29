@@ -123,7 +123,7 @@ function usableMetrics(metrics) {
  * ⚠️ 판정은 **정본의 `client`** 로만 한다. 라벨 문자열("개인 기술 …")로
  *    맞히면 라벨을 다듬는 순간 조용히 어긋난다.
  */
-const SELF_CLIENTS = new Set(['1인 기업 N사', '개인 프로젝트'])
+const SELF_CLIENTS = new Set(['1인 기업 N사', '개인 프로젝트', '자체 개발'])
 function isCommissioned(project) {
   const c = project.client
   return typeof c === 'string' ? !SELF_CLIENTS.has(c.trim()) : true

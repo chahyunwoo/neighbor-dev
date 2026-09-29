@@ -8,7 +8,7 @@ import styles from './page.module.css'
 
 export const metadata: Metadata = pageMetadata({
   title: '기술 스택',
-  description: '납품 프로젝트에서 사용한 기술과 사용 횟수입니다.',
+  description: '수행 프로젝트에서 사용한 기술과 사용 횟수입니다.',
   path: '/stack',
 })
 
@@ -34,7 +34,7 @@ export default function StackPage() {
         wide
         crumb="책장"
         title="기술 스택"
-        lede={`납품 프로젝트 ${total}건에서 사용한 기술을 사용 횟수 기준으로 정리했습니다.`}
+        lede={`수행 프로젝트 ${total}건(자체 프로젝트 포함)에서 사용한 기술을 사용 횟수 기준으로 정리했습니다.`}
       >
         <div className={styles.groups}>
           <Group

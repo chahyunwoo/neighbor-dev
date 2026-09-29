@@ -53,3 +53,4 @@ jobs:
           pnpm fsd:verify
           pnpm anim:verify
           pnpm room:verify
+          pnpm reaction:verify
