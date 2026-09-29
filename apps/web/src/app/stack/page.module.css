@@ -22,7 +22,7 @@
   letter-spacing: 0.02em;
 }
 .groupNote {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
 }
@@ -65,7 +65,7 @@
   margin: 22px 0 0;
   padding-top: 14px;
   border-top: 1px solid var(--line-soft);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   line-height: 1.9;
   color: var(--fg-ghost);

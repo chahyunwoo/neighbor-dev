@@ -54,8 +54,8 @@
   --color-blue-wash: rgba(107, 163, 232, 0.07);
 
   /* 타이포 */
-  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 
   /*
    * 글자 크기 — 2026-09-09 상향.
@@ -102,8 +102,8 @@
   --blue: var(--color-blue);
   --blue-line: var(--color-blue-line);
   --blue-wash: var(--color-blue-wash);
-  --font-sans: "IBM Plex Sans KR", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
   --pad-x: 56px;
   --radius: 3px;
   /*
@@ -198,11 +198,6 @@ html[data-canvas-mode="room"] {
   --cv-pe: auto;
 }
 
-/* 패널이 열리면 오른쪽을 그만큼 비운다(마커가 패널 뒤로 숨지 않게). */
-html[data-canvas-mode="room"][data-panel-open="true"] {
-  --cv-right: var(--panel-w);
-}
-
 /*
  * 페이지 — 오른쪽에 흐릿하게. 본문이 주인공이라 클릭을 받지 않는다.
  * `min(56vw, 780px)` 를 left 로 역산한다.
@@ -268,13 +263,32 @@ html[data-canvas-mode="off"] {
  *    자기 래퍼 <div> 를 끼우고 거기에 auto 를 주므로, 껍데기에만 걸면
  *    canvas 가 그 래퍼에서 auto 를 물려받아 그대로 클릭을 먹는다.
  */
-.canvas-shell {
+/*
+ * 3D 가 보이는 영역. 보이지 않는 틀이고 CSS 전환으로 움직인다.
+ * 캔버스는 이 자리로 옮기거나 줄이지 않는다 — 줄이면 전환 동안 매 프레임 드로잉 버퍼를 다시 만든다.
+ * `features/room-3d/model/frame.ts` 가 매 프레임 재서 캔버스 잘라내기와 카메라 투영에 쓴다.
+ */
+.canvas-frame {
   position: fixed;
   top: var(--cv-top, 0px);
   right: var(--cv-right, 0px);
   bottom: var(--cv-bottom, 0px);
   left: var(--cv-left, 0px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
+    top 0.3s ease-out,
+    bottom 0.3s ease-out;
+}
+
+.canvas-shell {
+  position: fixed;
+  inset: 0;
   z-index: 0;
+  /* 잘라낸 밖은 클릭도 안 받는다. */
+  clip-path: inset(var(--cf-y, 0px) var(--cf-r, 0px) var(--cf-b, 0px) var(--cf-x, 0px));
   /*
    * 🔴 처음에는 투명하다. `CanvasShell` 이 한 프레임 뒤에 `data-canvas-ready`
    *    를 붙이면 그때 모드별 값으로 올라간다 — 아래 transition 을 타고 페이드된다.
@@ -282,17 +296,7 @@ html[data-canvas-mode="off"] {
    */
   opacity: 0;
   pointer-events: var(--cv-pe, none);
-  /* 패널이 열리면 오른쪽이 좁아진다. 시안 실측 .44s. */
-  transition:
-    right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
-    left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
-    opacity 0.4s ease-out,
-    top 0.3s ease-out,
-    /* ⚠️ `bottom` 이 빠져 있었다 — 홈(`--cv-bottom: var(--foot-h)`)에서 본문
-       화면(`0px`)으로 갈 때 위 모서리만 0.3초에 걸쳐 움직이고 아래 모서리는
-       그 자리에서 튀었다. 네 변을 같이 움직인다. */
-    bottom
-    0.3s ease-out;
+  transition: opacity 0.4s ease-out;
 }
 
 html[data-canvas-ready="true"] .canvas-shell {
@@ -311,6 +315,13 @@ html[data-canvas-ready="true"] .canvas-shell {
 html[data-canvas-mode="object"] .canvas-shell {
   mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%, #000 100%);
+  /* 그라데이션은 캔버스가 아니라 보이는 영역 기준이다. */
+  mask-position: var(--cf-x, 0px) var(--cf-y, 0px);
+  -webkit-mask-position: var(--cf-x, 0px) var(--cf-y, 0px);
+  mask-size: var(--cf-w, 100%) var(--cf-h, 100%);
+  -webkit-mask-size: var(--cf-w, 100%) var(--cf-h, 100%);
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
 }
 
 /* 3D 를 안 쓰는 화면에서는 보이지도 않고 클릭도 안 받는다. */
@@ -319,7 +330,8 @@ html[data-canvas-mode="off"] .canvas-shell {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .canvas-shell {
+  .canvas-shell,
+  .canvas-frame {
     transition: none;
   }
 }
@@ -331,6 +343,21 @@ body {
   font-family: var(--font-sans);
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  /* 한국어는 기본값이 글자 단위로 끊는다. 어절 단위로 끊고, 한 어절이 줄보다 길 때만 쪼갠다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
 }
 
 a {

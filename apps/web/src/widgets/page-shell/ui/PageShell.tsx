@@ -5,8 +5,6 @@ import { ContentWidth, RoomStage } from '@/features/room-3d'
 import styles from './PageShell.module.css'
 
 interface Props {
-  /** 시안의 [ fig. N · … ] 캡션. 도면 규약을 화면 전체에 유지한다. */
-  fig: string
   /** 빵부스러기의 마지막 칸 — 어느 물건을 열었는지. */
   crumb: string
   title: string
@@ -40,7 +38,7 @@ interface Props {
  *    어느 쪽이 상위인지 알 수 없게 된다. 조합은 **라우트가** 한다 —
  *    홈(`app/page.tsx`)이 이미 그렇게 하고 있어서 방식도 통일된다.
  */
-export function PageShell({ fig, crumb, title, lede, from, wide, children }: Props) {
+export function PageShell({ crumb, title, lede, from, wide, children }: Props) {
   return (
     <div className={styles.page}>
       {/* 본문 폭을 <html> 에 알린다 — 캔버스 폭과 같은 곳에서 갈리도록. */}
@@ -78,9 +76,6 @@ export function PageShell({ fig, crumb, title, lede, from, wide, children }: Pro
               </TransitionBody>
             ) : null}
           </div>
-          <TransitionBody as="p" className={styles.fig}>
-            {fig}
-          </TransitionBody>
         </div>
         <TransitionBody>{children}</TransitionBody>
       </main>

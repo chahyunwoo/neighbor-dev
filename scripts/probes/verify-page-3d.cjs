@@ -89,7 +89,8 @@ const STATS = (b64) =>
       s.textContent =
         '.canvas-shell{opacity:1!important}body>*:not(.canvas-shell){visibility:hidden!important}'
       document.head.appendChild(s)
-      const el = document.querySelector('.canvas-shell')
+      // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+      const el = document.querySelector('.canvas-frame')
       const r = el.getBoundingClientRect()
       return { x: r.x, y: r.y, width: r.width, height: r.height }
     })

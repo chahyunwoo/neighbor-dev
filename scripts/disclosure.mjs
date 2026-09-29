@@ -164,7 +164,9 @@ const CHECKS = [
     (t) =>
       [...t.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-zA-Z]{2,}(?![\w+-])/g)]
         .map((m) => m[0])
-        .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a)),
+        .filter((a) => !/@example\.(com|org|net)$|@(example|test|invalid|localhost)$/i.test(a))
+        // 사업용 공개 주소 — apps/web/src/shared/lib/company.ts 와 같다.
+        .filter((a) => a.toLowerCase() !== 'hello@iutzip.dev'),
   ],
   [
     '내부URL',
@@ -329,7 +331,7 @@ export function scanText(text, extraCompanyNames = [], only = null) {
  * 지난 세션의 사고가 정확히 이것이므로 구조로 검사한다.
  */
 export function checkTierRules(projects) {
-  const DETAIL_ONLY = ['cardBody', 'problem', 'decisions', 'metrics', 'role', 'scale']
+  const DETAIL_ONLY = ['cardBody', 'brief', 'problem', 'decisions', 'metrics', 'role', 'scale']
   const violations = []
   for (const p of projects) {
     if (p.tier !== 'summary') continue
@@ -432,6 +434,26 @@ export function checkMetricEvidence(projects) {
     for (const m of p.metrics ?? []) {
       if (!m.재현 || String(m.재현).trim() === '') bad.push({ id: p.id, 항목: m.항목 })
     }
+    for (const line of p.brief?.metrics ?? []) {
+      if (!briefMetricBacked(line, p.metrics)) bad.push({ id: p.id, 항목: `brief: ${line}` })
+    }
   }
   return bad
+}
+
+/**
+ * 요약의 지표 한 줄이 **재현 명령이 있는 지표**에 근거하는가.
+ * 줄에 나온 숫자가 전부 그 지표들의 항목·값 안에 있어야 한다(천 단위 쉼표는 무시).
+ * 빌드(`briefOf`)와 이 검사가 같은 판정을 쓴다.
+ */
+export function briefMetricBacked(line, metrics) {
+  const usable = (metrics ?? []).filter((m) => m.재현 && String(m.재현).trim() !== '')
+  const text = usable
+    .map((m) => `${m.항목 ?? ''} ${m.값 ?? ''}`)
+    .join(' ')
+    .replaceAll(',', '')
+  const nums = (String(line).match(/\d[\d,.]*/g) ?? [])
+    .map((n) => n.replaceAll(',', '').replace(/\.$/, ''))
+    .filter(Boolean)
+  return nums.every((n) => text.includes(n))
 }

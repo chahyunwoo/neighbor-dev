@@ -4,6 +4,7 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { frame, readFrame } from '@/features/room-3d/model/frame'
 import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
 
 /**
@@ -218,7 +219,7 @@ function ease(t: number): number {
  */
 const UI_WIDTH = 520
 /** 열렸을 때 오른쪽 패널이 먹는 폭. `RoomPanel` 과 같아야 한다. */
-const PANEL_WIDTH = 480
+export const PANEL_WIDTH = 480
 
 /**
  * 페이지에서 **캔버스 왼쪽이 마스크로 지워지는 비율.**
@@ -238,6 +239,23 @@ const PANEL_WIDTH = 480
  *    아예 안 덮는다.** 덮는 것은 마스크뿐이다.
  */
 const PAGE_MASK_LEFT = 0.42
+
+/** 패널이 캔버스 오른쪽을 덮는 폭. 캔버스는 줄이지 않는다 — 줄이면 매 프레임 드로잉 버퍼·렌더 타깃을 다시 만든다. */
+function panelCover(mode: 'room' | 'page', open: boolean): number {
+  return mode === 'room' && open ? PANEL_WIDTH : 0
+}
+
+/**
+ * 보이는 영역(`frame`)을 한 화면으로 삼은 투영을 뷰포트 크기 캔버스에 그린다. `shift` 만큼 오른쪽으로 민다.
+ * 영역이 캔버스 전체면 `setViewOffset(vw, vh, -shift, 0, vw, vh)` 와 같다.
+ */
+function applyView(persp: THREE.PerspectiveCamera, vw: number, vh: number, shift: number) {
+  const { x, y, w, h } = frame
+  if (!w || !h) return
+  persp.aspect = w / h
+  persp.setViewOffset(w, h, -x - shift, -y, vw, vh)
+  persp.updateProjectionMatrix()
+}
 
 /**
  * 페이지에서 물건에 다가가는 거리의 하한.
@@ -551,7 +569,10 @@ export function CameraRig({
        */
       const persp = camera as THREE.PerspectiveCamera
       const fitH = focus.radius / Math.sin((persp.fov * Math.PI) / 180 / 2)
-      const fitW = fitH / (size.width / size.height)
+      readFrame()
+      const fw = frame.w || size.width
+      const fh = frame.h || size.height
+      const fitW = fitH / ((fw - panelCover(mode, true)) / fh)
       // 🔴 초점 상태의 거리 제약 안으로 접는다. 안 그러면 물건에 코를 박는다.
       const raw = Math.max(fitH, fitW) / FILL / 2
       // 🔴 하한을 넉넉히 잡는다. 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로
@@ -746,56 +767,25 @@ export function CameraRig({
    */
   const shiftNow = useRef(0)
 
+  /**
+   * 지금 걸어야 할 보정 목표(px, 보이는 영역 기준). 하위 화면은 영역 폭에 따라 바뀌므로 매 프레임 다시 잰다.
+   *
+   * - 홈: 영역이 뷰포트 폭이므로 왼쪽 UI 520px 이 그대로 덮는 폭이다. 패널이 열리면 오른쪽 480px 이 덮인다.
+   * - 페이지: 본문은 영역 **밖**에 있다. 덮는 것은 왼쪽 마스크뿐이다.
+   */
+  const shiftTarget = () => {
+    const right = panelCover(mode, focus != null)
+    const left = mode === 'page' ? frame.w * PAGE_MASK_LEFT : UI_WIDTH
+    return (left - right) / 2 - right / 2
+  }
+
   useEffect(() => {
     const persp = camera as THREE.PerspectiveCamera
-    const w = size.width
-    const h = size.height
-    /*
-     * 좁은 화면에서는 3D 를 띄우지 않으므로(폴백 3단) 가로 보정만 한다.
-     *
-     * 🔴 **페이지에는 패널이 없다.** 홈의 `PANEL_WIDTH` 를 그대로 빼면 3D 가
-     *    오른쪽으로 그만큼 더 밀려 화면 밖으로 빠진다(실측 스크린샷).
-     *    대신 왼쪽 본문이 홈의 카피보다 넓으므로 그 값을 쓴다.
-     */
-    /*
-     * 🔴 **둘 다 "캔버스 픽셀" 로 잰다.** 뷰포트 기준 값을 섞으면 캔버스가
-     *    뷰포트보다 좁은 화면(하위 화면)에서 보정이 폭을 넘어선다.
-     *
-     * - 홈: 캔버스가 뷰포트를 다 쓰므로 왼쪽 UI 520px 이 그대로 덮는 폭이다.
-     *       패널이 열리면 오른쪽 480px 이 덮인다.
-     * - 페이지: 본문은 캔버스 **밖**에 있다. 덮는 것은 왼쪽 마스크뿐이다.
-     */
-    const right = mode === 'page' ? 0 : focus ? PANEL_WIDTH : 0
-    const left = mode === 'page' ? w * PAGE_MASK_LEFT : UI_WIDTH
-    // `(left + (w - right)) / 2 - w / 2` 를 약분한 것이다 — `w` 는 상쇄된다.
-    const shift = (left - right) / 2
-    shiftRef.current = shift
-    /*
-     * 🔴 **여기서 즉시 걸지 않는다.** `useFrame` 이 매 프레임 목표로 다가간다
-     *    (위 `shiftNow` 주석). 처음 마운트될 때만 맞춰 둔다 — 그때는 비교할
-     *    이전 값이 없어 보간할 것도 없다.
-     */
-    // 처음 마운트면 보간할 이전 값이 없다 — 바로 맞춘다.
-    if (shiftNow.current === 0 && !fly.current) shiftNow.current = shift
-    /*
-     * 🔴 **매번 다시 건다.** 아래 cleanup 이 재실행마다 보정을 지우는데,
-     *    재적용을 "처음 마운트일 때만" 으로 두면 **높이만 바뀌어도 보정이
-     *    영영 사라진다** — `shift` 는 폭에만 의존하므로 값이 그대로라
-     *    `useFrame` 의 `|shiftNow - shiftRef| > 0.3` 가 영영 거짓이 되고,
-     *    다시 걸 기회가 없다.
-     *
-     *    실측 2026-09-16(홈, 폭 1440 고정): 높이 900→820 에서 마커 7개가
-     *    한꺼번에 ~260px 왼쪽으로 밀렸고 **820→900 으로 되돌려도 안 돌아왔다.**
-     *    개발자도구를 여닫거나, 홈→하위 전환에서 푸터가 사라져 캔버스 높이가
-     *    733→803→900 으로 바뀌는 것만으로도 걸린다(실측).
-     */
-    persp.setViewOffset(w, h, -shiftNow.current, 0, w, h)
-    persp.updateProjectionMatrix()
     return () => {
       persp.clearViewOffset()
       persp.updateProjectionMatrix()
     }
-  }, [camera, focus, size.width, size.height, mode])
+  }, [camera])
 
   useFrame(() => {
     const ctl = controls.current
@@ -807,12 +797,15 @@ export function CameraRig({
      * ⚠️ 0.12 는 캔버스 CSS 전환(0.44s)과 눈으로 맞춘 값이다. 크게 잡으면
      *    다시 툭 튀고, 작게 잡으면 3D 만 뒤늦게 따라온다.
      */
+    readFrame()
+    shiftRef.current = shiftTarget()
+    // 처음이면 보간할 이전 값이 없다 — 바로 맞춘다.
+    if (shiftNow.current === 0 && !fly.current) shiftNow.current = shiftRef.current
     if (ctl && Math.abs(shiftNow.current - shiftRef.current) > 0.3) {
       shiftNow.current += (shiftRef.current - shiftNow.current) * 0.12
-      const persp = camera as THREE.PerspectiveCamera
-      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
-      persp.updateProjectionMatrix()
     }
+    // 영역이 전환 중에 움직이므로 보정이 그대로여도 매 프레임 다시 건다.
+    applyView(camera as THREE.PerspectiveCamera, size.width, size.height, shiftNow.current)
 
     const f = fly.current
     if (!f || !ctl) return
@@ -848,8 +841,7 @@ export function CameraRig({
       const persp = camera as THREE.PerspectiveCamera
       const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
       shiftNow.current = shiftRef.current * ramp
-      persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
-      persp.updateProjectionMatrix()
+      applyView(persp, size.width, size.height, shiftNow.current)
     }
     // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
     if (f.intro) {
@@ -871,8 +863,7 @@ export function CameraRig({
         // 보정을 최종값으로 확정한다(보간이 끝났다).
         const persp = camera as THREE.PerspectiveCamera
         shiftNow.current = shiftRef.current
-        persp.setViewOffset(size.width, size.height, -shiftNow.current, 0, size.width, size.height)
-        persp.updateProjectionMatrix()
+        applyView(persp, size.width, size.height, shiftNow.current)
         // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
         landed.current = true
         onEntered()

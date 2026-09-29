@@ -24,7 +24,8 @@ const SLACK = 40
       const r = await pg.evaluate((slack) => {
         const c = document.querySelector('canvas')
         if (!c) return { skip: true }
-        const cb = c.getBoundingClientRect()
+        // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+        const cb = document.querySelector('.canvas-frame').getBoundingClientRect()
         const names = []
         let n = 0
         document.querySelectorAll('main *').forEach((e) => {

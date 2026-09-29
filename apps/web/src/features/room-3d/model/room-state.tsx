@@ -33,6 +33,8 @@ interface RoomState {
   seen: ReadonlySet<string>
   /** 입장 연출이 끝났는가. 홈의 카피가 이 뒤에 올라온다. */
   entered: boolean
+  /** 방 조명이 밤(기본)인가. */
+  night: boolean
 }
 
 interface RoomApi extends RoomState {
@@ -52,6 +54,8 @@ interface RoomApi extends RoomState {
    *    비행 중에 클릭하게 된다(실측 2026-09-17: 홈 도착 +100ms 에 이미 true).
    */
   resetEntered: () => void
+  /** 불을 켜고 끈다(낮/밤). */
+  toggleLight: () => void
 }
 
 const Ctx = createContext<RoomApi | null>(null)
@@ -73,6 +77,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set())
   const [entered, setEntered] = useState(false)
+  const [night, setNight] = useState(true)
 
   const declare = useCallback((nextMode: RoomMode, nextOpen: string | null) => {
     setMode(nextMode)
@@ -87,10 +92,35 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => setOpenId(null), [])
   const markEntered = useCallback(() => setEntered(true), [])
   const resetEntered = useCallback(() => setEntered(false), [])
+  const toggleLight = useCallback(() => setNight((v) => !v), [])
 
   const value = useMemo(
-    () => ({ mode, openId, seen, entered, declare, open, close, markEntered, resetEntered }),
-    [mode, openId, seen, entered, declare, open, close, markEntered, resetEntered],
+    () => ({
+      mode,
+      openId,
+      seen,
+      entered,
+      night,
+      declare,
+      open,
+      close,
+      markEntered,
+      resetEntered,
+      toggleLight,
+    }),
+    [
+      mode,
+      openId,
+      seen,
+      entered,
+      night,
+      declare,
+      open,
+      close,
+      markEntered,
+      resetEntered,
+      toggleLight,
+    ],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

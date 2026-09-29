@@ -19,8 +19,31 @@ const READ = () => {
   const cs = getComputedStyle(document.documentElement)
   const foot = document.querySelector('footer')
   const nav = document.querySelector('nav')
-  const c = document.querySelector('canvas')?.getBoundingClientRect()
+  // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+  const c = document.querySelector('.canvas-frame')?.getBoundingClientRect()
+  // 실제로 3D 를 잘라 보이는 것은 껍데기의 clip-path 다. `.canvas-frame` 과 어긋나면 3D 가 본문·푸터 뒤로 샌다.
+  const shell = document.querySelector('.canvas-shell')
+  let clipGap = null
+  if (c && shell) {
+    const m = /inset\(([^)]*)\)/.exec(getComputedStyle(shell).clipPath)
+    const v = m
+      ? m[1]
+          .trim()
+          .split(/\s+/)
+          .map((x) => Number.parseFloat(x) || 0)
+      : []
+    const [t = 0, r = t, bt = t, l = r] = v
+    const box = shell.getBoundingClientRect()
+    const clip = { x: box.x + l, y: box.y + t, right: box.right - r, bottom: box.bottom - bt }
+    clipGap = Math.max(
+      Math.abs(clip.x - c.x),
+      Math.abs(clip.y - c.y),
+      Math.abs(clip.right - c.right),
+      Math.abs(clip.bottom - c.bottom),
+    )
+  }
   return {
+    clipGap,
     varFoot: cs.getPropertyValue('--foot-h').trim(),
     varNav: cs.getPropertyValue('--nav-h').trim(),
     realFoot: foot ? Math.round(foot.getBoundingClientRect().height) : 0,
@@ -38,10 +61,14 @@ const READ = () => {
   let fail = 0
   const step = async (label) => {
     const r = await pg.evaluate(READ)
-    const ok = r.varFoot === `${r.realFoot}px` && r.varNav === `${r.realNav}px`
+    const ok =
+      r.varFoot === `${r.realFoot}px` &&
+      r.varNav === `${r.realNav}px` &&
+      r.clipGap !== null &&
+      r.clipGap <= 1
     if (!ok) fail++
     console.log(
-      `  ${ok ? '✓' : '✗'} ${label.padEnd(12)} --foot-h=${r.varFoot}(실제 ${r.realFoot}px) · --nav-h=${r.varNav}(실제 ${r.realNav}px) · 캔버스 ${r.canvas}`,
+      `  ${ok ? '✓' : '✗'} ${label.padEnd(12)} --foot-h=${r.varFoot}(실제 ${r.realFoot}px) · --nav-h=${r.varNav}(실제 ${r.realNav}px) · 영역 ${r.canvas} · 잘라내기 차이 ${r.clipGap === null ? '측정 불가' : `${Math.round(r.clipGap)}px`}`,
     )
   }
   await step('홈')

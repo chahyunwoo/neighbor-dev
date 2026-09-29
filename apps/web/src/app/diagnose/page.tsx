@@ -6,9 +6,9 @@ import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = pageMetadata({
-  title: '미리 진단해보기',
+  title: '프로젝트 사전 진단',
   description:
-    '요구사항을 적으면 기술 스택·대략 기간·리스크를 정리해드립니다. 금액은 말하지 않습니다.',
+    '요구사항을 입력하면 권장 기술 스택, 예상 기간, 주요 리스크를 정리해 드립니다. 견적 금액은 포함하지 않습니다.',
   path: '/diagnose',
 })
 
@@ -51,31 +51,29 @@ export default async function DiagnosePage() {
       <PageShell
         from="laptop"
         wide
-        fig={usable ? '[ fig. 5 · 노트북 ]' : '[ fig. 5 · 노트북 · 준비 중 ]'}
         crumb="노트북"
-        title="내 프로젝트 미리 진단해보기"
-        lede="만들고 싶은 것을 적으면 어떤 기술이 필요한지, 대략 얼마나 걸릴지, 어디가 위험한지를 정리해드립니다."
+        title="프로젝트 사전 진단"
+        lede="요구사항을 입력하면 권장 기술 스택, 예상 기간, 주요 리스크를 정리해 드립니다."
       >
         <div className={styles.wrapWide}>
           <ul className={styles.points}>
             <li className={styles.point}>
-              <span className={styles.pointNo}>합니다</span>
+              <span className={styles.pointNo}>01</span>
               <span className={styles.pointText}>
-                필요한 기술 스택 정리 · 범위를 쪼개는 방법 · 어디가 오래 걸릴지 · 빠진 것 짚기
+                권장 기술 스택, 개발 범위 분할, 일정 지연 요인, 누락된 요구사항을 정리합니다.
               </span>
             </li>
             <li className={styles.point}>
-              <span className={styles.pointNo}>안 합니다</span>
+              <span className={styles.pointNo}>02</span>
               <span className={styles.pointText}>
-                <strong>금액은 말하지 않습니다.</strong> 요구사항 몇 줄로 나온 숫자가 협상의
-                기준선이 되면 서로 손해입니다 — 견적은 사람이 직접 봅니다.
+                견적 금액은 제시하지 않습니다. 비용은 범위 확정 후 담당자가 직접 산정합니다.
               </span>
             </li>
             <li className={styles.point}>
-              <span className={styles.pointNo}>안 합니다</span>
+              <span className={styles.pointNo}>03</span>
               <span className={styles.pointText}>
-                입력하신 내용을 <strong>저장하지 않습니다.</strong> 결과는 화면에만 표시되고,
-                필요하시면 복사해서 문의에 붙여넣으시면 됩니다.
+                입력 내용은 저장하지 않습니다. 결과는 화면에만 표시되며, 복사해 문의에 첨부할 수
+                있습니다.
               </span>
             </li>
           </ul>
@@ -85,10 +83,10 @@ export default async function DiagnosePage() {
           ) : (
             <div className={styles.pending}>
               {status === null
-                ? '지금은 연결할 수 없습니다. 잠시 후 다시 열어주세요.'
+                ? '지금은 진단 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
                 : status.available === false
-                  ? '아직 열지 않았습니다. 입력을 받는 서버부터 준비하고 있습니다.'
-                  : '오늘 준비한 진단 횟수를 다 썼습니다. 내일 다시 열립니다 — 급하시면 문의로 직접 말씀해 주세요.'}
+                  ? '진단 기능을 준비하고 있습니다. 프로젝트 문의로 연락해 주세요.'
+                  : '오늘 진단 가능 횟수를 모두 사용했습니다. 급하신 경우 프로젝트 문의로 연락해 주세요.'}
             </div>
           )}
         </div>

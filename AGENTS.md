@@ -155,8 +155,8 @@ print('decisions 키:', list(d['decisions'][0].keys()))"
 
 | 축 | 데이터 | 주 독자 |
 |---|---|---|
-| 어떻게 판단했나 | `decisions[]` (선택·대안·이유·대가) | 발주자 |
-| 무엇이 나왔나 | `metrics[]` (재현 명령 포함) | 개발자·CTO |
+| 설계 판단 | `decisions[]` (선택·대안·근거·비용) | 발주자 |
+| 결과 지표 | `metrics[]` (재현 명령 포함) | 개발자·CTO |
 
 "한쪽만 두면 다른 쪽 방문자가 읽을 게 없다" 는 기획 의도는 그대로다.
 원안으로 되돌리려면 **정본에 단계별 판단과 노드 연결을 먼저 넣어야 한다.**
@@ -166,7 +166,7 @@ print('decisions 키:', list(d['decisions'][0].keys()))"
 `.panel[hidden]{display:none}` 이 필요하다(`display:flex` 가 기본값을 이긴다).
 
 ```bash
-curl -s http://localhost:21200/work/claude-board | grep -c '어떻게 판단했나\|무엇이 나왔나'
+curl -s http://localhost:21200/work/claude-board | grep -c '설계 판단\|결과 지표'
 ```
 
 ## 작업 사이클

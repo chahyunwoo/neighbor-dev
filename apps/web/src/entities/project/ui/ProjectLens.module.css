@@ -22,7 +22,7 @@
  *    (실측 2026-09-09, 스크린샷으로 확인). 한 줄에 나란히 둔다.
  */
 .headLabel {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
   letter-spacing: 0.09em;
@@ -107,7 +107,7 @@
   padding: 18px 20px;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.8;
   color: var(--fg-ghost);

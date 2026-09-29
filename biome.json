@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.next", "!**/node_modules", "!**/dist", "!data/generated", "!apps/api"]
+    "includes": [
+      "**",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/dist",
+      "!data/generated",
+      "!apps/api",
+      "!.claude/worktrees"
+    ]
   },
   "formatter": {
     "enabled": true,

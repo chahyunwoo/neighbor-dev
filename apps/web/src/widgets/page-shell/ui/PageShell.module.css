@@ -46,7 +46,7 @@ html[data-content="wide"] .main {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 13px;
   color: var(--fg-faint);
 }
@@ -83,19 +83,8 @@ html[data-content="wide"] .main {
   text-wrap: balance;
 }
 
-.fig {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--fg-ghost);
-  letter-spacing: 0.07em;
-  white-space: nowrap;
-}
-
 @media (max-width: 768px) {
   .title {
     font-size: 26px;
-  }
-  .fig {
-    white-space: normal;
   }
 }

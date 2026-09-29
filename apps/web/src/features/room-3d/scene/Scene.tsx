@@ -1,15 +1,24 @@
 'use client'
 
 import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROOM_OBJECTS } from '@/entities/room'
+import { readFrame } from '@/features/room-3d/model/frame'
 import { anchorFromBox } from './anchors'
-import { CameraRig, type FocusTarget, FREE_LIMITS, type OrbitControlsLike } from './CameraRig'
+import {
+  CameraRig,
+  type FocusTarget,
+  FREE_LIMITS,
+  type OrbitControlsLike,
+  PANEL_WIDTH,
+} from './CameraRig'
+import { BLOOM_NIGHT, DaylightSync } from './DaylightSync'
+import { setDaylightTarget } from './daylight'
 import {
   MONITOR_POSITION,
   Monitor,
+  Pendant,
   WHITEBOARD_POSITION,
   WHITEBOARD_ROTATION_Y,
   Whiteboard,
@@ -45,6 +54,16 @@ for (const p of LAYOUT) useGLTF.preload(`/models/${p.model}.glb`)
  *    쥐고 있고, 목록 폴백·서버 렌더 HTML 이 같은 데이터를 쓴다(기획서 4절).
  *    여기서 링크를 새로 만들지 않는다 — 만들면 세 경로가 어긋난다.
  */
+/**
+ * 회의 테이블 위 펜던트. x·z 는 프로토타입 `lampSwitch`·회의등(`Lights`)과 같다.
+ * 높이는 식탁 펜던트처럼 상판(0.67) 위 0.85m 로 내렸다 — 천장(2.3)에 붙이면 천장이 없는 이 구도에서
+ * 뒤쪽 책상 위에 뜬 것처럼 보인다.
+ */
+const PENDANT_Y = 1.55
+const PENDANT_POSITION: [number, number, number] = [1.19, PENDANT_Y, -0.25]
+/** 스위치 안내는 전구 바로 아래에 둔다(프로토타입: 위치 y − 0.06). */
+const PENDANT_SWITCH: [number, number, number] = [1.19, PENDANT_Y - 0.06, -0.25]
+
 export function Scene({
   openId,
   seen,
@@ -52,7 +71,13 @@ export function Scene({
   onEntered,
   onIntroStart,
   mode = 'room',
+  night = true,
+  onToggleLight,
 }: {
+  /** 밤(기본)인가. 바뀌면 1.1초에 걸쳐 조명이 넘어간다. */
+  night?: boolean
+  /** 회의 테이블 위 펜던트를 눌렀다 — 불을 켜고 끈다(홈 전용). */
+  onToggleLight?: () => void
   /** 지금 열려 있는 물건. 마커가 그 상태를 보여준다. */
   openId: string | null
   /** 이미 열어본 것 — 흐려져서 "남은 것" 이 눈에 띈다(시안 .mk.seen). */
@@ -110,6 +135,11 @@ export function Scene({
    *    ⚠️ 페이지 배경(`mode === 'page'`)은 입장 연출이 없으므로 처음부터 제약을 건다.
    */
   const [entered, setEntered] = useState(mode === 'page')
+
+  const bloomRef = useRef<React.ComponentRef<typeof Bloom>>(null)
+  useEffect(() => {
+    setDaylightTarget(night)
+  }, [night])
   const handleEntered = useCallback(() => {
     setEntered(true)
     onEntered()
@@ -217,8 +247,10 @@ export function Scene({
        *    위치에 고정됐고 `onEntered` 가 영영 안 불려 **카피·목록·어둠막이
        *    통째로 안 보였다.** 카메라 위치는 `CameraRig` 가 쥔다.
        */}
-      <PerspectiveCamera makeDefault fov={CAMERA_FOV} />
+      {/* 비율은 `CameraRig` 가 보이는 영역 기준으로 매 프레임 정한다. drei 는 렌더마다 캔버스 비율로 덮어쓴다. */}
+      <PerspectiveCamera makeDefault manual fov={CAMERA_FOV} />
       <color attach="background" args={[ROOM_BG]} />
+      <DaylightSync bloom={bloomRef} />
       <Lights />
 
       {/*
@@ -241,6 +273,18 @@ export function Scene({
 
       {/* 방 껍데기 — 벽이 빛을 되돌려 방을 밝힌다. 장식이 아니다. */}
       <Shell />
+
+      <Pendant position={PENDANT_POSITION} onPick={mode === 'room' ? onToggleLight : undefined} />
+
+      {/* 펜던트 전구의 스위치. 펜던트 모델을 눌러도 같다. */}
+      {mode === 'room' && entered && openId === null && onToggleLight ? (
+        <Html position={PENDANT_SWITCH} center zIndexRange={[10, 0]}>
+          <button type="button" className={styles.lampSwitch} onClick={onToggleLight}>
+            <span className={styles.lampRing} aria-hidden="true" />
+            <b className={styles.lampLabel}>{night ? '불을 켜보세요' : '불을 꺼보세요'}</b>
+          </button>
+        </Html>
+      ) : null}
 
       {/* 🔴 페이지에서는 마커를 그리지 않는다 — 배경이고, 누를 것은 본문에 있다. */}
       {(mode === 'room' ? hotspots : []).map(({ at, meta }) => (
@@ -313,7 +357,13 @@ export function Scene({
 
       {/* 포스트프로세싱은 데스크톱에서만 켠다 — 부모가 그 판단을 한다. */}
       <EffectComposer>
-        <Bloom intensity={0.7} luminanceThreshold={0.55} luminanceSmoothing={0.3} mipmapBlur />
+        <Bloom
+          ref={bloomRef}
+          intensity={BLOOM_NIGHT}
+          luminanceThreshold={0.55}
+          luminanceSmoothing={0.3}
+          mipmapBlur
+        />
       </EffectComposer>
     </>
   )
@@ -347,10 +397,7 @@ export function Scene({
  *    "물건 위에 떠 있다" 가 유지된다. 밖으로 나간 것만 끌어온다.
  */
 function useEdgeClamp() {
-  const { gl } = useThree()
-
   useEffect(() => {
-    const canvas = gl.domElement
     /*
      * ⚠️ 마커 래퍼는 `canvas.parentElement` **바로 밑이 아니다** — 드리가
      *    자기 컨테이너 div 를 한 겹 더 끼운다(실측: 래퍼 7개가 잡히는데
@@ -359,10 +406,14 @@ function useEdgeClamp() {
     const root = document
 
     let raf = 0
+    /** 패널이 덮는 폭. 한 번에 바꾸면 가장자리 마커가 한 프레임에 튄다 — `CameraRig` 의 투영 보정과 같은 비율로 따라간다. */
+    let cover = 0
     const tick = () => {
       raf = requestAnimationFrame(tick)
-      const w = canvas.clientWidth
-      const h = canvas.clientHeight
+      const coverTo = document.documentElement.dataset.panelOpen === 'true' ? PANEL_WIDTH : 0
+      cover = Math.abs(coverTo - cover) < 0.5 ? coverTo : cover + (coverTo - cover) * 0.12
+      // 캔버스는 뷰포트 전체다. 접는 경계는 3D 가 보이는 영역이다.
+      const { x: fx, y: fy, w, h } = readFrame()
       if (!w || !h) return
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
@@ -396,9 +447,11 @@ function useEdgeClamp() {
          *    책장(x=80)·테이블(x=91)이 그래서 5/7 이었다.
          *    `UI_LEFT` 는 `CameraRig` 의 `UI_WIDTH` 와 같은 값이다.
          */
-        const left = Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
-        const cx = Math.min(w - EDGE_PAD, Math.max(left, x))
-        const cy = Math.min(h - EDGE_PAD, Math.max(EDGE_PAD, y))
+        const left = fx + Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
+        // 패널은 캔버스를 줄이지 않고 덮는다. 그 밑으로 접으면 마커가 패널 뒤에 숨는다.
+        const right = fx + w - cover - EDGE_PAD
+        const cx = Math.min(right, Math.max(left, x))
+        const cy = Math.min(fy + h - EDGE_PAD, Math.max(fy + EDGE_PAD, y))
         const clamped = cx !== x || cy !== y
 
         /*
@@ -446,7 +499,6 @@ function useEdgeClamp() {
        * ⚠️ DOM 순서대로 훑고 **아래로만** 민다. 순서가 프레임마다 바뀌면
        *    마커가 떨려서 오히려 더 안 눌린다(한 번 그렇게 만들어 7/7 → 5/7).
        */
-      const canvasBox = canvas.getBoundingClientRect()
       const taken: { x: number; y: number }[] = []
       for (const el of wraps) {
         if (el.dataset.edge !== 'true') {
@@ -469,7 +521,7 @@ function useEdgeClamp() {
         ) {
           shift += EDGE_GAP
           // 아래로 넘치면 포기한다 — 화면 밖으로 내보내면 더 나쁘다.
-          if (at.y + shift > canvasBox.bottom - EDGE_PAD) {
+          if (at.y + shift > fy + h - EDGE_PAD) {
             shift = 0
             break
           }
@@ -480,5 +532,5 @@ function useEdgeClamp() {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [gl])
+  }, [])
 }

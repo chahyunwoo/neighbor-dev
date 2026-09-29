@@ -26,7 +26,7 @@
 }
 
 .blockNote {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
 }
@@ -69,7 +69,7 @@
 }
 
 .decisionKey {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--fg-ghost);
   padding-top: 3px;
@@ -137,7 +137,7 @@
 }
 
 .tag {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   padding: 4px 9px;
   border: 1px solid var(--line);
@@ -149,6 +149,57 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.brief {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.briefSummary {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+  font-weight: 400;
+  color: var(--fg-strong);
+}
+
+.briefList {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--fg-muted);
+}
+
+.briefList li::marker {
+  color: var(--fg-ghost);
+}
+
+.full {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.fullToggle {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--amber);
+}
+.fullToggle:hover {
+  color: var(--amber-bright);
+}
+
+.fullBody {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
 }
 
 @media (max-width: 768px) {

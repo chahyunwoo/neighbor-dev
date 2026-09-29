@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17",
+  "generatedAt": "2026-09-29",
   "counts": {
     "detail": 10,
     "summary": 6,
@@ -45,6 +45,28 @@
       ],
       "role": "1인 개발. (1) 데이터 수집 — `claude agents --json`을 ProcessBuilder로 실행해 살아있는 세션 목록을 얻고, 세션 기록 JSONL을 역순으로 읽어 제목·마지막 발화·컨텍스트 사용량을 붙이는 수집 계층, (2) 상태 판별 — 레코드 타입이 아니라 `message.content`의 블록(tool_use / tool_result)까지 봐서 '답변 대기 / 작업 중 / 멈춤 의심'을 가르는 순수 도메인 로직, (3) 성능 — 대용량 기록을 통째로 파싱하지 않고 NIO `RandomAccessFile`로 파일 끝에서부터 필요한 레코드까지만 읽는 역순 리더와 상한 튜닝, (4) API — `@Scheduled` 주기 수집 + `SseEmitter` 실시간 스트림, record DTO, (5) 프론트 — Vue 3 + Vite + Tailwind로 프로젝트별 그룹 화면과 SSE 구독 훅, (6) macOS 메뉴바 앱 — SwiftUI로 답변 대기 수를 메뉴바에 띄우고 SSE를 구독, 백엔드가 죽으면 되살리는 클라이언트, (7) 배포 — 빌드 스크립트와 launchd 에이전트, (8) CI — 빌드·테스트에 더해 '바인딩이 로컬 전용 바인딩인가', '배포 산출물에 세션 데이터가 섞이지 않았는가'를 검사하는 게이트.",
       "cardBody": "여러 작업을 한꺼번에 돌리다 보면 어느 것이 내 답을 기다리고 어느 것이 멈춰 있는지 알 수 없다. 흩어져 있던 기록을 이어 한 화면에 모았다.",
+      "brief": {
+        "summary": "여러 Claude Code 세션 중 답변 대기·멈춤 세션을 한 화면과 메뉴바에 보여주는 로컬 대시보드입니다.",
+        "problem": [
+          "세션 목록 CLI는 작업 내용·브랜치·답변 대기 여부를 알려주지 않음",
+          "기획 시점 실측: 살아 있는 세션 10개 중 7개가 답변 대기, 1개는 27일째 방치"
+        ],
+        "role": [
+          "수집·상태 판별: Java / Spring Boot, 세션 기록 역순 읽기 (1인)",
+          "실시간 화면: SSE + Vue 3 대시보드, macOS 메뉴바 앱(SwiftUI)",
+          "배포·CI: launchd, 로컬 전용 바인딩 검사 게이트"
+        ],
+        "decisions": [
+          "세션 기록을 끝에서부터 필요한 만큼만 읽음 → 파일이 커져도 속도가 거의 일정 (대안: 전체 파싱)",
+          "상태를 레코드 타입 대신 메시지 블록으로 판정 → 도구 결과가 사용자 입력으로 기록되는 함정 회피",
+          "외부 전송 없이 로컬에서만 동작하고 CI로 강제 → 세션 기록의 프롬프트·경로 보호"
+        ],
+        "metrics": [
+          "역순 읽기 96ms vs 전체 파싱 1,684ms (17.5배, 기록 421MB 기준)",
+          "테스트 54개, 백엔드 1,730줄 대비 테스트 1,238줄",
+          "이틀 동안 23커밋, 단독 작업"
+        ]
+      },
       "problem": "여러 프로젝트에서 Claude Code 세션을 동시에 띄워두고, 컨텍스트가 차면 새 세션을 여는 방식으로 쓰다 보니 세션이 계속 쌓였다. `claude agents --json`은 살아있는 세션 목록은 주지만 **무슨 작업 중인지·어느 브랜치인지·내 답을 기다리는지는 알려주지 않는다.** 그 정보는 세션 기록 파일에 따로 있다. 이 둘을 이어서 '지금 내 답을 기다리는 세션'과 '멈춰 있는 세션', '컨텍스트가 얼마나 찼는지'를 한 화면에 놓는 것이 목표였다. 기획 시점 실측으로 살아있는 세션 10개 중 7개가 답변 대기 상태였고, 한 세션은 27일째 떠 있었다. 만들고 끝낸 도구가 아니라 2026-09-04 확인 기준 매일 사용 중이며, 쓰면서 나온 불편을 계속 반영하고 있다.",
       "decisions": [
         {
@@ -116,123 +138,6 @@
       "scale": "Java 1,730줄 + 프론트 1,697줄 + Swift 894줄 · 테스트 54개 · 문서 2,332줄"
     },
     {
-      "id": "booking-settlement",
-      "tier": "detail",
-      "label": "예약은 되는데 정산은 엑셀로 하던 일",
-      "period": "2025.11 ~ 2026.09 (백엔드 완료, 프론트 착수 전)",
-      "domain": [
-        "예약",
-        "예약시스템",
-        "부킹",
-        "정산",
-        "수수료정산",
-        "파트너정산",
-        "결제연동",
-        "PG연동",
-        "웹훅",
-        "멀티테넌트",
-        "SaaS",
-        "백오피스",
-        "관리자페이지",
-        "회원권",
-        "횟수권",
-        "환불",
-        "대사",
-        "원장",
-        "동시성제어",
-        "필라테스",
-        "공유미용실",
-        "스포츠센터",
-        "골프장",
-        "학원"
-      ],
-      "commissioned": true,
-      "stack": [
-        "Java 21",
-        "Spring Boot 4.1.1",
-        "Spring Security (세션 + 쿠키, CSRF)",
-        "Spring JDBC (JdbcTemplate)",
-        "PostgreSQL 17 (btree_gist, numeric, 제약 트리거)",
-        "Flyway (마이그레이션 14개)",
-        "Gradle 9.7.1 멀티모듈 (Wrapper)",
-        "Lombok",
-        "JUnit 5 / AssertJ",
-        "Testcontainers (PostgreSQL)",
-        "토스페이먼츠 (테스트 키)",
-        "Docker (Testcontainers 실행 기반)",
-        "GitHub Issues / PR 기반 이슈 추적"
-      ],
-      "role": "설계·백엔드 단독 개발. 구체적으로 (1) 제품 방향 결정을 위한 도메인 전수조사 — 예약·정산 구조를 쓰는 여러 업종의 요구사항 1,300건을 수집·집계해 도메인 빈도·규모·스택 수요를 근거로 '예약+정산' 코어를 선택, (2) 도메인 모델링 — 예약 상태 머신, 복식 원장, 크레딧(회원권), 정산 회차·이월, 대사 불일치 5유형 설계, (3) 동시성 제어 — PostgreSQL 배타 제약(EXCLUDE USING gist) 기반 좌석 분해 점유와 홀드 승격, (4) 결제 파이프라인 — PG 어댑터 추상화, 웹훅 멱등 관문, 승인·커밋 불일치 복구 배치, 부분환불 누계 상한, (5) 정산 엔진 — 파트너 요율 기간 스냅샷, 매출 인식, PG 수수료 배치, 회차 확정과 확정 후 환불 이월, (6) 인증·인가 — 세션+쿠키, 역할 4종, 테넌트 격리 판정을 한 곳(TenantGuard)으로 통합, (7) 코어/프리셋 분리 — 확장점 설계와 2차 프리셋으로 '코어 커밋 0건' 실증, (8) 검증 체계 — 되돌리기(뮤테이션) 검증과 전수 게이트 테스트 설계. 프론트엔드는 아직 착수 전이라 이 저장소에 코드가 없다.",
-      "cardBody": "예약을 받는 제품은 많아도 대부분 정산에서 멈추고 사업자는 엑셀로 돌아간다. 예약부터 정산까지 한 곳에서 끝내되 업종은 갈아끼울 수 있게 했다.",
-      "problem": "시설·인력의 시간 슬롯을 팔고 받은 돈을 강사·파트너·지점에 나누는 사업자를 위한 시스템을 만들되, 한 업종에 고정된 시스템이 아니라 업종을 갈아끼울 수 있는 재사용 코어로 만드는 것이 목표였다. 예약만 하는 제품은 흔하지만 대부분 정산 지점에서 멈추고 사업자는 엑셀로 돌아간다. 기술적으로는 (a) 같은 시간·같은 좌석을 두 명이 잡는 중복 예약, (b) PG 웹훅 중복 발송으로 인한 원장 이중 반영, (c) 승인은 됐는데 우리 DB 커밋이 실패한 불일치, (d) 부분 환불이 원금을 넘는 초과 환불, (e) 확정된 정산 회차에 뒤늦게 도착한 환불의 이월 처리가 핵심 난제였다. 이들은 전부 틀렸을 때 조용히 번지고 발견 시점엔 원장이 이미 오염돼 있어 되돌리기가 어렵다.",
-      "decisions": [
-        {
-          "선택": "슬롯 중복 예약 방지를 애플리케이션 락이나 SELECT ... FOR UPDATE가 아니라 PostgreSQL의 `EXCLUDE USING gist (resource_id WITH =, seat_no WITH =, during WITH &&)` 배타 제약으로 DB에 맡겼다. 좌석은 capacity만큼 행으로 분해해 넣고, 홀드→예약 승격은 두 문장이 아니라 UPDATE 한 문장으로 처리했다.",
-          "대안": "비관적 락(SELECT ... FOR UPDATE)으로 리소스 행을 잡고 애플리케이션에서 겹침을 계산하는 방식, 또는 Redis 분산 락.",
-          "이유": "중복 예약은 오프라인에서 고객 두 명이 같은 시간에 오는 사고가 되므로 애플리케이션 로직이 아니라 DB 불변식으로 막아야 한다. 승격을 UPDATE 한 문장으로 둔 이유는, 배타 제약의 대상 상태 목록에 HELD와 CONFIRMED가 둘 다 있어서 점유 집합이 바뀌지 않기 때문이다 — '홀드 만료 + 예약 INSERT' 두 문장으로 짜면 그 틈에 남이 가져가는데, 그때는 이미 PG 승인이 끝나 되돌릴 수 없다.",
-          "트레이드오프": "배타 제약은 즉시 거부가 아니라 **블로킹한다** — 충돌 상대가 커밋/롤백할 때까지 기다린다(실측: 상대가 5초 뒤 커밋하면 4초 대기 후 거부). 그래서 모든 요청이 같은 좌석을 먼저 노리면 사실상 직렬화되고 커넥션 풀이 대기 스레드로 가득 찬다. 시작 좌석 무작위 분산과 `lock_timeout`을 함께 넣어야 했다. 또 실패한 INSERT가 트랜잭션 전체를 죽이므로(`current transaction is aborted`) '실패하면 다음 좌석' 루프를 한 트랜잭션 안에서 짤 수 없어 시도마다 새 트랜잭션을 여는 구조가 됐다. 그리고 락 대기 초과(55P03)는 '찼다'가 아니라 '모른다'인데, 이를 만석으로 뭉개면 정원이 남았는데 409가 나가는 오판이 생긴다.",
-          "재현": "grep -n 'EXCLUDE USING gist' api/src/main/resources/db/migration/V1__init.sql → 127행"
-        },
-        {
-          "선택": "결제 반영 순서를 'PENDING 커밋 → PG 승인(트랜잭션 밖) → 반영(트랜잭션 1개)'으로 고정하고, 웹훅 멱등은 `UNIQUE (provider, event_id)` 제약을 관문으로 두되 **처리 로직을 인자로 받는 형태**로 감쌌다. `boolean isDuplicate()`를 공개하지 않았다. 환불도 같은 형태로 '예약(누계 증가) → PG → 확정' 순서를 강제했다.",
-          "대안": "PG를 먼저 호출하고 성공하면 DB에 기록하는 방식(가장 단순), 멱등 판정을 `if (isDuplicate()) return;`으로 호출부마다 푸는 방식.",
-          "이유": "PENDING 커밋이 없으면 '승인 성공 + 반영 실패' 시 우리 DB에 흔적이 없어 복구할 대상 자체가 존재하지 않는다. 멱등 관문이 boolean을 공개하면 호출부마다 if를 풀어 쓰게 되고, 새 핸들러 하나가 빼먹으면 조용히 중복 반영된다 — 에러가 안 나므로 아무도 모른다. 환불 순서를 뒤집은 이유는 실측으로 드러났다: PG를 먼저 부르고 상한을 나중에 검사하면 동시 요청 20건이 **전부 PG에 도달해 실제로 돈이 나가고** 우리 DB는 4건만 받아들인다. 원장은 깨끗한데 PG에서 돈이 빠져나간 상태다.",
-          "트레이드오프": "트랜잭션이 세 조각으로 나뉘어 중간 상태(PENDING)가 DB에 남고, 그 상태를 청소할 복구 배치가 별도로 필요해졌다. 복구 배치는 '오래 PENDING이면 실패겠지'라고 우리 DB만 보고 판단할 수 없어 반드시 PG에 재조회해야 하고(그러지 않으면 승인된 결제를 실패로 기록해 대사가 어긋난다), PG 취소 내역에는 우리 refund 행을 가리키는 식별자가 없어서 부분 환불이 여러 건이고 금액까지 같으면 **어느 취소가 내 것인지 원리적으로 알 수 없다**. 그래서 배치를 '구멍을 메우는 것'이 아니라 '애매하지 않은 것과 애매한 것을 가르는 것'으로 설계하고, 애매한 건은 자동 판정을 포기해 수동 검토로 남기는 컬럼을 따로 뒀다.",
-          "재현": "grep -n 'payment_webhook_event_id_unique' api/src/main/resources/db/migration/V2__payment_and_ledger.sql → 111행"
-        },
-        {
-          "선택": "정산 금액 계산과 대사 판정을 Spring 의존이 전혀 없는 순수 함수(`SettlementCalculation`, `ReconciliationMatcher`)로 `core-domain`에 분리했다. 반올림은 파트너 몫과 원천징수 두 지점에서만, 둘 다 `RoundingMode.FLOOR`로 한다.",
-          "대안": "정산 계산을 서비스 레이어나 SQL 집계로 두는 방식(조회와 계산을 한 번에 끝낼 수 있어 더 짧다).",
-          "이유": "되돌리기(뮤테이션) 검증이 제값을 하려면 판정이 단독으로 결과를 결정해야 한다. 계산이 어댑터에 섞여 있으면 DB CHECK나 상태 머신이 같은 결과를 내주기 때문에, 계산 로직을 지워도 테스트가 초록으로 남는다. 실제로 순수 함수로 뽑은 뒤 판정 분기를 하나씩 지웠더니 **전부 갈렸다**. FLOOR로 통일한 이유는 파트너 몫과 원천징수를 모두 내리면 플랫폼 몫이 나머지를 흡수해 '지급 + 원천세 + 플랫폼 = 기준액'이 항상 성립하기 때문이다 — 100건을 합산해도 1원이 새지 않는다.",
-          "트레이드오프": "계산에 필요한 값을 전부 인자로 모아 넘겨야 해서 조회 쿼리와 DTO가 늘었고, 여러 서브쿼리가 같은 질문에 답하게 되면서 그 기준이 미세하게 갈리는 새로운 실패 모드가 생겼다 — 실제로 `settled_*`와 `last_refund`가 하나는 DRAFT 제외, 하나는 포함이었을 때 그 비대칭이 특정 항목 금액을 정확히 두 번 깎았다(파트너 몫 -198 vs 정답 2,202). 예외도 제약 위반도 없이 지급액만 틀리고, 항목 **개수**는 어느 구현에서도 같아서 개수로는 안 보이고 합계로 봐야 갈렸다. 이 계열 버그를 잡느라 이 슬라이스는 리뷰 4회전이 필요했고, 매 회전마다 직전 수정이 만든 버그가 나왔다.",
-          "재현": "ls core-domain/src/main/java/kr/hyunwoo/booking/domain/settlement/SettlementCalculation.java core-domain/src/main/java/kr/hyunwoo/booking/domain/reconciliation/ReconciliationMatcher.java"
-        }
-      ],
-      "metrics": [
-        {
-          "항목": "테스트 수 (전체 통과, 실패·에러 0)",
-          "값": "437건 (core-domain 146 / core-app 30 / api 258 / preset-golf 3)",
-          "재현": "./gradlew clean build 후 `grep -ho 'tests=\"[0-9]*\"' */build/test-results/test/*.xml | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s}'` → 437, 같은 방식으로 failures/errors 합계 → 0"
-        },
-        {
-          "항목": "코드 규모 (main / test)",
-          "값": "main 15,993줄 187파일 / test 14,338줄 53파일",
-          "재현": "find . -name '*.java' -path '*/src/main/*' -exec cat {} + | wc -l → 15993 · find . -name '*.java' -path '*/src/test/*' -exec cat {} + | wc -l → 14338"
-        },
-        {
-          "항목": "DB 마이그레이션",
-          "값": "Flyway 14개 (V1~V14)",
-          "재현": "ls api/src/main/resources/db/migration/*.sql | wc -l → 14"
-        },
-        {
-          "항목": "REST 엔드포인트",
-          "값": "32개 (컨트롤러 11개)",
-          "재현": "grep -rhcE '@(Get|Post|Put|Patch|Delete)Mapping' --include='*.java' api/src/main | awk '{s+=$1} END {print s}' → 32 · find . -name '*Controller.java' -path '*/src/main/*' | wc -l → 11"
-        },
-        {
-          "항목": "동시성 검증 테스트",
-          "값": "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증",
-          "재현": "grep -rln 'CountDownLatch\\|ExecutorService' --include='*.java' */src/test | grep -v build → ReservationConcurrencyTest, CreditConcurrencyTest, RefundConcurrencyTest, WebhookIdempotencyTest"
-        },
-        {
-          "항목": "전수 게이트 테스트 (규칙이 실제로 배선됐는지 소스를 훑어 판정)",
-          "값": "5개 — 보안 규칙·테넌트 격리·@Valid·프리셋 격리·PG 어댑터 계약",
-          "재현": "find . -name '*CoverageTest.java' -o -name '*ContractTest.java' | grep -v build → SecurityRuleCoverageTest, TenantGuardCoverageTest, ValidCoverageTest, TossPaymentGatewayContractTest, GolfPresetContractTest"
-        },
-        {
-          "항목": "코어/프리셋 분리 실증 (2차 프리셋 추가 시 코어 수정 없음)",
-          "값": "preset-golf는 자바 파일 3개(용어·정책·계약테스트)로 끝났고, api 모듈은 preset-fitness만 의존한다",
-          "재현": "find preset-golf -name '*.java' | grep -v build | wc -l → 3 · grep -n 'preset' api/build.gradle → runtimeOnly project(':preset-fitness') 한 줄뿐"
-        },
-        {
-          "항목": "제품 방향 결정에 쓴 도메인 조사 표본",
-          "값": "요구사항 1,300건 (두 개의 수집 경로: 1,000건 + 300건)",
-          "재현": "python3 -c \"import json; print(len(json.load(open('research/projects.json'))), len(json.load(open('research/projects_term.json'))))\" → 1000 300"
-        }
-      ],
-      "scale": "Java 21 · Spring Boot 4 · PostgreSQL 17 멀티모듈 · main 15,993줄 · 테스트 437건 · REST 32개 · 마이그레이션 14개"
-    },
-    {
       "id": "qs-fe",
       "tier": "detail",
       "label": "메일로 주고받던 상품 견적을 한 화면에서",
@@ -271,6 +176,28 @@
       ],
       "role": "프론트엔드 단독 개발. 실제로 손댄 영역은 다음과 같다 — (1) TanStack Router 파일 기반 라우팅 구조 설계와 인증·메뉴 권한 이중 가드(beforeLoad에서 로그인 여부, loader에서 서버가 내려준 메뉴 목록으로 경로 접근 판정), (2) ky 기반 HTTP 클라이언트 3종(API/Auth/SSE) 구성과 전역 에러·세션 만료 처리, (3) 로그인·2FA·비밀번호 재설정 등 인증 플로우 UI와 요청 본문 AES-CBC 암호화 유틸, (4) TanStack Query 캐시 전략 설계(쿼리키 팩토리, 용도별 staleTime 프리셋 4종, 무한 쿼리 낙관적 업데이트/롤백), (5) 서버 메타데이터 응답으로 검색 필드와 RFQ 템플릿 폼을 그리는 동적 렌더링, (6) TanStack Table + Virtual 기반 가상화 무한 스크롤 테이블 공용 컴포넌트, (7) SSE 스트림을 직접 파싱하는 실시간 통계 바, (8) 데스크톱/모바일 분기 레이아웃과 모바일 허용 경로 제한, (9) Biome·Husky·lint-staged·commitlint 품질 게이트와 브랜치·커밋 컨벤션 문서화. 백엔드 API 스펙과 DB 스키마 설계, 배포·서버 인프라 구성에는 관여하지 않았다 — 전달받은 스펙에 맞춰 프론트엔드만 구현했다.",
       "cardBody": "견적 요청이 이메일로 오가면 조건을 사람이 옮겨 적고 진행 상황은 메일함에 흩어진다. 요청 조회부터 회신 비교까지 한 화면에서 하게 했다.",
+      "brief": {
+        "summary": "장외 파생상품 견적 요청을 조회·발송·회신 비교까지 처리하는 웹 콘솔 프론트엔드입니다.",
+        "problem": [
+          "견적 요청이 이메일로 오가 상품 조건을 사람이 옮겨 적음",
+          "진행 상태가 메일함에 흩어져 요청 조회·호가 비교가 어려움"
+        ],
+        "role": [
+          "프론트엔드 전 범위: React 19, TanStack Router / Query (단독 개발)",
+          "가상화 무한 스크롤 공용 테이블, 서버 메타데이터 기반 동적 폼",
+          "인증 가드·세션 만료 처리, SSE 실시간 통계, 품질 게이트"
+        ],
+        "decisions": [
+          "검색 필드·템플릿 폼을 서버 메타데이터로 렌더링 → 필드 추가 시 프론트 재배포 불필요",
+          "무한 스크롤 + 행 가상화 공용 테이블로 통일 → 화면별 코드를 컬럼 정의만 남김",
+          "세션 만료를 HTTP 클라이언트 훅 한 곳에서 판정 → 엔드포인트별 중복 분기 제거"
+        ],
+        "metrics": [
+          "커밋 283건 중 282건이 본인 계정",
+          "TypeScript/TSX 411개 파일, 24,498줄",
+          "연동한 API 엔드포인트 경로 51개"
+        ]
+      },
       "problem": "장외 파생상품 견적 요청이 이메일로 오가면서, 상품 조건을 사람이 옮겨 적고 진행 상태는 메일함에 흩어져 있었다. 수신 메일에서 뽑아낸 요청·주문을 한 화면에서 조회·검색하고, 템플릿으로 조건 조합을 만들어 다수 상대방에게 한 번에 발송하고, 회신된 호가를 비교하고, 운영자가 사용자·접속·발신 제어와 시스템 정지까지 관리할 수 있는 웹 콘솔을 만드는 것이 목표였다.",
       "decisions": [
         {
@@ -368,6 +295,27 @@
       ],
       "role": "설계·구현·운영 전부",
       "cardBody": "손으로 하던 발행을 자동으로 바꾸면, 실패해도 아무도 모른다는 문제가 따라온다. 실제로 다른 자동화가 6일간 죽어 있던 적이 있어 조용한 실패를 드러내는 쪽에 무게를 뒀다.",
+      "brief": {
+        "summary": "포트폴리오 정본 변경 반영과 블로그 발행을 무인으로 돌리는 파이프라인입니다.",
+        "problem": [
+          "정본을 고칠 때마다 사이트 반영·색인을 손으로 돌리고 블로그는 수동 발행",
+          "다른 자동화가 6일간 죽어 있어도 발견되지 않은 전례"
+        ],
+        "role": [
+          "게이트·발행 CLI·주기 스케줄러: Python 표준 라이브러리 (설계·구현·운영 전담)",
+          "launchd 에이전트 2종, 알림 폴백과 워치독 감시"
+        ],
+        "decisions": [
+          "AI는 원고 파일만 작성하고 발행은 검증된 경로가 수행 → 게이트 우회 차단",
+          "주기 판정을 launchd 대신 코드에서 수행 → 무작위 주기 표현, 매일 기동으로 감시",
+          "알림 실패를 작업 실패로 처리하지 않음 → 저장된 초안이 누락되는 상황 방지"
+        ],
+        "metrics": [
+          "테스트 184건 통과",
+          "외부 의존성 0개 (표준 라이브러리만)",
+          "게이트 검사 6종, 무인 실행 11단계"
+        ]
+      },
       "problem": "정본(JSON)을 고칠 때마다 사이트 반영·색인·이력서 PDF 를 손으로 돌려야 했고, 블로그 글은 아예 수동이었다. 무인화하면 실패했을 때 아무도 모른다는 문제가 따라온다 — 실제로 다른 자동화가 6일간 죽어 있었는데 발견되지 않은 적이 있다. 자동화 자체보다 '조용한 실패'를 어떻게 드러낼지가 핵심 과제였다.",
       "decisions": [
         {
@@ -468,6 +416,28 @@
       ],
       "role": "백엔드 단독 개발. 구체적으로 (1) REST API 설계 — 5개 도메인(blog/portfolio/auth/analytics/health) 72개 오퍼레이션의 라우트·쿼리·DTO 계약 설계, (2) DB 모델링 — PostgreSQL 멀티스키마(auth/blog/portfolio/analytics) 21개 모델과 마이그레이션 14회 운영, (3) 인증·인가 — JWT 액세스 토큰 + Refresh Token Rotation, TOTP 2FA, 공개 API용 API Key, 어드민 IP 화이트리스트, 전역 Guard 체인 구성, (4) 파일 스토리지 — Cloudflare R2(S3 호환) 업로드·이동·삭제와 임시 파일 크론 정리, (5) 배포 — Dockerfile 멀티스테이지, Compose 환경 분리(base/local/prod), GitHub Actions CI(lint·typecheck·OpenAPI drift·build·test) 및 사설 VPN 경유 SSH를 통한 자체 호스팅 서버 자동 배포, (6) 프론트와의 타입 계약 — openapi.json 생성 파이프라인과 CI 게이트, (7) 테스트 기반 구축 — 운영 DB 접속 차단 가드와 순수 로직 단위 테스트 도입. 프론트엔드 코드는 이 저장소에 없다(별도 저장소).",
       "cardBody": "성격이 다른 두 사이트가 글·이미지·방문 기록·로그인을 각자 관리하면 운영이 안 된다. 한 서버가 모두 맡고, 바뀐 내용이 곧바로 사이트에 반영되게 했다.",
+      "brief": {
+        "summary": "블로그와 포트폴리오 두 사이트가 함께 쓰는 콘텐츠·인증·통계 API 서버입니다.",
+        "problem": [
+          "성격이 다른 두 프론트가 하나의 백엔드를 소비해야 함",
+          "글·이미지·다국어 이력·통계·어드민 인증을 따로 관리하면 운영 불가"
+        ],
+        "role": [
+          "REST API 설계·구현: NestJS 11 + Fastify, Prisma (단독 개발)",
+          "인증: JWT + Refresh Token Rotation, TOTP 2FA, 전역 Guard 체인",
+          "배포·CI: Docker 멀티스테이지, OpenAPI drift 게이트"
+        ],
+        "decisions": [
+          "다국어를 엔티티별 translation 테이블로 분리 → 언어 추가 시 스키마 변경 불필요",
+          "OpenAPI 스펙을 파일로 커밋하고 CI에서 drift 검사 → 서버 없이 프론트 타입 생성",
+          "이미지 이동 부분 실패 시 반영분을 기록하고 500 반환 → 다음 날 깨지는 이미지 방지"
+        ],
+        "metrics": [
+          "API 오퍼레이션 72개",
+          "72개 중 60개가 200/201 JSON 스키마 선언, 12개가 204 → 미선언 0건",
+          "Prisma 모델 21개, 스키마 4개, 마이그레이션 14회"
+        ]
+      },
       "problem": "블로그와 포트폴리오라는 성격이 다른 두 프론트(별도 저장소)가 하나의 백엔드를 소비해야 했고, 글·이미지·다국어 이력·방문 통계·어드민 인증이 각각 따로 관리되면 운영이 불가능했다. 한 서버에서 콘텐츠 CRUD와 자산 저장, 다국어 조회, 접속 통계, 어드민 보안을 모두 처리하면서, 정적 생성 기반 프론트가 변경을 즉시 반영할 수 있도록 갱신 신호까지 밀어 주는 것이 목표였다.",
       "decisions": [
         {
@@ -567,6 +537,28 @@
         "Turborepo/pnpm workspace의 한 앱으로 빌드"
       ],
       "role": "1인 개발. (1) TanStack Router 파일 기반 라우팅으로 로그인·포스트·포트폴리오 관리 화면 12개 라우트 구성, (2) TanStack Query 기반 서버 상태 관리와 entities 단위 쿼리 옵션/훅 캡슐화, (3) TOTP 2단계 인증의 **프런트 플로우**(코드 입력 폼, 실패 처리, 세션 수립)와 남은 세션 시간을 표시·연장하는 세션 타이머 훅 구현 — 서버 측 TOTP 검증은 별도 저장소의 API 서버에 있고 그쪽 항목에서 다룬다, (4) Monaco 에디터를 붙인 글·작업물 작성 폼(react-hook-form + Zod 검증), (5) Recharts 기반 애널리틱스 대시보드(유입 경로 파이 차트 등), (6) 어드민에 남아 있던 Mantine을 걷어내고 shadcn/Radix 기반 `자체 공통 패키지` 공용 컴포넌트로 통일, (7) FSD 레이어(app → pages → features → entities → shared)로 소스 구조 정리.",
+      "brief": {
+        "summary": "블로그 글과 포트폴리오 작업물을 작성·관리하는 어드민 SPA입니다.",
+        "problem": [
+          "콘텐츠를 저장소 밖 API로 옮긴 뒤 글을 쓰고 고칠 도구가 필요해짐",
+          "어드민 Mantine과 블로그 shadcn이 갈라져 같은 폼을 두 번 구현"
+        ],
+        "role": [
+          "화면 12개 라우트: Vite + React, TanStack Router / Query (1인)",
+          "Monaco 에디터 작성 폼, Recharts 통계 대시보드",
+          "2단계 인증 프론트 플로우와 세션 타이머"
+        ],
+        "decisions": [
+          "어드민만 Vite + React SPA로 구성 → 로그인 뒤 화면이라 SSR 불필요, 빌드 단축",
+          "Mantine을 걷어내고 shadcn 기반 공용 패키지로 통일 → 컴포넌트·토큰 중복 제거",
+          "만료 전 남은 시간을 표시하고 연장을 제안 → 긴 글 편집 중 본문 유실 방지"
+        ],
+        "metrics": [
+          "TypeScript/TSX 103개 파일, 6,625줄",
+          "라우트 12개",
+          "어드민 앱에 닿은 커밋 23건"
+        ]
+      },
       "problem": "블로그 콘텐츠를 저장소 밖 API로 옮기고 나니 글을 쓰고 고칠 도구가 필요해졌다. 동시에 어드민은 로그인 뒤에서만 도는 화면이라 SEO나 초기 렌더 비용보다 '편집 중 상태를 얼마나 잘 붙들고 있느냐'가 중요했고, 블로그·포트폴리오가 이미 쓰던 shadcn과 어드민의 Mantine이 갈라져 같은 폼을 두 번 만들고 있었다.",
       "decisions": [
         {
@@ -652,6 +644,28 @@
         "Turborepo/pnpm workspace의 한 앱으로 빌드"
       ],
       "role": "1인 개발. (1) Next.js 16 App Router 기반 목록/상세/검색/TOC 화면 구현, (2) 저장소 안 MDX 파일 36건을 걷어내고 백엔드 API에서 본문을 받아 next-mdx-remote v6로 런타임 렌더링하는 구조로 전환, (3) 시간 기반 ISR을 끄고 어드민 저장 웹훅이 호출하는 `/api/revalidate` Route Handler(시크릿 검증 + 태그·경로 선택 무효화)로 갱신 경로를 바꿈, (4) 캐시 태그가 한글 slug에서 깨지는 문제를 ASCII 해시 태그로 해소, (5) ko/en/jp About 페이지를 `[locale]` 세그먼트로 분리하고 `generateStaticParams`·`alternates.languages`로 다국어 메타데이터 구성, (6) 미발행 글 미리보기 라우트(`/preview/[slug]`)를 토큰 검증 뒤에 분리 배치, (7) next-themes 다크모드·cmdk 검색 팔레트 구성.",
+      "brief": {
+        "summary": "본문을 API에서 받아 렌더링하고 저장 즉시 캐시를 갱신하는 기술 블로그입니다.",
+        "problem": [
+          "글이 저장소 안 MDX라 오타 수정에도 커밋·CI·재배포가 필요",
+          "시간 기반 ISR로는 수정 내용의 반영 시점을 확인할 수 없음"
+        ],
+        "role": [
+          "목록·상세·검색·TOC 화면: Next.js 16 App Router (1인)",
+          "MDX 파일을 API 기반 런타임 렌더링으로 전환",
+          "태그·경로 선택 무효화 갱신 경로, 다국어 About, 미리보기 라우트"
+        ],
+        "decisions": [
+          "MDX를 API로 옮기고 저장 웹훅으로만 캐시 무효화 → 무엇이 어떤 캐시를 깨는지 코드로 명시",
+          "한글 slug 캐시 태그를 ASCII 해시로 변환 → 헤더 인코딩 오류 해소",
+          "미리보기를 별도 라우트로 분리하고 토큰 검증 → 미발행 본문의 공개 캐시 유입 차단"
+        ],
+        "metrics": [
+          "검색 유입(최근 3개월) 클릭 481, 평균 CTR 8.8%, 평균 게재순위 6.9위",
+          "발행된 글 42건 (2026-09-04 측정)",
+          "단일 커밋에서 MDX 36건 일괄 삭제"
+        ]
+      },
       "problem": "블로그 글이 저장소 안 MDX 파일이라 오타 하나 고치는 데도 커밋·CI·재배포 사이클이 통째로 붙었고, 시간 기반 ISR로는 '지금 고친 게 언제 반영되는지'를 확인할 수 없었다. 글쓰기와 배포를 떼어내되, 무엇을 고치면 어떤 캐시가 깨지는지가 코드에 명시적으로 남는 갱신 경로를 만드는 것이 목표였다.",
       "decisions": [
         {
@@ -748,6 +762,28 @@
         "자체 호스팅 API 서버 (구체 구성은 비공개)"
       ],
       "role": "1인 개발. (1) 단일 Next.js 블로그를 Turborepo + pnpm workspace로 재구성해 앱 3개 + 공유 패키지 3개 구조로 분할(커밋 f614877), (2) 공유 패키지 설계 — API 클라이언트·ENDPOINTS·OpenAPI 생성 타입(`packages/shared`), Radix 기반 공용 컴포넌트 21개(`packages/ui`), MDX 렌더러와 커스텀 컴포넌트(`packages/mdx`), (3) 백엔드 `openapi.json`을 바이트 그대로 복사·커밋하는 동기화 스크립트와 `openapi-typescript` 코드젠 파이프라인 구성, (4) 성공 응답 스키마가 없는 라우트를 고유 심볼로 브랜딩해 컴파일 시점에 잡는 `MissingResponseSchema` 타입 설계, (5) GitHub Actions 5종(CI, CodeQL, Lighthouse CI, OpenAPI drift 검사, release-please) 구성과 워크플로 YAML 파싱 검사 스텝 추가, (6) Biome + Husky + lint-staged 커밋 게이트, Dependabot 격리 브랜치 정책, (7) 각 앱 `src/`를 FSD 레이어로 정리하고 위반 4건을 문서로 채증한 뒤 해소.",
+      "brief": {
+        "summary": "블로그·포트폴리오·어드민 세 앱과 공유 패키지를 묶은 모노레포입니다.",
+        "problem": [
+          "세 앱이 API 타입·UI 컴포넌트·MDX 렌더링을 각자 중복 보유",
+          "백엔드 저장소가 분리돼 API 스펙 변경을 프론트가 알 방법이 없음"
+        ],
+        "role": [
+          "앱 3개 + 공유 패키지 3개 구조 설계: Turborepo, pnpm (1인)",
+          "OpenAPI 스펙 동기화와 openapi-typescript 코드젠 파이프라인",
+          "GitHub Actions 5종, 커밋 게이트, Dependabot 격리 정책"
+        ],
+        "decisions": [
+          "Turborepo 모노레포로 분할하고 앱별 FSD 레이어 적용 → 공용 코드 버전 동기화 비용 제거",
+          "백엔드 스펙을 파일로 복사해 타입 생성 → 수동 타입이 숨기던 nullable을 컴파일 에러로 검출",
+          "스키마 없는 응답을 고유 심볼로 브랜딩 → 대입 시점에 컴파일 실패 (대안: never)"
+        ],
+        "metrics": [
+          "OpenAPI 경로 51개 / 오퍼레이션 72개 / 스키마 80개, 생성 타입 4,997줄",
+          "커밋 327건, 머지 커밋 57건",
+          "공용 UI 컴포넌트 21개"
+        ]
+      },
       "problem": "블로그·포트폴리오·어드민이 따로 놀면서 API 타입·UI 컴포넌트·MDX 렌더링이 각자 중복돼 있었고, 프런트와 백엔드 저장소가 갈린 탓에 API 스펙이 바뀌어도 프런트가 그것을 알 방법이 없었다. 세 앱을 한 저장소로 묶어 타입·디자인 시스템·캐시 무효화 규칙을 하나의 소스에서 공유하되, 빌드가 백엔드 가용성에 끌려가지 않게 만드는 것이 목표였다.",
       "decisions": [
         {
@@ -855,6 +891,28 @@
         "GitHub Actions Lighthouse CI 대상"
       ],
       "role": "1인 개발. (1) Next.js 16 App Router 기반 단일 페이지 구성, (2) @react-three/fiber + drei로 GLSL 셰이더 히어로 구현, (3) requestAnimationFrame 기반 스킬 궤도·3D 캐러셀 인터랙션, (4) @react-pdf/renderer로 ko/en/jp 이력서를 브라우저에서 즉시 생성·내려받게 구현, (5) Framer Motion 기반 스크롤 인터랙션, (6) 작업물 콘텐츠를 백엔드 API에서 받아 MDX(next-mdx-remote + Shiki)로 렌더링, (7) `/api/revalidate` Route Handler로 어드민 저장 시 캐시 태그·경로 무효화.",
+      "brief": {
+        "summary": "셰이더 히어로와 3개 국어 이력서 생성을 갖춘 원페이지 포트폴리오입니다.",
+        "problem": [
+          "만들 수 있는 것을 문장 대신 화면 자체로 보여줘야 함",
+          "국문·영문·일문 이력서를 요청 즉시 건넬 수 있어야 함"
+        ],
+        "role": [
+          "원페이지 구성: Next.js 16 App Router (1인)",
+          "GLSL 셰이더 히어로(@react-three/fiber), rAF 궤도·3D 캐러셀",
+          "브라우저 이력서 PDF 생성, API 기반 MDX 렌더링"
+        ],
+        "decisions": [
+          "이력서 PDF를 브라우저에서 생성 → 화면과 같은 데이터 소스라 내용 불일치 없음",
+          "히어로를 GLSL 셰이더로, 궤도·캐러셀을 rAF 루프로 구현 → 해상도 독립, 매 프레임 계산",
+          "작업물 본문도 API + MDX로 받고 웹훅으로 갱신 → 블로그와 렌더러·캐시 규칙 통일"
+        ],
+        "metrics": [
+          "이력서 3개 언어(ko / en / jp), 브라우저에서 즉시 생성",
+          "TypeScript/TSX 59개 파일, 3,665줄",
+          "포트폴리오 앱에 닿은 커밋 30건"
+        ]
+      },
       "problem": "프리랜서로 직접 수주하는 입장에서 포트폴리오는 '무엇을 만들 수 있는지'를 문장이 아니라 화면 자체로 보여줘야 했고, 동시에 상대가 요구하는 형식(국문·영문·일문 이력서 PDF)으로도 즉시 건네줄 수 있어야 했다. 인터랙션을 넣되 그 비용이 초기 로딩과 저사양 기기에서 감당 가능한 선에 머무르게 하는 것이 과제였다.",
       "decisions": [
         {
@@ -944,6 +1002,27 @@
       ],
       "role": "1인 개발. 티어 점수 산출 로직(CDF 가중합·디비전 매핑) 설계와 구현, GitHub REST/GraphQL 연동부 작성, SVG 카드 렌더러(엠블럼·스탯바·프리미엄 효과·9종 테마) 구현, Vercel 서버리스 배포 파이프라인(esbuild 번들 + 산출물 커밋) 구성, GitHub Actions CI(타입체크 + vitest) 및 Dependabot·이슈/PR 템플릿 설정, README 문서 작성",
       "cardBody": "프로필에 붙이는 활동 카드는 숫자를 나열할 뿐 그게 잘하는 건지는 알려주지 않는다. 다섯 가지 활동을 하나의 순위로 환산해 한 장으로 보여준다.",
+      "brief": {
+        "summary": "GitHub 활동 지표 5개를 하나의 티어로 환산해 SVG 카드로 보여주는 서비스입니다.",
+        "problem": [
+          "프로필 통계 카드는 숫자를 나열할 뿐 상대적 수준을 알려주지 않음",
+          "커밋·스타·PR·팔로워·이슈를 31개 구간 순위로 환산할 방법이 필요"
+        ],
+        "role": [
+          "점수 산출 로직과 GitHub REST / GraphQL 연동 (1인)",
+          "SVG 카드 렌더러: 엠블럼·스탯바·9종 테마",
+          "Vercel 서버리스 배포(esbuild 번들), CI(타입체크 + Vitest)"
+        ],
+        "decisions": [
+          "Next.js를 Hono + SVG 문자열 생성으로 교체 → 라우트 하나에 프레임워크 적재 회피",
+          "Edge 대신 Node.js 서버리스, 번들 산출물 커밋 → 배포 대상을 파일 하나로 고정",
+          "점수 계산을 정규화 함수와 순수 함수로 격리 → API 없이 테스트, 지표 추가 용이"
+        ],
+        "metrics": [
+          "테스트 45개 / 6파일 전부 통과",
+          "런타임 의존성 3개 (hono, @hono/node-server, esbuild)"
+        ]
+      },
       "problem": "GitHub 프로필 README에 붙이는 통계 카드는 숫자를 나열할 뿐 '이게 잘하는 건지'를 알려주지 않는다. 커밋·스타·PR·팔로워·이슈 5개 지표를 하나의 상대적 순위(Iron~Challenger, 31개 구간)로 환산해 한 장의 SVG로 보여주는 것이 목표였다.",
       "decisions": [
         {
@@ -1008,6 +1087,145 @@
         }
       ],
       "scale": "소스 1,193줄 · 테스트 45개 · 티어 구간 31개 · 테마 9종"
+    },
+    {
+      "id": "booking-settlement",
+      "tier": "detail",
+      "label": "예약은 되는데 정산은 엑셀로 하던 일",
+      "period": "2025.11 ~ 2026.09 (백엔드 완료, 프론트 착수 전)",
+      "domain": [
+        "예약",
+        "예약시스템",
+        "부킹",
+        "정산",
+        "수수료정산",
+        "파트너정산",
+        "결제연동",
+        "PG연동",
+        "웹훅",
+        "멀티테넌트",
+        "SaaS",
+        "백오피스",
+        "관리자페이지",
+        "회원권",
+        "횟수권",
+        "환불",
+        "대사",
+        "원장",
+        "동시성제어",
+        "필라테스",
+        "공유미용실",
+        "스포츠센터",
+        "골프장",
+        "학원"
+      ],
+      "commissioned": false,
+      "stack": [
+        "Java 21",
+        "Spring Boot 4.1.1",
+        "Spring Security (세션 + 쿠키, CSRF)",
+        "Spring JDBC (JdbcTemplate)",
+        "PostgreSQL 17 (btree_gist, numeric, 제약 트리거)",
+        "Flyway (마이그레이션 14개)",
+        "Gradle 9.7.1 멀티모듈 (Wrapper)",
+        "Lombok",
+        "JUnit 5 / AssertJ",
+        "Testcontainers (PostgreSQL)",
+        "토스페이먼츠 (테스트 키)",
+        "Docker (Testcontainers 실행 기반)",
+        "GitHub Issues / PR 기반 이슈 추적"
+      ],
+      "role": "설계·백엔드 단독 개발. 구체적으로 (1) 제품 방향 결정을 위한 도메인 전수조사 — 예약·정산 구조를 쓰는 여러 업종의 요구사항 1,300건을 수집·집계해 도메인 빈도·규모·스택 수요를 근거로 '예약+정산' 코어를 선택, (2) 도메인 모델링 — 예약 상태 머신, 복식 원장, 크레딧(회원권), 정산 회차·이월, 대사 불일치 5유형 설계, (3) 동시성 제어 — PostgreSQL 배타 제약(EXCLUDE USING gist) 기반 좌석 분해 점유와 홀드 승격, (4) 결제 파이프라인 — PG 어댑터 추상화, 웹훅 멱등 관문, 승인·커밋 불일치 복구 배치, 부분환불 누계 상한, (5) 정산 엔진 — 파트너 요율 기간 스냅샷, 매출 인식, PG 수수료 배치, 회차 확정과 확정 후 환불 이월, (6) 인증·인가 — 세션+쿠키, 역할 4종, 테넌트 격리 판정을 한 곳(TenantGuard)으로 통합, (7) 코어/프리셋 분리 — 확장점 설계와 2차 프리셋으로 '코어 커밋 0건' 실증, (8) 검증 체계 — 되돌리기(뮤테이션) 검증과 전수 게이트 테스트 설계. 프론트엔드는 아직 착수 전이라 이 저장소에 코드가 없다.",
+      "cardBody": "예약을 받는 제품은 많아도 대부분 정산에서 멈추고 사업자는 엑셀로 돌아간다. 예약부터 정산까지 한 곳에서 끝내되 업종은 갈아끼울 수 있게 했다.",
+      "brief": {
+        "summary": "예약부터 결제·정산·대사까지 한 곳에서 처리하고 업종을 교체할 수 있는 백엔드 코어입니다.",
+        "problem": [
+          "예약 제품 대부분이 정산 단계에서 멈춰 사업자가 엑셀로 돌아감",
+          "중복 예약·웹훅 중복 반영·승인/커밋 불일치로 인한 원장 불일치 위험"
+        ],
+        "role": [
+          "예약·결제·정산 설계: Java 21 / Spring Boot, PostgreSQL (단독 개발)",
+          "동시성·멱등성: 배타 제약 좌석 점유, 웹훅 멱등 관문, 복구 배치",
+          "코어/프리셋 분리, 되돌리기 검증과 전수 게이트 테스트"
+        ],
+        "decisions": [
+          "중복 예약을 PostgreSQL 배타 제약으로 차단 → 앱 로직 대신 DB 불변식으로 보장",
+          "PENDING 커밋 후 PG 승인, 멱등은 유니크 제약 관문 → 중복 반영·복구 누락 방지",
+          "정산 계산·대사 판정을 순수 함수로 분리 → 계산 로직을 테스트로 고정"
+        ],
+        "metrics": [
+          "테스트 437건 (전체 통과, 실패·에러 0)",
+          "main 15,993줄 187파일 / test 14,338줄 53파일",
+          "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증"
+        ]
+      },
+      "problem": "시설·인력의 시간 슬롯을 팔고 받은 돈을 강사·파트너·지점에 나누는 사업자를 위한 시스템을 만들되, 한 업종에 고정된 시스템이 아니라 업종을 갈아끼울 수 있는 재사용 코어로 만드는 것이 목표였다. 예약만 하는 제품은 흔하지만 대부분 정산 지점에서 멈추고 사업자는 엑셀로 돌아간다. 기술적으로는 (a) 같은 시간·같은 좌석을 두 명이 잡는 중복 예약, (b) PG 웹훅 중복 발송으로 인한 원장 이중 반영, (c) 승인은 됐는데 우리 DB 커밋이 실패한 불일치, (d) 부분 환불이 원금을 넘는 초과 환불, (e) 확정된 정산 회차에 뒤늦게 도착한 환불의 이월 처리가 핵심 난제였다. 이들은 전부 틀렸을 때 조용히 번지고 발견 시점엔 원장이 이미 오염돼 있어 되돌리기가 어렵다.",
+      "decisions": [
+        {
+          "선택": "슬롯 중복 예약 방지를 애플리케이션 락이나 SELECT ... FOR UPDATE가 아니라 PostgreSQL의 `EXCLUDE USING gist (resource_id WITH =, seat_no WITH =, during WITH &&)` 배타 제약으로 DB에 맡겼다. 좌석은 capacity만큼 행으로 분해해 넣고, 홀드→예약 승격은 두 문장이 아니라 UPDATE 한 문장으로 처리했다.",
+          "대안": "비관적 락(SELECT ... FOR UPDATE)으로 리소스 행을 잡고 애플리케이션에서 겹침을 계산하는 방식, 또는 Redis 분산 락.",
+          "이유": "중복 예약은 오프라인에서 고객 두 명이 같은 시간에 오는 사고가 되므로 애플리케이션 로직이 아니라 DB 불변식으로 막아야 한다. 승격을 UPDATE 한 문장으로 둔 이유는, 배타 제약의 대상 상태 목록에 HELD와 CONFIRMED가 둘 다 있어서 점유 집합이 바뀌지 않기 때문이다 — '홀드 만료 + 예약 INSERT' 두 문장으로 짜면 그 틈에 남이 가져가는데, 그때는 이미 PG 승인이 끝나 되돌릴 수 없다.",
+          "트레이드오프": "배타 제약은 즉시 거부가 아니라 **블로킹한다** — 충돌 상대가 커밋/롤백할 때까지 기다린다(실측: 상대가 5초 뒤 커밋하면 4초 대기 후 거부). 그래서 모든 요청이 같은 좌석을 먼저 노리면 사실상 직렬화되고 커넥션 풀이 대기 스레드로 가득 찬다. 시작 좌석 무작위 분산과 `lock_timeout`을 함께 넣어야 했다. 또 실패한 INSERT가 트랜잭션 전체를 죽이므로(`current transaction is aborted`) '실패하면 다음 좌석' 루프를 한 트랜잭션 안에서 짤 수 없어 시도마다 새 트랜잭션을 여는 구조가 됐다. 그리고 락 대기 초과(55P03)는 '찼다'가 아니라 '모른다'인데, 이를 만석으로 뭉개면 정원이 남았는데 409가 나가는 오판이 생긴다.",
+          "재현": "grep -n 'EXCLUDE USING gist' api/src/main/resources/db/migration/V1__init.sql → 127행"
+        },
+        {
+          "선택": "결제 반영 순서를 'PENDING 커밋 → PG 승인(트랜잭션 밖) → 반영(트랜잭션 1개)'으로 고정하고, 웹훅 멱등은 `UNIQUE (provider, event_id)` 제약을 관문으로 두되 **처리 로직을 인자로 받는 형태**로 감쌌다. `boolean isDuplicate()`를 공개하지 않았다. 환불도 같은 형태로 '예약(누계 증가) → PG → 확정' 순서를 강제했다.",
+          "대안": "PG를 먼저 호출하고 성공하면 DB에 기록하는 방식(가장 단순), 멱등 판정을 `if (isDuplicate()) return;`으로 호출부마다 푸는 방식.",
+          "이유": "PENDING 커밋이 없으면 '승인 성공 + 반영 실패' 시 우리 DB에 흔적이 없어 복구할 대상 자체가 존재하지 않는다. 멱등 관문이 boolean을 공개하면 호출부마다 if를 풀어 쓰게 되고, 새 핸들러 하나가 빼먹으면 조용히 중복 반영된다 — 에러가 안 나므로 아무도 모른다. 환불 순서를 뒤집은 이유는 실측으로 드러났다: PG를 먼저 부르고 상한을 나중에 검사하면 동시 요청 20건이 **전부 PG에 도달해 실제로 돈이 나가고** 우리 DB는 4건만 받아들인다. 원장은 깨끗한데 PG에서 돈이 빠져나간 상태다.",
+          "트레이드오프": "트랜잭션이 세 조각으로 나뉘어 중간 상태(PENDING)가 DB에 남고, 그 상태를 청소할 복구 배치가 별도로 필요해졌다. 복구 배치는 '오래 PENDING이면 실패겠지'라고 우리 DB만 보고 판단할 수 없어 반드시 PG에 재조회해야 하고(그러지 않으면 승인된 결제를 실패로 기록해 대사가 어긋난다), PG 취소 내역에는 우리 refund 행을 가리키는 식별자가 없어서 부분 환불이 여러 건이고 금액까지 같으면 **어느 취소가 내 것인지 원리적으로 알 수 없다**. 그래서 배치를 '구멍을 메우는 것'이 아니라 '애매하지 않은 것과 애매한 것을 가르는 것'으로 설계하고, 애매한 건은 자동 판정을 포기해 수동 검토로 남기는 컬럼을 따로 뒀다.",
+          "재현": "grep -n 'payment_webhook_event_id_unique' api/src/main/resources/db/migration/V2__payment_and_ledger.sql → 111행"
+        },
+        {
+          "선택": "정산 금액 계산과 대사 판정을 Spring 의존이 전혀 없는 순수 함수(`SettlementCalculation`, `ReconciliationMatcher`)로 `core-domain`에 분리했다. 반올림은 파트너 몫과 원천징수 두 지점에서만, 둘 다 `RoundingMode.FLOOR`로 한다.",
+          "대안": "정산 계산을 서비스 레이어나 SQL 집계로 두는 방식(조회와 계산을 한 번에 끝낼 수 있어 더 짧다).",
+          "이유": "되돌리기(뮤테이션) 검증이 제값을 하려면 판정이 단독으로 결과를 결정해야 한다. 계산이 어댑터에 섞여 있으면 DB CHECK나 상태 머신이 같은 결과를 내주기 때문에, 계산 로직을 지워도 테스트가 초록으로 남는다. 실제로 순수 함수로 뽑은 뒤 판정 분기를 하나씩 지웠더니 **전부 갈렸다**. FLOOR로 통일한 이유는 파트너 몫과 원천징수를 모두 내리면 플랫폼 몫이 나머지를 흡수해 '지급 + 원천세 + 플랫폼 = 기준액'이 항상 성립하기 때문이다 — 100건을 합산해도 1원이 새지 않는다.",
+          "트레이드오프": "계산에 필요한 값을 전부 인자로 모아 넘겨야 해서 조회 쿼리와 DTO가 늘었고, 여러 서브쿼리가 같은 질문에 답하게 되면서 그 기준이 미세하게 갈리는 새로운 실패 모드가 생겼다 — 실제로 `settled_*`와 `last_refund`가 하나는 DRAFT 제외, 하나는 포함이었을 때 그 비대칭이 특정 항목 금액을 정확히 두 번 깎았다(파트너 몫 -198 vs 정답 2,202). 예외도 제약 위반도 없이 지급액만 틀리고, 항목 **개수**는 어느 구현에서도 같아서 개수로는 안 보이고 합계로 봐야 갈렸다. 이 계열 버그를 잡느라 이 슬라이스는 리뷰 4회전이 필요했고, 매 회전마다 직전 수정이 만든 버그가 나왔다.",
+          "재현": "ls core-domain/src/main/java/kr/hyunwoo/booking/domain/settlement/SettlementCalculation.java core-domain/src/main/java/kr/hyunwoo/booking/domain/reconciliation/ReconciliationMatcher.java"
+        }
+      ],
+      "metrics": [
+        {
+          "항목": "테스트 수 (전체 통과, 실패·에러 0)",
+          "값": "437건 (core-domain 146 / core-app 30 / api 258 / preset-golf 3)",
+          "재현": "./gradlew clean build 후 `grep -ho 'tests=\"[0-9]*\"' */build/test-results/test/*.xml | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s}'` → 437, 같은 방식으로 failures/errors 합계 → 0"
+        },
+        {
+          "항목": "코드 규모 (main / test)",
+          "값": "main 15,993줄 187파일 / test 14,338줄 53파일",
+          "재현": "find . -name '*.java' -path '*/src/main/*' -exec cat {} + | wc -l → 15993 · find . -name '*.java' -path '*/src/test/*' -exec cat {} + | wc -l → 14338"
+        },
+        {
+          "항목": "DB 마이그레이션",
+          "값": "Flyway 14개 (V1~V14)",
+          "재현": "ls api/src/main/resources/db/migration/*.sql | wc -l → 14"
+        },
+        {
+          "항목": "REST 엔드포인트",
+          "값": "32개 (컨트롤러 11개)",
+          "재현": "grep -rhcE '@(Get|Post|Put|Patch|Delete)Mapping' --include='*.java' api/src/main | awk '{s+=$1} END {print s}' → 32 · find . -name '*Controller.java' -path '*/src/main/*' | wc -l → 11"
+        },
+        {
+          "항목": "동시성 검증 테스트",
+          "값": "예약·크레딧·환불·웹훅 멱등 4개 시나리오를 스레드 경합으로 검증",
+          "재현": "grep -rln 'CountDownLatch\\|ExecutorService' --include='*.java' */src/test | grep -v build → ReservationConcurrencyTest, CreditConcurrencyTest, RefundConcurrencyTest, WebhookIdempotencyTest"
+        },
+        {
+          "항목": "전수 게이트 테스트 (규칙이 실제로 배선됐는지 소스를 훑어 판정)",
+          "값": "5개 — 보안 규칙·테넌트 격리·@Valid·프리셋 격리·PG 어댑터 계약",
+          "재현": "find . -name '*CoverageTest.java' -o -name '*ContractTest.java' | grep -v build → SecurityRuleCoverageTest, TenantGuardCoverageTest, ValidCoverageTest, TossPaymentGatewayContractTest, GolfPresetContractTest"
+        },
+        {
+          "항목": "코어/프리셋 분리 실증 (2차 프리셋 추가 시 코어 수정 없음)",
+          "값": "preset-golf는 자바 파일 3개(용어·정책·계약테스트)로 끝났고, api 모듈은 preset-fitness만 의존한다",
+          "재현": "find preset-golf -name '*.java' | grep -v build | wc -l → 3 · grep -n 'preset' api/build.gradle → runtimeOnly project(':preset-fitness') 한 줄뿐"
+        },
+        {
+          "항목": "제품 방향 결정에 쓴 도메인 조사 표본",
+          "값": "요구사항 1,300건 (두 개의 수집 경로: 1,000건 + 300건)",
+          "재현": "python3 -c \"import json; print(len(json.load(open('research/projects.json'))), len(json.load(open('research/projects_term.json'))))\" → 1000 300"
+        }
+      ],
+      "scale": "Java 21 · Spring Boot 4 · PostgreSQL 17 멀티모듈 · main 15,993줄 · 테스트 437건 · REST 32개 · 마이그레이션 14개"
     }
   ],
   "summary": [

@@ -117,7 +117,7 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
 
   g.fillStyle = INK.text
   g.font = '500 22px system-ui, sans-serif'
-  g.fillText('이 단계에서 내린 판단', 86, 362)
+  g.fillText('단계별 설계 판단', 86, 362)
   g.strokeStyle = INK.line
   g.beginPath()
   g.moveTo(86, 382)
@@ -136,7 +136,7 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
 
   g.fillStyle = INK.amber
   g.font = '500 18px ui-monospace, monospace'
-  g.fillText('모니터를 눌러 전부 보기 →', 86, 528)
+  g.fillText('클릭해서 전체 보기 →', 86, 528)
 
   return toTexture(canvas, maxAnisotropy)
 }
@@ -165,10 +165,11 @@ export function makeBoardTexture(
   // 머리말
   g.fillStyle = '#e7e9ee'
   g.font = '600 34px system-ui, sans-serif'
-  g.fillText('만든 것', 52, 66)
+  g.fillText('수행 사례', 52, 66)
+  const titleW = g.measureText('수행 사례').width
   g.fillStyle = INK.dim
   g.font = '400 22px ui-monospace, monospace'
-  g.fillText(`${total}건`, 52 + 108, 66)
+  g.fillText(`${total}건`, 52 + titleW + 16, 66)
 
   g.strokeStyle = 'rgba(255,255,255,0.09)'
   g.lineWidth = 2
@@ -206,7 +207,7 @@ export function makeBoardTexture(
 
   g.fillStyle = INK.dim
   g.font = '400 18px ui-monospace, monospace'
-  g.fillText('눌러서 전부 보기 →', 52, H - 34)
+  g.fillText('클릭해서 전체 보기 →', 52, H - 34)
 
   return toTexture(canvas, maxAnisotropy)
 }

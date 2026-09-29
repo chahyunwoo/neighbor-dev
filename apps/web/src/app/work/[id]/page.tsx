@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import {
+  type Brief,
   type DetailProject,
   displayStack,
   getDetailProjects,
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const project = getProject(id)
   // 🔴 없는 사례는 색인시키지 않는다. 남는 URL 이 검색 결과에 뜨면 방문자가 막힌다.
   if (project?.tier !== 'detail') {
-    return { title: '없는 사례', robots: { index: false, follow: false } }
+    return { title: '사례를 찾을 수 없음', robots: { index: false, follow: false } }
   }
   return pageMetadata({
     title: project.label,
@@ -83,29 +84,66 @@ export default async function ProjectPage({ params }: Params) {
           creator: { '@type': 'Organization', name: '이웃집 개발자' },
         }}
       />
-      <PageShell
-        from="monitor"
-        fig="[ fig. 2-1 · 모니터 · 사례 ]"
-        crumb="모니터"
-        title={project.label}
-        lede={project.period}
-      >
+      <PageShell from="monitor" crumb="모니터" title={project.label} lede={project.period}>
         <div className={styles.body}>
-          <Problem project={project} />
-          <Role project={project} />
-          {/*
-           * 기획서 4절의 토글. 두 축을 한 화면에 쌓지 않고 전환한다 —
-           * 전환 자체가 인터랙션이고, 발주자와 개발자가 볼 것이 갈린다.
-           */}
-          <ProjectLens
-            decisionCount={project.decisions?.length ?? 0}
-            metricCount={project.metrics?.length ?? 0}
-            decisions={<Decisions project={project} />}
-            metrics={<Metrics project={project} />}
-          />
+          {project.brief ? (
+            <>
+              <BriefView brief={project.brief} />
+              {/* 원문은 접어 둔다. 접혀도 DOM 에 남아 크롤러가 수치를 읽는다. */}
+              <details className={styles.full}>
+                <summary className={styles.fullToggle}>원문 자세히 보기</summary>
+                <div className={styles.fullBody}>
+                  <Original project={project} />
+                </div>
+              </details>
+            </>
+          ) : (
+            <Original project={project} />
+          )}
           <Stack project={project} />
         </div>
       </PageShell>
+    </>
+  )
+}
+
+const BRIEF_BLOCKS = [
+  ['problem', '과제'],
+  ['role', '담당 범위'],
+  ['decisions', '설계 판단'],
+  ['metrics', '결과 지표'],
+] as const
+
+function BriefView({ brief }: { brief: Brief }) {
+  return (
+    <section className={styles.brief}>
+      <p className={styles.briefSummary}>{brief.summary}</p>
+      {BRIEF_BLOCKS.map(([key, title]) => (
+        <div key={key} className={styles.block}>
+          <h2 className={styles.blockTitle}>{title}</h2>
+          <ul className={styles.briefList}>
+            {brief[key].map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function Original({ project }: { project: DetailProject }) {
+  return (
+    <>
+      <Problem project={project} />
+      <Role project={project} />
+      {/* 설계 판단과 결과 지표는 토글로 전환한다 — 발주자와 개발자가 볼 것이 갈린다. */}
+      <ProjectLens
+        decisionCount={project.decisions?.length ?? 0}
+        metricCount={project.metrics?.length ?? 0}
+        decisions={<Decisions project={project} />}
+        metrics={<Metrics project={project} />}
+      />
     </>
   )
 }
@@ -115,7 +153,7 @@ function Problem({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>무엇이 문제였나</h2>
+        <h2 className={styles.blockTitle}>과제</h2>
       </div>
       <p className={styles.prose}>
         <RichText>{project.problem}</RichText>
@@ -129,7 +167,7 @@ function Role({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>맡은 범위</h2>
+        <h2 className={styles.blockTitle}>담당 범위</h2>
         {project.scale ? <span className={styles.blockNote}>{project.scale}</span> : null}
       </div>
       <p className={styles.prose}>
@@ -145,7 +183,7 @@ function Decisions({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       {/* 제목은 토글 탭이 준다. 여기서 다시 붙이면 두 번 읽힌다. */}
-      <p className={styles.blockNote}>선택한 것과 버린 것, 그리고 그 대가</p>
+      <p className={styles.blockNote}>선택안 · 대안 · 근거 · 비용</p>
       <div className={styles.list}>
         {decisions.map((d) => (
           <article key={d.선택} className={styles.decision}>
@@ -157,11 +195,11 @@ function Decisions({ project }: { project: DetailProject }) {
               <span className={styles.decisionVal}>
                 <RichText>{d.대안}</RichText>
               </span>
-              <span className={styles.decisionKey}>이유</span>
+              <span className={styles.decisionKey}>근거</span>
               <span className={styles.decisionVal}>
                 <RichText>{d.이유}</RichText>
               </span>
-              <span className={styles.decisionKey}>대가</span>
+              <span className={styles.decisionKey}>비용</span>
               <span className={styles.decisionVal}>
                 <RichText>{d.트레이드오프}</RichText>
               </span>
@@ -179,7 +217,7 @@ function Metrics({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       {/* 재현 명령이 붙지 않은 수치는 빌드 단계에서 이미 빠졌다. */}
-      <p className={styles.blockNote}>전부 지금 다시 돌려볼 수 있는 것</p>
+      <p className={styles.blockNote}>모두 재현 명령과 함께 표기</p>
       <div className={styles.list}>
         {metrics.map((m) => (
           <div key={m.항목} className={styles.metric}>
@@ -208,7 +246,7 @@ function Stack({ project }: { project: DetailProject }) {
   return (
     <section className={styles.block}>
       <div className={styles.blockHead}>
-        <h2 className={styles.blockTitle}>쓴 기술</h2>
+        <h2 className={styles.blockTitle}>사용 기술</h2>
       </div>
       <div className={styles.stack}>
         <StackTags names={names} peek={6} label={project.label} />

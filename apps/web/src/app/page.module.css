@@ -121,14 +121,6 @@ html[data-canvas-mode="room"] .page {
   pointer-events: auto;
 }
 
-.caption {
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  color: var(--fg-ghost);
-  letter-spacing: 0.07em;
-  padding-top: 26px;
-}
-
 .copy {
   display: flex;
   flex-direction: column;
@@ -183,12 +175,20 @@ html[data-canvas-mode="room"] .page {
   font-weight: 300;
 }
 
-.footStats {
-  display: flex;
-  gap: 26px;
-  font-family: var(--font-mono);
+.footLegal {
   font-size: 12.5px;
+  line-height: 1.6;
   color: var(--fg-ghost);
+  text-align: right;
+}
+.footLegal p {
+  margin: 0;
+}
+.footLegal a {
+  color: inherit;
+}
+.footLegal a:hover {
+  color: var(--fg-faint);
 }
 
 /* ⚠️ `lib/can-3d.ts` 의 `NARROW_QUERY`(900px)와 **같은 값이어야 한다.**

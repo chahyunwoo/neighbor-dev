@@ -14,7 +14,7 @@ import { ImageResponse } from 'next/og'
  * 색은 `shared/styles/tokens.css` 와 맞춘다(bg #0b0a0c · amber #e8a87c).
  * ⚠️ CSS 변수는 여기서 못 쓴다 — Satori 는 계산된 스타일만 받는다.
  */
-export const alt = '이웃집 개발자 — 웹·앱을 기획부터 배포까지'
+export const alt = '이웃집 개발자 | 웹·앱 기획부터 배포까지'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -40,13 +40,15 @@ export default function Image() {
       </div>
 
       <div style={{ fontSize: 76, color: '#f2f4f8', lineHeight: 1.25, fontWeight: 600 }}>
-        웹·앱을 기획부터
+        기획부터 배포까지,
       </div>
       <div style={{ fontSize: 76, color: '#f2f4f8', lineHeight: 1.25, fontWeight: 600 }}>
-        배포까지 만듭니다
+        한 팀이 만듭니다
       </div>
 
-      <div style={{ fontSize: 32, color: '#8891a0', marginTop: 40 }}>화면도 서버도 직접 합니다</div>
+      <div style={{ fontSize: 32, color: '#8891a0', marginTop: 40 }}>
+        웹 서비스 · 관리자 시스템 · 앱
+      </div>
 
       <div
         style={{
@@ -58,7 +60,7 @@ export default function Image() {
           paddingTop: 28,
         }}
       >
-        만든 것과 그때 내린 판단을 그대로 보여드립니다
+        수행 사례의 설계 판단과 결과 지표를 공개합니다
       </div>
     </div>,
     size,

@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from 'next'
+import { IBM_Plex_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { TransitionRoot } from '@/features/page-transition'
 import { MotionRoot } from '@/features/reveal'
 import { CanvasRoot, RoomProvider } from '@/features/room-3d'
 import { siteUrl } from '@/shared/lib'
 import { JsonLd } from '@/shared/ui'
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import '@/shared/styles/tokens.css'
+
+const plexMono = IBM_Plex_Mono({
+  weight: ['400', '500', '600'],
+  subsets: ['latin'],
+  variable: '--font-plex-mono',
+})
 
 export const metadata: Metadata = {
   /*
@@ -18,14 +26,14 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   title: {
     default: '이웃집 개발자',
-    template: '%s · 이웃집 개발자',
+    template: '이웃집 개발자 | %s',
   },
   description:
-    '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다. 만든 것과 그때 내린 판단을 그대로 보여드립니다.',
+    '웹·앱 기획부터 설계, 개발, 배포까지 맡는 4인 개발팀입니다. 수행 사례의 설계 판단과 결과 지표를 공개합니다.',
   // 🔴 개인 사이트 도메인·저장소 링크를 넣지 않는다 (기획서 7절).
   openGraph: {
     title: '이웃집 개발자',
-    description: '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.',
+    description: '웹·앱 기획부터 설계, 개발, 배포까지 맡는 4인 개발팀입니다.',
     type: 'website',
     locale: 'ko_KR',
     url: '/',
@@ -42,14 +50,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={plexMono.variable}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap"
-        />
         {/*
          * 🔴 **JS 가 없으면 등장 연출을 통째로 무효화한다.**
          *
@@ -114,7 +116,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             '@type': 'ProfessionalService',
             name: '이웃집 개발자',
             url: siteUrl(),
-            description: '웹·앱을 기획부터 배포까지 만듭니다. 화면도 서버도 직접 합니다.',
+            description: '웹·앱 기획부터 설계, 개발, 배포까지 맡는 4인 개발팀입니다.',
             areaServed: 'KR',
             knowsLanguage: ['ko'],
             serviceType: ['웹 개발', '앱 개발', '백엔드 개발', '시스템 구축'],

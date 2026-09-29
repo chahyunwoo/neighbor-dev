@@ -160,7 +160,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
        */}
       {is3D ? (
         <p className={styles.hint} data-hidden={openId !== null}>
-          드래그해서 둘러보기 · 눌러서 열기
+          드래그로 시점 이동 · 클릭으로 열기
         </p>
       ) : null}
 

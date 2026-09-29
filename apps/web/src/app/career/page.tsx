@@ -7,8 +7,8 @@ import { Nav } from '@/widgets/nav'
 import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = pageMetadata({
-  title: '이름 못 밝히는 일들',
-  description: '계약상 화면과 세부 판단을 공개할 수 없는 건들. 도메인과 기술까지만 적었습니다.',
+  title: '비공개 프로젝트',
+  description: '계약상 화면과 세부 설계를 공개할 수 없는 프로젝트입니다. 업종과 기술만 표기합니다.',
   path: '/career',
 })
 
@@ -28,10 +28,9 @@ export default function CareerPage() {
       <PageShell
         from="drawer"
         wide
-        fig={`[ fig. 4 · 서랍 · ${summary.length}건 ]`}
         crumb="서랍"
-        title="이름 못 밝히는 일들"
-        lede="계약상 화면도 세부 판단도 공개할 수 없는 건들입니다. 도메인과 쓴 기술까지만 적었습니다."
+        title="비공개 프로젝트"
+        lede="계약상 화면과 세부 설계를 공개할 수 없는 프로젝트입니다. 업종과 사용 기술만 표기합니다."
       >
         <RevealGroup className={styles.rows}>
           {summary.map((p) => (
@@ -45,11 +44,7 @@ export default function CareerPage() {
             </RevealItem>
           ))}
         </RevealGroup>
-        <p className={styles.note}>
-          여기 적히지 않은 것이 실력의 공백은 아닙니다 — 공개 범위의 문제입니다.
-          <br />
-          구체적으로 궁금한 부분이 있으면 문의 때 직접 말씀드리겠습니다.
-        </p>
+        <p className={styles.note}>공개 범위 안에서 더 필요한 내용은 문의 시 직접 설명드립니다.</p>
       </PageShell>
     </>
   )
