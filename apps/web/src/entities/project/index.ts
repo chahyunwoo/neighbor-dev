@@ -8,6 +8,7 @@
  */
 export {
   type BaseProject,
+  type Brief,
   type Decision,
   type DetailProject,
   displayStack,

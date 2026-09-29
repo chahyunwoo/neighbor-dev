@@ -61,6 +61,8 @@ export const ALLOWED_FIELDS = {
     'role',
     // 카드 본문 한 문장(#84). 사례 상세 층에만 나간다 — 경력 요약은 한 줄 행이라 본문이 없다.
     'cardBody',
+    // 상세 화면 맨 앞의 요약(한 줄 + 불릿). 원문 problem·role·decisions·metrics 는 접어서 둔다.
+    'brief',
     'problem',
     'decisions',
     'metrics',

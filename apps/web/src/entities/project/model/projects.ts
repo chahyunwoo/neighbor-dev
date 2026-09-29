@@ -50,6 +50,15 @@ export interface Metric {
   재현: string
 }
 
+/** 상세 화면 맨 앞의 요약. 정본 `brief` 에서 온다. */
+export interface Brief {
+  summary: string
+  problem: string[]
+  role: string[]
+  decisions: string[]
+  metrics: string[]
+}
+
 /** 사례 상세 층. 문제·판단·수치까지 실을 수 있다. */
 export interface DetailProject extends BaseProject {
   tier: 'detail'
@@ -62,6 +71,7 @@ export interface DetailProject extends BaseProject {
    *    카드에서 그것을 잘라 쓰던 것이 #84 에서 고친 문제다.
    */
   cardBody?: string
+  brief?: Brief
   problem?: string
   decisions?: Decision[]
   metrics?: Metric[]

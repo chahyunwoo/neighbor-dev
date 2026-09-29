@@ -129,6 +129,23 @@ function isCommissioned(project) {
   return typeof c === 'string' ? !SELF_CLIENTS.has(c.trim()) : true
 }
 
+const BRIEF_LISTS = ['problem', 'role', 'decisions', 'metrics']
+
+/** 정본의 `brief`. 모양이 하나라도 어긋나면 통째로 뺀다 — 반쯤 그려진 요약보다 원문이 낫다. */
+function briefOf(project) {
+  const b = project.brief
+  if (!b || typeof b.summary !== 'string' || !b.summary.trim()) return undefined
+  for (const k of BRIEF_LISTS) {
+    if (!Array.isArray(b[k]) || !b[k].every((x) => typeof x === 'string' && x.trim())) {
+      return undefined
+    }
+  }
+  return {
+    summary: b.summary.trim(),
+    ...Object.fromEntries(BRIEF_LISTS.map((k) => [k, b[k].map((x) => x.trim())])),
+  }
+}
+
 function project2public(project, indexEntry, tier) {
   const full = {
     // 🔴 저장소명을 URL 로 내보내지 않는다(`publicIdFor` 주석 참고).
@@ -141,6 +158,7 @@ function project2public(project, indexEntry, tier) {
     stack: flattenStack(project.stack),
     role: project.role,
     cardBody: cardBodyOf(project),
+    brief: briefOf(project),
     problem: project.problem ?? indexEntry?.problemSummary,
     decisions: project.decisions,
     metrics: usableMetrics(project.metrics),

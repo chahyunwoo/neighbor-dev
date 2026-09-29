@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import {
+  type Brief,
   type DetailProject,
   displayStack,
   getDetailProjects,
@@ -85,21 +86,64 @@ export default async function ProjectPage({ params }: Params) {
       />
       <PageShell from="monitor" crumb="모니터" title={project.label} lede={project.period}>
         <div className={styles.body}>
-          <Problem project={project} />
-          <Role project={project} />
-          {/*
-           * 기획서 4절의 토글. 두 축을 한 화면에 쌓지 않고 전환한다 —
-           * 전환 자체가 인터랙션이고, 발주자와 개발자가 볼 것이 갈린다.
-           */}
-          <ProjectLens
-            decisionCount={project.decisions?.length ?? 0}
-            metricCount={project.metrics?.length ?? 0}
-            decisions={<Decisions project={project} />}
-            metrics={<Metrics project={project} />}
-          />
+          {project.brief ? (
+            <>
+              <BriefView brief={project.brief} />
+              {/* 원문은 접어 둔다. 접혀도 DOM 에 남아 크롤러가 수치를 읽는다. */}
+              <details className={styles.full}>
+                <summary className={styles.fullToggle}>원문 자세히 보기</summary>
+                <div className={styles.fullBody}>
+                  <Original project={project} />
+                </div>
+              </details>
+            </>
+          ) : (
+            <Original project={project} />
+          )}
           <Stack project={project} />
         </div>
       </PageShell>
+    </>
+  )
+}
+
+const BRIEF_BLOCKS = [
+  ['problem', '과제'],
+  ['role', '담당 범위'],
+  ['decisions', '설계 판단'],
+  ['metrics', '결과 지표'],
+] as const
+
+function BriefView({ brief }: { brief: Brief }) {
+  return (
+    <section className={styles.brief}>
+      <p className={styles.briefSummary}>{brief.summary}</p>
+      {BRIEF_BLOCKS.map(([key, title]) => (
+        <div key={key} className={styles.block}>
+          <h2 className={styles.blockTitle}>{title}</h2>
+          <ul className={styles.briefList}>
+            {brief[key].map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function Original({ project }: { project: DetailProject }) {
+  return (
+    <>
+      <Problem project={project} />
+      <Role project={project} />
+      {/* 설계 판단과 결과 지표는 토글로 전환한다 — 발주자와 개발자가 볼 것이 갈린다. */}
+      <ProjectLens
+        decisionCount={project.decisions?.length ?? 0}
+        metricCount={project.metrics?.length ?? 0}
+        decisions={<Decisions project={project} />}
+        metrics={<Metrics project={project} />}
+      />
     </>
   )
 }
