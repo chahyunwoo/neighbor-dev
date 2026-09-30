@@ -153,3 +153,28 @@ test('한도에 닿는 순간 알림이 용도별로 한 번 불린다', () => {
   q.reserve('4.4.4.4', 'contact')
   assert.deepEqual(calls, ['diagnose:2', 'contact:1'], '막힌 요청으로는 다시 불리지 않는다')
 })
+
+test('되돌림으로 캡에 다시 닿아도 알림은 하루 한 번이다', () => {
+  const q = svc(99, 99, 1, 99)
+  let n = 0
+  q.onCapReached(() => n++)
+  // 발송 실패로 되돌리는 것을 세 번 되풀이한다
+  for (let i = 0; i < 3; i++) {
+    const r = q.reserve('1.1.1.1', 'contact')
+    if (r.allowed) q.refund(r.ticket)
+  }
+  assert.equal(n, 1, '되돌려도 알림이 다시 나가면 안 된다')
+  assert.equal(q.snapshot('contact').dailyUsed, 0)
+})
+
+test('자정이 지나면 알림이 다시 열린다', (t) => {
+  const q = svc(99, 99, 1, 99)
+  let n = 0
+  q.onCapReached(() => n++)
+  const first = q.reserve('1.1.1.1', 'contact')
+  assert.equal(n, 1)
+  t.mock.method(Date, 'now', () => first.ticket.period + 1000)
+  q.reserve('2.2.2.2', 'contact')
+  assert.equal(n, 2, '새 날에는 다시 알린다')
+})
+

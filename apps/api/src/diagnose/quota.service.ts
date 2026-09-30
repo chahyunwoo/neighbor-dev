@@ -38,6 +38,8 @@ export class QuotaService {
   private readonly contactDailyCap: number
   private readonly contactPerIpHourly: number
   private capListener: ((scope: QuotaScope, cap: number) => void) | null = null
+  // 환불로 카운터가 캡 아래로 내려갔다 다시 닿을 수 있다 — 알림은 그와 별개로 하루 한 번만
+  private readonly notifiedCaps = new Set<QuotaScope>()
 
   constructor(config: ConfigService) {
     // 월 $20 상한 ≈ 하루 약 33건. 환경변수가 없으면 상한을 넘지 않는 보수적 기본값
@@ -114,7 +116,8 @@ export class QuotaService {
     hits.push(now)
     this.ipHits.set(key, hits)
 
-    if (used === limits.daily) {
+    if (used >= limits.daily && !this.notifiedCaps.has(scope)) {
+      this.notifiedCaps.add(scope)
       // 캡 도달을 남긴다 — 조용히 막히면 원인을 알 수 없다
       this.log.warn(`${scope} 일일 캡 ${limits.daily}건에 도달했다. 자정까지 안내 문구로 전환된다.`)
       this.capListener?.(scope, limits.daily)
@@ -141,6 +144,7 @@ export class QuotaService {
   private rolloverIfNeeded(now: number): void {
     if (now < this.dailyResetAt) return
     this.dailyCount.clear()
+    this.notifiedCaps.clear()
     this.dailyResetAt = nextMidnightKst()
     // 오래된 IP 기록도 턴다 — 안 그러면 맵이 무한히 자란다
     for (const [ip, hits] of this.ipHits) {
