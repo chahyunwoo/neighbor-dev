@@ -142,3 +142,14 @@ test('되돌림은 그 예약의 기록만 지운다 — 나중에 들어온 요
   assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false, '남은 기록 2개로 막혀야 한다')
 })
 
+test('한도에 닿는 순간 알림이 용도별로 한 번 불린다', () => {
+  const q = svc(2, 99, 1, 99)
+  const calls = []
+  q.onCapReached((scope, cap) => calls.push(`${scope}:${cap}`))
+  q.reserve('1.1.1.1', 'diagnose')
+  assert.deepEqual(calls, [], '한도 전에는 부르지 않는다')
+  q.reserve('2.2.2.2', 'diagnose')
+  q.reserve('3.3.3.3', 'diagnose')
+  q.reserve('4.4.4.4', 'contact')
+  assert.deepEqual(calls, ['diagnose:2', 'contact:1'], '막힌 요청으로는 다시 불리지 않는다')
+})

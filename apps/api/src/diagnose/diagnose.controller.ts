@@ -12,6 +12,7 @@ import {
 import type { Response } from 'express'
 import { DiagnoseDto } from './diagnose.dto'
 import { DiagnoseService } from './diagnose.service'
+import { TurnstileService } from '../turnstile.service'
 import { QuotaService } from './quota.service'
 
 @Controller('diagnose')
@@ -19,6 +20,7 @@ export class DiagnoseController {
   constructor(
     private readonly service: DiagnoseService,
     private readonly quota: QuotaService,
+    private readonly turnstile: TurnstileService,
   ) {}
 
   @Get('status')
@@ -36,6 +38,11 @@ export class DiagnoseController {
   async stream(@Body() dto: DiagnoseDto, @Ip() ip: string, @Res() res: Response) {
     if (!this.service.available) {
       res.status(HttpStatus.SERVICE_UNAVAILABLE).json({ message: '자가진단은 아직 준비 중입니다.' })
+      return
+    }
+    // 사람 확인은 쿼터보다 먼저 — 봇 요청이 방문자의 하루 몫을 깎지 못하게
+    if (!(await this.turnstile.verify(dto.turnstileToken, ip))) {
+      res.status(HttpStatus.FORBIDDEN).json({ message: '사람 확인에 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.' })
       return
     }
     // 모델을 부르기 전에 한 칸을 잡는다. 게이트에 걸려도 비용은 썼으므로 되돌리지 않는다
@@ -94,6 +101,9 @@ export class DiagnoseController {
   async diagnose(@Body() dto: DiagnoseDto, @Ip() ip: string) {
     if (!this.service.available) {
       throw new HttpException('자가진단은 아직 준비 중입니다.', HttpStatus.SERVICE_UNAVAILABLE)
+    }
+    if (!(await this.turnstile.verify(dto.turnstileToken, ip))) {
+      throw new HttpException('사람 확인에 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', HttpStatus.FORBIDDEN)
     }
     // 모델을 부르기 전에 한 칸을 잡는다. 호출 뒤 실패는 비용을 썼을 수 있어 되돌리지 않는다
     const decision = this.quota.reserve(ip)
