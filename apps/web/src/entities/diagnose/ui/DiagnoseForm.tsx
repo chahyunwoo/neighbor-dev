@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Turnstile, turnstileEnabled } from '@/shared/ui'
 import styles from './DiagnoseForm.module.css'
 import { buildCopyText, DiagnoseResult } from './DiagnoseResult'
 
@@ -15,6 +16,8 @@ export function DiagnoseForm() {
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [resetKey, setResetKey] = useState(0)
   const [streaming, setStreaming] = useState(false)
   const [copied, setCopied] = useState(false)
   // 화면 상태로만 산다 — 서버로 보내거나 저장하지 않는다.
@@ -41,10 +44,11 @@ export function DiagnoseForm() {
 
   const tooShort = text.trim().length < MIN
   const tooLong = text.length > MAX
+  const unverified = turnstileEnabled && !token
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (pending || tooShort || tooLong) return
+    if (pending || tooShort || tooLong || unverified) return
     setPending(true)
     setStreaming(true)
     setError(null)
@@ -58,7 +62,7 @@ export function DiagnoseForm() {
       const res = await fetch('/api/diagnose/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requirement: text.trim() }),
+        body: JSON.stringify({ requirement: text.trim(), turnstileToken: token ?? undefined }),
       })
 
       // 캡에 걸렸거나 준비 중이면 api 가 JSON 으로 답한다.
@@ -111,6 +115,7 @@ export function DiagnoseForm() {
     } finally {
       setPending(false)
       setStreaming(false)
+      setResetKey((k) => k + 1)
       // 실패면 비운다 — 에러는 role="alert" 가 읽고, 여기서 "결과" 를 말하면 거짓이 된다.
       setLive(failed ? '' : '진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다.')
     }
@@ -164,12 +169,17 @@ export function DiagnoseForm() {
             disabled={pending}
           />
         </div>
+        <Turnstile onToken={setToken} resetKey={resetKey} />
         <div className={styles.row}>
           <span className={styles.count} data-over={tooLong}>
             {text.length} / {MAX}
             {tooShort && text.length > 0 ? ` · ${MIN}자 이상 적어주세요` : ''}
           </span>
-          <button className={styles.submit} type="submit" disabled={pending || tooShort || tooLong}>
+          <button
+            className={styles.submit}
+            type="submit"
+            disabled={pending || tooShort || tooLong || unverified}
+          >
             {pending ? '분석 중…' : '진단 시작'}
           </button>
         </div>

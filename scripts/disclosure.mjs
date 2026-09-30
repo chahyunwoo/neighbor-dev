@@ -30,6 +30,9 @@ const ISSUE_KEY_ALLOW = new Set([
 ])
 
 // 표준 규격 접두사 — 뒤의 숫자는 규격 번호다(ERC-721 등)
+// 번들에 들어가도 되는 공개 SDK 호스트. 늘릴 때는 그 경로가 벤더 공개 문서에 있는지 확인한다
+const PUBLIC_SDK_HOSTS = ['challenges.cloudflare.com/turnstile']
+
 const ISSUE_KEY_ALLOW_PREFIX = ['ERC', 'EIP', 'BIP', 'RFC', 'CVE', 'ISO', 'IEEE', 'ANSI', 'PEP']
 
 // 표현 제약어 — 다른 항목의 서술에 섞여 들어오는 것까지 막으려 전 데이터에 건다
@@ -161,7 +164,14 @@ const CHECKS = [
   ['상태전이표', (t) => TRANSITION_TABLE_MARKERS.filter((w) => t.includes(w))],
   // 클라이언트 시스템의 API 엔드포인트 경로 — 남의 시스템 구조다
   // 버전 세그먼트(/v1/)를 요구한다 — 없으면 문서·파일 경로가 전부 걸린다. 이 저장소 api 는 버전 세그먼트를 쓰지 않는다
-  ['클라이언트API경로', (t) => [...t.matchAll(/\/v\d+\/[a-zA-Z][\w/-]*/g)].map((m) => m[0])],
+  // 공개 벤더 SDK 주소(호스트 바로 뒤의 경로)만 뺀다 — 남의 시스템이 아니라 누구나 받는 스크립트다
+  [
+    '클라이언트API경로',
+    (t) =>
+      [...t.matchAll(/\/v\d+\/[a-zA-Z][\w/-]*/g)]
+        .filter((m) => !PUBLIC_SDK_HOSTS.some((h) => t.slice(0, m.index).endsWith(h)))
+        .map((m) => m[0]),
+  ],
   // 클라이언트 응답 스펙의 키 나열 — 셋 이상만 잡는다(둘짜리는 설명문에 흔해 오탐이 쏟아진다)
   [
     '응답스펙키나열',
