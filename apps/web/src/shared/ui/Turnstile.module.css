@@ -1,0 +1,18 @@
+.failed {
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+
+.retry {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 10px;
+  color: var(--fg);
+  background: none;
+  cursor: pointer;
+}
+
+.retry:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}

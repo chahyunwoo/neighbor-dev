@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import styles from './Turnstile.module.css'
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
@@ -27,11 +28,13 @@ function load(): Promise<TurnstileApi> {
     const s = document.createElement('script')
     s.src = SCRIPT
     s.async = true
-    s.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error('turnstile')))
-    s.onerror = () => {
+    const fail = () => {
+      // 다음 시도가 실패한 약속을 다시 받지 않게 비운다
       loading = null
       reject(new Error('turnstile'))
     }
+    s.onload = () => (window.turnstile ? resolve(window.turnstile) : fail())
+    s.onerror = fail
     document.head.appendChild(s)
   })
   return loading
@@ -50,14 +53,19 @@ export function Turnstile({
   const el = useRef<HTMLDivElement>(null)
   const id = useRef<string | null>(null)
   const report = useRef(onToken)
+  // 스크립트를 못 받으면 빈 상자만 남고 버튼이 잠긴 채로 끝난다 — 이유와 다시 시도를 보여준다
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     report.current = onToken
   }, [onToken])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt 은 값이 아니라 다시 불러오기 트리거다
   useEffect(() => {
     if (!SITE_KEY || !el.current) return
     let cancelled = false
+    setFailed(false)
     load()
       .then((ts) => {
         if (cancelled || !el.current) return
@@ -71,13 +79,17 @@ export function Turnstile({
           'error-callback': () => report.current(null),
         })
       })
-      .catch(() => report.current(null))
+      .catch(() => {
+        if (cancelled) return
+        report.current(null)
+        setFailed(true)
+      })
     return () => {
       cancelled = true
       if (id.current) window.turnstile?.remove(id.current)
       id.current = null
     }
-  }, [])
+  }, [attempt])
 
   useEffect(() => {
     if (resetKey === 0 || !id.current) return
@@ -86,5 +98,17 @@ export function Turnstile({
   }, [resetKey])
 
   if (!SITE_KEY) return null
-  return <div ref={el} className={className} />
+  return (
+    <div className={className}>
+      <div ref={el} hidden={failed} />
+      {failed ? (
+        <p className={styles.failed} role="alert">
+          사람 확인을 불러오지 못했습니다.{' '}
+          <button type="button" className={styles.retry} onClick={() => setAttempt((n) => n + 1)}>
+            다시 시도
+          </button>
+        </p>
+      ) : null}
+    </div>
+  )
 }

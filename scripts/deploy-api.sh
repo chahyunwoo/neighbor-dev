@@ -48,7 +48,7 @@ build_and_restart() {
     healthy
 }
 
-changed=$(git diff --name-only "$prev" "$next" | grep -cE '^(apps/api/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)')
+changed=$(git diff --name-only "$prev" "$next" | grep -cE '^(apps/api/|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json)')
 if [ "$prev" != "$next" ] && [ "$changed" -eq 0 ] && healthy; then
   echo "$next" >"$STATE/deployed"
   say "${next:0:7} api 변경 없음 — 재시작 생략"
