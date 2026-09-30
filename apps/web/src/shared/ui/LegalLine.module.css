@@ -1,0 +1,14 @@
+.legal {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg-ghost);
+}
+.legal p {
+  margin: 0;
+}
+.legal a {
+  color: inherit;
+}
+.legal a:hover {
+  color: var(--fg-faint);
+}

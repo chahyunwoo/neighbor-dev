@@ -18,7 +18,10 @@ export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
   try {
-    const res = await apiFetch('/diagnose/status', { cache: 'no-store' })
+    const res = await apiFetch('/diagnose/status', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    })
     if (!res.ok) return null
     return await res.json()
   } catch {
@@ -59,8 +62,8 @@ export default async function DiagnosePage() {
             <li className={styles.point}>
               <span className={styles.pointNo}>03</span>
               <span className={styles.pointText}>
-                입력 내용은 저장하지 않습니다. 결과는 화면에만 표시되며, 복사해 문의에 첨부할 수
-                있습니다.
+                입력 내용은 결과 생성을 위해 외부 AI(Anthropic)로 전송되며, 서버에 저장하지
+                않습니다. 개인정보는 입력하지 마세요. 결과는 복사해 문의에 첨부할 수 있습니다.
               </span>
             </li>
           </ul>

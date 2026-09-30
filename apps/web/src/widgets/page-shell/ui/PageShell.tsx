@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { TransitionBody, TransitionTitle } from '@/features/page-transition'
 import { ContentWidth, RoomStage } from '@/features/room-3d'
+import { LegalLine } from '@/shared/ui'
 import styles from './PageShell.module.css'
 
 interface Props {
@@ -42,6 +43,9 @@ export function PageShell({ crumb, title, lede, from, wide, children }: Props) {
         </div>
         <TransitionBody>{children}</TransitionBody>
       </main>
+      <footer className={styles.foot}>
+        <LegalLine />
+      </footer>
     </div>
   )
 }

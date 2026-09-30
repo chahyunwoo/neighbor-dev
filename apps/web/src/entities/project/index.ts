@@ -8,7 +8,6 @@ export {
   getAllProjects,
   getCounts,
   getDetailProjects,
-  getGeneratedAt,
   getProject,
   getStackFrequency,
   getSummaryProjects,

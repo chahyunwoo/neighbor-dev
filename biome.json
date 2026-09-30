@@ -53,7 +53,7 @@
       }
     },
     {
-      "includes": ["apps/web/src/styles/**"],
+      "includes": ["apps/web/src/shared/styles/**"],
       "linter": {
         "rules": {
           "complexity": {

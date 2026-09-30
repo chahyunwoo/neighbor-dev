@@ -1,5 +1,5 @@
 import { TransitionTitle } from '@/features/page-transition'
-import { COMPANY } from '@/shared/lib'
+import { LegalLine } from '@/shared/ui'
 import { Hero } from '@/widgets/hero'
 import { Nav } from '@/widgets/nav'
 import styles from './page.module.css'
@@ -31,15 +31,7 @@ export default function HomePage() {
 
       <footer className={styles.foot}>
         <p className={styles.footCopy}>웹·앱 기획, 설계, 개발, 배포</p>
-        <div className={styles.footLegal}>
-          <p>
-            {COMPANY.name} · 대표 {COMPANY.owner} · 사업자등록번호 {COMPANY.bizNo}
-          </p>
-          <p>
-            <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> · © {new Date().getFullYear()}{' '}
-            이웃집 개발자
-          </p>
-        </div>
+        <LegalLine className={styles.footLegal} />
       </footer>
     </div>
   )

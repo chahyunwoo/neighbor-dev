@@ -20,6 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page('/career', 0.6),
     page('/stack', 0.6),
     page('/diagnose', 0.5),
+    page('/privacy', 0.2),
     ...getDetailProjects().map((p) => page(`/work/${p.id}`, 0.7)),
   ]
 }

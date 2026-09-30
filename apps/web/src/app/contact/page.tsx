@@ -17,7 +17,10 @@ export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
   try {
-    const res = await apiFetch('/contact/status', { cache: 'no-store' })
+    const res = await apiFetch('/contact/status', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    })
     return res.ok ? await res.json() : null
   } catch {
     return null

@@ -1,22 +1,24 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import styles from './ContactForm.module.css'
 
 const MIN_MESSAGE = 20
 const MAX_MESSAGE = 8000
 
-// 받는 항목은 이름·이메일·내용뿐이고 저장하지 않는다 — 안 받은 개인정보는 지킬 필요도 없다.
+// 받는 항목은 이름·이메일·내용뿐이다. 서버에 저장하지 않고 메일로만 넘긴다(보유 기간은 /privacy).
 export function ContactForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [pending, setPending] = useState(false)
   const [result, setResult] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
 
   const tooShort = message.trim().length < MIN_MESSAGE
   const tooLong = message.length > MAX_MESSAGE
-  const invalid = name.trim().length < 2 || !email.includes('@') || tooShort || tooLong
+  const invalid = name.trim().length < 2 || !email.includes('@') || tooShort || tooLong || !agreed
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,6 +48,7 @@ export function ContactForm() {
       setName('')
       setEmail('')
       setMessage('')
+      setAgreed(false)
     } catch {
       setResult({ kind: 'error', text: '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' })
     } finally {
@@ -103,15 +106,36 @@ export function ContactForm() {
         />
       </div>
 
+      <div className={styles.consent}>
+        <p className={styles.consentText}>
+          수집 항목: 이름(또는 회사명), 이메일, 문의 내용 · 목적: 문의 확인과 회신 · 보유: 문의 처리
+          후 1년. 문의 메일은 Google Workspace 로 수신·보관됩니다.{' '}
+          <Link href="/privacy">개인정보처리방침</Link>
+        </p>
+        <label className={styles.consentCheck}>
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            disabled={pending}
+          />
+          개인정보 수집·이용에 동의합니다 (필수)
+        </label>
+      </div>
+
       {result ? (
-        <p className={styles.message} data-kind={result.kind}>
+        <p
+          className={styles.message}
+          data-kind={result.kind}
+          role={result.kind === 'error' ? 'alert' : 'status'}
+        >
           {result.text}
         </p>
       ) : null}
 
       <div className={styles.foot}>
         <span className={styles.note}>
-          문의 내용은 회신에만 사용하며 저장하지 않습니다.
+          문의 내용은 서버에 저장하지 않고 메일로만 전달됩니다.
           {tooLong ? ` · ${MAX_MESSAGE.toLocaleString()}자 안쪽으로 적어주세요` : ''}
         </span>
         <button className={styles.submit} type="submit" disabled={pending || invalid}>

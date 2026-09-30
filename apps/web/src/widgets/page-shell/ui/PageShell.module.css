@@ -1,5 +1,6 @@
 .page {
-  min-height: 100dvh;
+  /* 메뉴는 이 틀 밖에 있다 — 빼지 않으면 짧은 화면도 메뉴 높이만큼 스크롤이 생긴다 */
+  min-height: calc(100dvh - var(--nav-h, 97px));
   display: flex;
   flex-direction: column;
 }
@@ -8,6 +9,12 @@
 .main {
   flex: 1;
   padding: 0 var(--pad-x) 64px;
+  max-width: var(--content-max, none);
+}
+
+.foot {
+  padding: 20px var(--pad-x) 28px;
+  border-top: 1px solid var(--line-soft);
   max-width: var(--content-max, none);
 }
 

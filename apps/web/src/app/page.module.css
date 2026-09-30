@@ -111,19 +111,7 @@ html[data-canvas-mode="room"] .page {
 }
 
 .footLegal {
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--fg-ghost);
   text-align: right;
-}
-.footLegal p {
-  margin: 0;
-}
-.footLegal a {
-  color: inherit;
-}
-.footLegal a:hover {
-  color: var(--fg-faint);
 }
 
 /* `can-3d.ts` 의 NARROW_QUERY(900px)와 같은 값이어야 한다. */

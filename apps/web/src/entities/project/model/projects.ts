@@ -88,10 +88,6 @@ export function getCounts() {
   return payload.counts
 }
 
-export function getGeneratedAt(): string {
-  return payload.generatedAt
-}
-
 /** 두 층 모두 스택은 실을 수 있으므로 전체를 센다. */
 export function getStackFrequency(): { name: string; count: number }[] {
   const counts = new Map<string, number>()
