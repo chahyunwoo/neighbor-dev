@@ -245,11 +245,14 @@ async function markerHits(page) {
     else await waitEntered(p, 400)
     const r = await p.evaluate(() => ({
       canvas: document.querySelectorAll('canvas').length,
-      links: document.querySelectorAll(
-        'a[href^="/work"],a[href^="/stack"],a[href^="/career"],a[href^="/team"],a[href^="/diagnose"],a[href^="/contact"]',
-      ).length,
+      // 메뉴 밖의 방 목록 링크만 센다 — 메뉴 구성이 바뀌어도 판정이 흔들리지 않게
+      links: [
+        ...document.querySelectorAll(
+          'a[href^="/work"],a[href^="/stack"],a[href^="/career"],a[href^="/team"],a[href^="/diagnose"],a[href^="/contact"]',
+        ),
+      ].filter((a) => !a.closest('nav')).length,
     }))
-    ok(r.canvas === 0 && r.links === 10, label, `캔버스 ${r.canvas} · 링크 ${r.links}`)
+    ok(r.canvas === 0 && r.links === 7, label, `캔버스 ${r.canvas} · 방 목록 링크 ${r.links}`)
     await c.close()
   }
 

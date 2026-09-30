@@ -45,7 +45,21 @@ export class QuotaService {
     this.dailyResetAt = nextMidnightKst()
   }
 
-  // 소비하지 않는다 — 처리 성공 뒤 consume() 을 부른다. 실패한 호출로 캡이 깎이지 않게
+  // 확인과 차감을 한 동기 호출에서 한다 — 나눠서 사이에 await 이 끼면 동시 요청이 전부 통과한다
+  reserve(ip: string, scope: QuotaScope = 'diagnose'): QuotaDecision {
+    const decision = this.check(ip, scope)
+    if (decision.allowed) this.consume(ip, scope)
+    return decision
+  }
+
+  // 비용이 들지 않은 실패(메일 발송 실패 등)만 되돌린다
+  refund(ip: string, scope: QuotaScope = 'diagnose'): void {
+    this.dailyCount.set(scope, Math.max(0, (this.dailyCount.get(scope) ?? 0) - 1))
+    const key = `${scope}:${ip}`
+    const hits = this.ipHits.get(key)
+    if (hits?.length) hits.pop()
+  }
+
   check(ip: string, scope: QuotaScope = 'diagnose'): QuotaDecision {
     const now = Date.now()
     this.rolloverIfNeeded(now)

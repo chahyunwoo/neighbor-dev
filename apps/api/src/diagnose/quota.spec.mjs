@@ -100,3 +100,18 @@ test('빈 값·숫자 아닌 값은 기본값을 쓴다 — 상한이 0 이 되�
     assert.ok(q.snapshot('contact').dailyCap > 0, JSON.stringify(v))
   }
 })
+
+test('동시에 들어와도 한도만큼만 잡힌다 — 확인과 차감 사이에 틈이 없다', () => {
+  const q = svc(99, 2)
+  const results = Array.from({ length: 8 }, () => q.reserve('9.9.9.2').allowed)
+  assert.deepEqual(results.filter(Boolean).length, 2)
+})
+
+test('되돌리면 한 칸이 다시 열린다', () => {
+  const q = svc(99, 1, 1, 1)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false)
+  q.refund('1.1.1.1', 'contact')
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+})
+

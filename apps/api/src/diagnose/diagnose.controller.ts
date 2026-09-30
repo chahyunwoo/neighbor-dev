@@ -34,7 +34,12 @@ export class DiagnoseController {
   // 게이트 판정이 스트림 끝에 온다 — done 이벤트로 통과 여부를 알리고, 걸리면 화면이 지운다
   @Post('stream')
   async stream(@Body() dto: DiagnoseDto, @Ip() ip: string, @Res() res: Response) {
-    const decision = this.quota.check(ip)
+    if (!this.service.available) {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE).json({ message: '자가진단은 아직 준비 중입니다.' })
+      return
+    }
+    // 모델을 부르기 전에 한 칸을 잡는다. 게이트에 걸려도 비용은 썼으므로 되돌리지 않는다
+    const decision = this.quota.reserve(ip)
     if (!decision.allowed) {
       res.status(HttpStatus.TOO_MANY_REQUESTS).json({
         message:
@@ -63,7 +68,6 @@ export class DiagnoseController {
         send('delta', { text: delta })
       })
       if (ok) {
-        this.quota.consume(ip)
         send('done', { ok: true })
       } else {
         // 무엇에 걸렸는지는 알리지 않는다
@@ -88,8 +92,11 @@ export class DiagnoseController {
   @Post()
   @HttpCode(HttpStatus.OK)
   async diagnose(@Body() dto: DiagnoseDto, @Ip() ip: string) {
-    // 캡 검사는 모델 호출 전에 — 그래야 비용 방어가 된다
-    const decision = this.quota.check(ip)
+    if (!this.service.available) {
+      throw new HttpException('자가진단은 아직 준비 중입니다.', HttpStatus.SERVICE_UNAVAILABLE)
+    }
+    // 모델을 부르기 전에 한 칸을 잡는다. 호출 뒤 실패는 비용을 썼을 수 있어 되돌리지 않는다
+    const decision = this.quota.reserve(ip)
     if (!decision.allowed) {
       throw new HttpException(
         {
@@ -105,8 +112,6 @@ export class DiagnoseController {
     }
 
     const result = await this.service.diagnose(dto.requirement)
-    // 부른 뒤에 소비한다 — 실패한 호출로 캡이 깎이지 않게
-    this.quota.consume(ip)
     return { result }
   }
 }
