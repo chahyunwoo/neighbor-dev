@@ -1,0 +1,43 @@
+name: Deploy api
+
+# push 로 두면 CI 와 병렬로 돌아 검사가 끝나기 전에 배포된다. CI 가 성공한 main 푸시에만 돈다.
+# web 은 Vercel 이 main 을 배포한다. 이 워크플로는 api(자체 호스팅)만 맡는다.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Tailscale 접속
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+
+      # 공개 저장소라 로그가 공개된다. 배포 키는 서버 쪽 command= 로 scripts/deploy-api.sh 하나에 묶여 있어 여기서 명령을 보내지 않는다.
+      - name: api 배포
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          install -m 600 /dev/null "$RUNNER_TEMP/key"
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/key"
+          ssh -i "$RUNNER_TEMP/key" -T -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "$USER@$HOST"
