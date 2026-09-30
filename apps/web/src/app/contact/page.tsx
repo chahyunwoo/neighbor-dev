@@ -42,10 +42,7 @@ export default async function ContactPage() {
         lede="요구사항이 정리되지 않았어도 문의하실 수 있습니다. 범위 정의부터 함께 진행합니다."
       >
         <div className={styles.wrap}>
-          <p className={styles.prose}>
-            기획서가 없어도, 화면 시안 몇 장만으로도 상담할 수 있습니다. 진행 순서는 다음과
-            같습니다.
-          </p>
+          <p className={styles.prose}>진행 순서는 다음과 같습니다.</p>
           <ul className={styles.points}>
             <li className={styles.point}>
               <span className={styles.pointNo}>01</span>
