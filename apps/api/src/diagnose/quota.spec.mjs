@@ -109,9 +109,36 @@ test('동시에 들어와도 한도만큼만 잡힌다 — 확인과 차감 사�
 
 test('되돌리면 한 칸이 다시 열린다', () => {
   const q = svc(99, 1, 1, 1)
-  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+  const r = q.reserve('1.1.1.1', 'contact')
+  assert.equal(r.allowed, true)
   assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false)
-  q.refund('1.1.1.1', 'contact')
+  q.refund(r.ticket)
   assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+})
+
+test('자정 전 예약을 자정 뒤에 되돌려도 새 날의 사용량은 그대로다', (t) => {
+  const q = svc(99, 99, 1, 99)
+  const before = q.reserve('1.1.1.1', 'contact')
+  assert.equal(before.allowed, true)
+  const later = before.ticket.period + 1000
+  t.mock.method(Date, 'now', () => later)
+  assert.equal(q.reserve('2.2.2.2', 'contact').allowed, true, '자정이 지나 새로 열린다')
+  q.refund(before.ticket)
+  assert.equal(q.snapshot('contact').dailyUsed, 1, '새 날의 1건이 지워지면 안 된다')
+  assert.equal(q.reserve('3.3.3.3', 'contact').allowed, false, '캡 1 이면 막혀야 한다')
+})
+
+test('되돌림은 그 예약의 기록만 지운다 — 나중에 들어온 요청 기록은 남는다', (t) => {
+  const q = svc(99, 2, 99, 2)
+  let now = 1_000_000
+  t.mock.method(Date, 'now', () => now)
+  const first = q.reserve('1.1.1.1', 'contact')
+  now += 10 * 60 * 1000
+  q.reserve('1.1.1.1', 'contact')
+  q.refund(first.ticket)
+  now += 55 * 60 * 1000
+  // 55분 전 기록 하나가 남아 한 칸만 열려 있어야 한다. 엉뚱한 기록을 지우면 두 칸이 열린다
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false, '남은 기록 2개로 막혀야 한다')
 })
 

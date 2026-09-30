@@ -44,7 +44,7 @@ export class ContactController {
       await this.service.send(dto)
     } catch (err) {
       // 발송 실패는 비용이 없다 — 방문자가 다시 보낼 수 있게 되돌린다
-      this.quota.refund(ip, 'contact')
+      this.quota.refund(decision.ticket)
       throw err
     }
     return { ok: true }

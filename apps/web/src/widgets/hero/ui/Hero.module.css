@@ -26,15 +26,15 @@
   pointer-events: auto;
 }
 
-.room[data-mode="list"] {
+.room:not([data-mode="3d"]) {
   position: relative;
   z-index: 1;
   padding: 34px 0 48px;
   max-width: 620px;
 }
-/* 하이드레이션 전에 CSS 로 먼저 접는다. 조건은 `can-3d.ts` 의 쿼리와 같아야 한다 — 어긋나면 아무것도 안 보인다. */
+/* 판정 전에만 CSS 로 먼저 접는다. WebGL 이 없어 list 로 판정되면 펼쳐야 한다. 조건은 `can-3d.ts` 의 쿼리와 같아야 한다. */
 @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  .room {
+  .room[data-mode="pending"] {
     position: absolute;
     width: 1px;
     height: 1px;

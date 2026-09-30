@@ -13,7 +13,8 @@ const COPY_DEADLINE_MS = 250
 // 목록은 항상 DOM 에 둔다 — 3D 가 뜨면 clip-path 로 시각적으로만 감춘다(보조기술·크롤러용).
 export function Hero({ children }: { children: React.ReactNode }) {
   // null(SSR·첫 페인트)이면 false — 서버 HTML 은 항상 목록을 내보낸다.
-  const is3D = useCanRender3D() === true
+  const can3D = useCanRender3D()
+  const is3D = can3D === true
 
   // 씬이 라우트를 넘어 살아 있으므로 열린 물건·입장 상태도 RoomProvider 가 쥔다.
   const { openId, seen, entered, open, close } = useRoom()
@@ -61,7 +62,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
         </p>
       ) : null}
 
-      <div className={styles.room} data-mode={is3D ? '3d' : 'list'}>
+      <div className={styles.room} data-mode={can3D === null ? 'pending' : is3D ? '3d' : 'list'}>
         <RoomList />
       </div>
 

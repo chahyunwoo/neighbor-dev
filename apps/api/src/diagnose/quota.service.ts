@@ -7,9 +7,12 @@ import { ConfigService } from '@nestjs/config'
 // 용도별로 예산을 따로 센다
 export type QuotaScope = 'diagnose' | 'contact'
 
-export type QuotaDecision =
-  | { allowed: true }
-  | { allowed: false; reason: 'daily-cap' | 'ip-hourly'; retryAfterSeconds: number }
+// 되돌릴 때 이 예약 하나만 지우도록 기간과 시각을 들고 다닌다
+export type QuotaTicket = { scope: QuotaScope; ip: string; at: number; period: number }
+
+type QuotaDenied = { allowed: false; reason: 'daily-cap' | 'ip-hourly'; retryAfterSeconds: number }
+export type QuotaCheck = { allowed: true } | QuotaDenied
+export type QuotaDecision = { allowed: true; ticket: QuotaTicket } | QuotaDenied
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -48,19 +51,25 @@ export class QuotaService {
   // 확인과 차감을 한 동기 호출에서 한다 — 나눠서 사이에 await 이 끼면 동시 요청이 전부 통과한다
   reserve(ip: string, scope: QuotaScope = 'diagnose'): QuotaDecision {
     const decision = this.check(ip, scope)
-    if (decision.allowed) this.consume(ip, scope)
-    return decision
+    if (!decision.allowed) return decision
+    const at = this.consume(ip, scope)
+    return { allowed: true, ticket: { scope, ip, at, period: this.dailyResetAt } }
   }
 
   // 비용이 들지 않은 실패(메일 발송 실패 등)만 되돌린다
-  refund(ip: string, scope: QuotaScope = 'diagnose'): void {
-    this.dailyCount.set(scope, Math.max(0, (this.dailyCount.get(scope) ?? 0) - 1))
-    const key = `${scope}:${ip}`
-    const hits = this.ipHits.get(key)
-    if (hits?.length) hits.pop()
+  // 자정을 넘긴 예약은 이미 리셋된 카운터라 일일 수를 건드리지 않는다
+  refund(ticket: QuotaTicket): void {
+    this.rolloverIfNeeded(Date.now())
+    const { scope, ip, at, period } = ticket
+    if (period === this.dailyResetAt) {
+      this.dailyCount.set(scope, Math.max(0, (this.dailyCount.get(scope) ?? 0) - 1))
+    }
+    const hits = this.ipHits.get(`${scope}:${ip}`)
+    const i = hits ? hits.indexOf(at) : -1
+    if (hits && i >= 0) hits.splice(i, 1)
   }
 
-  check(ip: string, scope: QuotaScope = 'diagnose'): QuotaDecision {
+  check(ip: string, scope: QuotaScope = 'diagnose'): QuotaCheck {
     const now = Date.now()
     this.rolloverIfNeeded(now)
     const limits = this.limitsFor(scope)
@@ -87,7 +96,7 @@ export class QuotaService {
     return { allowed: true }
   }
 
-  consume(ip: string, scope: QuotaScope = 'diagnose'): void {
+  consume(ip: string, scope: QuotaScope = 'diagnose'): number {
     const now = Date.now()
     this.rolloverIfNeeded(now)
     const limits = this.limitsFor(scope)
@@ -103,6 +112,7 @@ export class QuotaService {
       // 캡 도달을 남긴다 — 조용히 막히면 원인을 알 수 없다
       this.log.warn(`${scope} 일일 캡 ${limits.daily}건에 도달했다. 자정까지 안내 문구로 전환된다.`)
     }
+    return now
   }
 
   snapshot(scope: QuotaScope = 'diagnose') {
