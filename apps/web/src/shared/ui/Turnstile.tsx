@@ -64,8 +64,8 @@ export function Turnstile({
         id.current = ts.render(el.current, {
           sitekey: SITE_KEY,
           theme: 'dark',
-          // 대부분은 보이지 않게 통과한다. 의심스러울 때만 체크 상자가 뜬다
-          appearance: 'interaction-only',
+          // 늘 보인다 — 통과 전에는 제출 버튼이 잠기므로, 안 보이면 방문자가 이유를 알 수 없다
+          appearance: 'always',
           callback: (token: string) => report.current(token),
           'expired-callback': () => report.current(null),
           'error-callback': () => report.current(null),
