@@ -1,12 +1,6 @@
-/**
- * 이슈 #10 — 첫 화면에 읽을 것이 언제 뜨는가.
- *
- * 🔴 "마커가 다 떴는가" 로는 이 문제를 못 잡는다. 마커는 2.6초에 다 떠 있었는데
- *    **카피가 4.5초까지 안 보였다** — 방문자는 그동안 빈 방을 본다.
- *    보이는 것은 `opacity` 로 재야 한다(요소는 처음부터 DOM 에 있다).
- */
+// 첫 화면에 카피가 언제 읽히는가 — 마커가 다 떴는지로는 못 잡는다. 요소는 처음부터 DOM 에 있으니 opacity 로 잰다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
-/** 카피가 이 시각 안에는 읽혀야 한다(ms). */
+// 카피가 읽혀야 하는 시각(ms)
 const BUDGET = 1200
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
@@ -28,10 +22,7 @@ const BUDGET = 1200
         const c = document.querySelector('[class*="copyLayer"]')
         return {
           op: h?.parentElement ? Number(getComputedStyle(h.parentElement).opacity) : 0,
-          // 🔴 하이드레이션 전에는 `data-lit` 이 아예 없고 opacity 는 1 이다.
-          //    그 상태를 "보인다" 로 세면 **방어를 지워도 초록이 뜬다**
-          //    (실측: 300ms 에 op=1.00 을 읽어 통과로 판정했는데, 실제로는
-          //     5.6초까지 안 떴다). 클라이언트가 살아난 뒤부터 센다.
+          // 하이드레이션 전에는 data-lit 이 없고 opacity 가 1 이라 세면 방어를 지워도 초록 — 클라이언트가 살아난 뒤부터 센다
           hydrated: c?.dataset.lit !== undefined,
         }
       })

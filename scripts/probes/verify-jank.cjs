@@ -1,18 +1,12 @@
-/**
- * 3D 모션 중 프레임이 튀는가 — 평균 fps 가 아니라 긴 프레임의 수와 시점을 센다.
- *
- * 레티나(DSF 2)로 연다. DSF 1 로 재면 dpr 비용이 통째로 빠진다.
- * 입장 → 마커 7개를 차례로 열기 → 닫기 구간마다 rAF 간격을 기록한다.
- *
- * 돌리는 법:  node scripts/probes/verify-jank.cjs [--dsf 1]
- */
+// 3D 모션 중 프레임이 튀는가 — 평균 fps 가 아니라 긴 프레임의 수와 시점을 센다. 레티나(DSF 2)로 연다(DSF 1 은 dpr 비용이 빠진다).
+// 돌리는 법: node scripts/probes/verify-jank.cjs [--dsf 1]
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const DSF = Number(process.argv[process.argv.indexOf('--dsf') + 1]) || 2
-/** 이 구간 안에서 허용하는 33ms 초과 프레임 수. 60Hz 에서 두 프레임을 연달아 놓친 것이다. */
+// 허용하는 33ms 초과 프레임 수 — 60Hz 에서 두 프레임을 연달아 놓친 것
 const MAX_LONG = 2
 const ALL = ['모니터', '화이트보드', '책장', '서랍', '노트북', '테이블', '현관문']
-/** --first <이름> 으로 처음 열 물건을 바꾼다. 튐이 물건을 따라가는지 '처음' 을 따라가는지 가른다. */
+// --first <이름>: 처음 열 물건을 바꿔 튐이 물건을 따라가는지 '처음' 을 따라가는지 가른다
 const FIRST = process.argv.includes('--first')
   ? process.argv[process.argv.indexOf('--first') + 1]
   : ALL[0]

@@ -1,9 +1,4 @@
-/**
- * 입장 연출과 초점 비행 사이의 **상태 전이** 세 가지.
- *
- * 🔴 셋 다 기존 프로브가 못 잡았다 — 전부 "홈에 들어가 가만히 둔다" 만
- *    보기 때문이다. 사람은 연출이 끝나기를 기다려 주지 않는다.
- */
+// 입장 연출과 초점 비행 사이의 상태 전이 — 사람은 연출이 끝나기를 기다려 주지 않으므로 도중에 나가고 누르고 끈다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 let fail = 0
@@ -12,13 +7,7 @@ const ok = (c, label, detail) => {
   console.log(`  ${c ? '✓' : '✗'} ${label}${detail ? `  — ${detail}` : ''}`)
 }
 
-/**
- * 두 스크린샷의 **픽셀 차이**를 잰다.
- *
- * 🔴 평균 휘도로는 못 잡는다 — 구도가 완전히 달라도 평균이 우연히 비슷하다
- *    (실측: 잘못된 구도 21.8 vs 제 구도 19.4, 배율 1.12). 실제로 그 판정으로
- *    무력화 검증이 **안 잡혔다.** 같은 자리의 픽셀을 직접 비교한다.
- */
+// 두 스크린샷의 픽셀 차이 — 평균 휘도는 구도가 달라도 우연히 비슷해 못 잡는다
 const DIFF = ([a, b]) =>
   new Promise((res) => {
     const load = (s) =>
@@ -58,7 +47,7 @@ async function shotNow(pg) {
         '.canvas-shell{opacity:1!important}body>*:not(.canvas-shell){visibility:hidden!important}'
       document.head.appendChild(s)
     }
-    // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+    // 3D 가 보이는 영역은 캔버스(뷰포트 전체)가 아니라 .canvas-frame 이다
     const r = document.querySelector('.canvas-frame').getBoundingClientRect()
     return { x: r.x, y: r.y, width: r.width, height: r.height }
   })
@@ -70,19 +59,8 @@ async function shotNow(pg) {
 ;(async () => {
   const b = await chromium.launch(LAUNCH)
 
-  /*
-   * ── ① 입장 연출 도중 나가도 그 화면의 구도가 **곧바로** 잡히는가.
-   *
-   *    전에는 `skipIntro` 분기가 `started` 가드 **뒤**에 있어서 못 들어갔고,
-   *    입장 비행이 4.2초를 끝까지 다 돈 뒤에야 초점 비행이 열렸다.
-   *    실측: 이탈 600ms → 목표 구도가 4847ms 에야 잡혔다(그 사이 4101ms).
-   */
-  /*
-   * 🔴 **판정은 "도착 뒤에도 화면이 한 번 더 도는가" 다.**
-   *    잘못된 구도로 있다가 4.4~4.9초에 **한 번에 휙 도는** 것이 증상이므로,
-   *    도착 직후(+1.6s)와 입장이 끝났을 시각(+5.5s)의 화면을 **픽셀로 비교**한다.
-   *    제대로 고쳐졌으면 둘이 같다.
-   */
+  // ① 입장 연출 도중 나가도 그 화면의 구도가 곧바로 잡히는가
+  // 도착 직후(+1.6s)와 입장이 끝났을 시각(+5.5s)을 픽셀로 비교한다 — 뒤늦게 한 번 휙 도는 것이 증상
   for (const leaveAt of [600, 1200, 2600]) {
     const c2 = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const p2 = await c2.newPage()
@@ -103,13 +81,7 @@ async function shotNow(pg) {
     )
   }
 
-  /*
-   * ── ② 마커를 열 때 한 프레임에 크게 튀지 않는가.
-   *
-   *    `CAMERA_LIMITS_FOCUS.maxDistance`(6.5)를 비행 **시작**에 걸면,
-   *    개요 거리 9.36 이 한 프레임에 30.6% 당겨진다(실측 202px).
-   *    🔴 캔버스가 좁아져서가 아니다 — 캔버스 폭이 아직 1440 인 프레임에 난다.
-   */
+  // ② 마커를 열 때 한 프레임에 크게 튀지 않는가 — 초점 거리 상한을 비행 시작에 걸면 한 프레임에 당겨진다
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -121,8 +93,7 @@ async function shotNow(pg) {
     const worst = await pg.evaluate(
       () =>
         new Promise((res) => {
-          // ⚠️ 라벨로 키를 잡고 **중심**을 잰다. DOM 순서·좌측 좌표로 재면
-          //    열린 마커가 이름표를 펼쳐 상자가 커진 것이 이동으로 잡힌다.
+          // 라벨로 키를 잡고 중심을 잰다 — 좌측 좌표면 열린 마커의 이름표 펼침이 이동으로 잡힌다
           const snap = () => {
             const m = {}
             for (const e of document.querySelectorAll('button[class*="marker"]')) {
@@ -157,13 +128,7 @@ async function shotNow(pg) {
     ok(worst <= 90, '마커를 열 때 한 프레임 최대 이동', `${worst}px (기준 90px 이하)`)
   }
 
-  /*
-   * ── ③ 입장 비행이 도는 동안 `data-room-entered` 가 꺼져 있는가.
-   *
-   *    `markEntered` 에 짝이 없어 한 번 켜지면 안 꺼졌다. `verify-clamp`·
-   *    `canvas-probe` 가 이 값을 "이제 눌러도 된다" 게이트로 쓰는데,
-   *    깊은 링크 경로에서는 **비행 중인데 true** 였다.
-   */
+  // ③ 입장 비행 중에는 data-room-entered 가 꺼져 있는가 — 프로브들이 "이제 눌러도 된다" 게이트로 쓴다
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -180,17 +145,8 @@ async function shotNow(pg) {
     ok(after === 'true', '입장이 끝나면 다시 켜진다', `끝난 뒤 ${after}`)
   }
 
-  /*
-   * ── ④ 마커를 **열었다 닫으면** 개요 구도가 제자리로 오는가.
-   *
-   *    제약을 비행 **끝**에만 걸었더니, **나오는 비행**(초점 → 개요 9.36)이
-   *    비행 내내 옛 FOCUS 상한(6.5)에 잘렸다. 끝나서 상한을 12 로 돌려놔도
-   *    **카메라를 도로 밀어내 주는 것이 없다** — 영영 30.6% 당겨진 채 남는다.
-   *    실측: 마커 화면좌표 최대 편차 205px, scale 0.703 → 0.959.
-   *
-   * 🔴 **`verify-clamp` 는 마커를 열기만 하고 닫지 않아서** 이것을 못 봤다.
-   *    여는 방향은 전부 FOCUS 제약 안이라 증상이 안 난다.
-   */
+  // ④ 마커를 열었다 닫으면 개요 구도가 제자리로 오는가 — 나오는 비행이 초점 상한에 잘리면 당겨진 채 남는다
+  // verify-clamp 는 열기만 해서 이것을 못 본다
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -202,12 +158,7 @@ async function shotNow(pg) {
     const before = await shotNow(pg)
     await pg.$eval('button[class*="marker"]', (e) => e.click())
     await pg.waitForTimeout(1800)
-    /*
-     * 🔴 **양성 대조** — "마커가 실제로 열렸다" 를 단언한다. 없으면 클릭이
-     *    아무것도 안 해도 픽셀차 0.03 으로 **초록이 뜬다**(실측 2026-09-17).
-     *    검사기가 "안 잡혔다" 와 "아무 일도 안 일어났다" 를 못 가르면
-     *    그 게이트는 있으나 마나다.
-     */
+    // 양성 대조 — 마커가 실제로 열렸는지 단언한다. 없으면 클릭이 아무것도 안 해도 초록이 뜬다
     const cntOpen = () =>
       pg.evaluate(
         () => document.querySelectorAll('button[class*="marker"][aria-expanded="true"]').length,
@@ -229,14 +180,7 @@ async function shotNow(pg) {
     )
   }
 
-  /*
-   * ── ⑤ 깊은 링크로 들어와 홈에 올 때 **어둠막이 옅어졌다 돌아오지** 않는가.
-   *
-   *    `entered` 를 되돌리게 만들면서(프로브 게이트 용도) `.scrim` 의
-   *    `data-lit` 이 날것 `lit` 을 보고 있어 한 번 꺼졌다 켜졌다.
-   *    실측: 최소 불투명도 0.58~0.61 @324ms, `data-lit=false` 프레임 15개.
-   *    글은 그대로 있는데 그 뒤 어둠막만 빠져 대비가 약해진다.
-   */
+  // ⑤ 깊은 링크로 들어와 홈에 올 때 어둠막이 옅어졌다 돌아오지 않는가
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -259,11 +203,7 @@ async function shotNow(pg) {
     await pg.waitForTimeout(2500)
     const v = await pg.evaluate(() => window.__scrim)
     await ctx.close()
-    /*
-     * 🔴 **양성 대조** — 프레임을 하나도 못 읽었으면 실패다. 없으면 선택자가
-     *    안 맞아 `.scrim` 을 못 찾아도 **초록이 뜬다**(실측: `: 1` 폴백이라
-     *    0개면 그냥 통과했다). CSS Module 해시가 바뀌면 조용히 눈이 먼다.
-     */
+    // 양성 대조 — 프레임을 못 읽었으면 실패다. CSS Module 해시가 바뀌면 선택자가 조용히 눈이 먼다
     ok(v.length >= 30, '   (대조) 어둠막을 실제로 읽었다', `프레임 ${v.length}개`)
     const min = v.length ? Math.min(...v) : 0
     ok(
@@ -273,20 +213,8 @@ async function shotNow(pg) {
     )
   }
 
-  /*
-   * ── ⑥ 마커를 **연 채로** 방을 둘러볼 때 초점 제약이 실제로 쓰이는가.
-   *
-   *    `abort` 리스너가 `'start'`(= 모든 pointerdown)에 붙어 있어서, 되돌릴
-   *    비행이 없는데도 제약을 갈아치웠다. **마커를 연 채 드래그하는 첫
-   *    순간에 FOCUS(방위각 0.44~1.08π)가 ROOM(0.54~0.98π)으로 바뀌어**
-   *    마커를 닫을 때까지 그대로였다 — 실측 2026-09-17: 방위각 79.2° →
-   *    115.2°(36°·31% 손실). 깨지는 화면은 아니고 **의도한 자유도가
-   *    사라진 것**이라, 픽셀 비교로는 안 잡힌다.
-   *
-   * 🔴 판정은 **끝까지 돌렸을 때 닿는 각도**로 한다. 3D 마커의 화면 좌표가
-   *    카메라 방위각을 그대로 반영하므로, 좌우로 끝까지 끈 뒤의 **가로 이동
-   *    폭**을 본다. ROOM 제약이면 눈에 띄게 좁다.
-   */
+  // ⑥ 마커를 연 채로 둘러볼 때 초점 제약(FOCUS)이 실제로 쓰이는가 — 드래그 첫 순간 ROOM 으로 바뀌던 회귀. 픽셀 비교로는 안 잡힌다
+  // 끝까지 돌렸을 때 닿는 범위로 판정한다 — 마커 화면 좌표가 카메라 각도를 그대로 반영한다
   {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -302,14 +230,7 @@ async function shotNow(pg) {
     )
     ok(opened === 1, '   (대조) 둘러보기 전 마커가 열려 있다', `열린 마커 ${opened}개`)
 
-    /** 닫히지 않은 마커들의 가로 중심 평균. 방위각이 바뀌면 같이 움직인다. */
-    /**
-     * 닫히지 않은 마커들의 중심 평균. 방위각·극각이 바뀌면 같이 움직인다.
-     *
-     * ⚠️ **가로만 보면 극각을 못 잡는다.** 초점 제약이 잃는 것에는
-     *    방위각 36° 말고 **극각 16.2°** 도 있는데(FOCUS 0.14~0.52π vs
-     *    ROOM 0.17~0.46π), 가로 중심만 재면 그쪽만 되돌려 놔도 초록이 뜬다.
-     */
+    // 닫히지 않은 마커들의 중심 평균 — 가로만 보면 극각 제약 손실을 못 잡아 세로도 본다
     const center = () =>
       pg.evaluate(() => {
         const m = [...document.querySelectorAll('button[class*="marker"]')].filter(
@@ -337,7 +258,7 @@ async function shotNow(pg) {
     const left = await center()
     await drag(1800)
     const right = await center()
-    // 세로도 끝까지 — 극각 범위를 본다.
+    // 세로도 끝까지 — 극각 범위를 본다
     await drag(0, -700)
     const up = await center()
     await drag(0, 1400)
@@ -345,27 +266,13 @@ async function shotNow(pg) {
     await ctx.close()
     const span = left && right ? Math.round(Math.abs(right.x - left.x)) : 0
     const vspan = up && down ? Math.round(Math.abs(down.y - up.y)) : 0
-    /*
-     * 실측 2026-09-17 (1440x900, 첫 마커를 연 채 좌우 끝까지):
-     *   FOCUS 제약 913px   vs   ROOM 제약 409px
-     * 두 배 넘게 갈리므로 기준은 그 사이에 넉넉히 둔다.
-     */
+    // 1440x900 기준 FOCUS 913px vs ROOM 409px — 기준은 그 사이
     ok(
       span >= 700,
       '마커를 연 채 좌우로 둘러볼 때 초점 제약이 쓰인다',
       `이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
     )
-    /*
-     * 🔴 **이 값은 게이트다. 양성 대조가 아니다.**
-     *    한때 `vspan >= 1` 이었는데, 그건 "세로 드래그가 뭔가 하긴 했다" 만
-     *    확인할 뿐 **극각 제약이 죽어도 통과했다** — 실측 2026-09-17:
-     *    `CAMERA_LIMITS_FOCUS` 의 극각만 ROOM 으로 되돌려(16.2° 손실)
-     *    `vspan 74 → 53` 인데 `>= 1` 이라 초록이었다.
-     *    바로 위 주석이 "가로만 보면 극각을 못 잡는다" 고 적어 놓고
-     *    정작 판정은 가로 하나뿐이었던 셈이다.
-     *
-     *    값은 완전히 결정적이다(4회 반복 전부 913 / 74). 기준을 그 사이에 둔다.
-     */
+    // 게이트다(양성 대조 아님) — >= 1 이면 극각 제약이 죽어도 통과한다. 값은 결정적(913 / 74)이라 기준을 그 사이에 둔다
     ok(
       vspan >= 65,
       '마커를 연 채 위아래로 둘러볼 때 초점 극각이 쓰인다',
@@ -373,28 +280,8 @@ async function shotNow(pg) {
     )
   }
 
-  /*
-   * ── ⑦ **비행 도중** 드래그해서 중단시켜도 한 프레임에 튀지 않는가.
-   *
-   *    중단 지점에는 **목적지 제약도 출발 제약도 안전하지 않다** — 둘 다
-   *    실제로 사고를 냈다:
-   *      · 목적지(FOCUS 상한 6.5) → **들어가는** 비행을 개요 거리(9.36)에서
-   *        중단하면 한 프레임에 30.6% 당겨진다(마커 111px)
-   *      · 출발(ROOM 방위각) → FOCUS 범위까지 돌려 둔 채 **나오는** 비행을
-   *        중단하면 한 프레임에 97° 꺾인다(마커 6756px)
-   *    CLAUDE.md 가 "한 프레임에 79.3° 꺾였다 — 갑자기 화면이 휙 돈다" 로
-   *    적어 둔 그 사고와 같은 형태다.
-   *
-   * 🔴 **기존 프로브는 비행이 끝난 뒤에만 드래그한다.** 그래서 이 경로를
-   *    아무도 안 봤다 — 그런데 "손대면 비행을 포기한다" 는 설계상 의도된 조작이다.
-   */
-  /**
-   * ⚠️ **절대값으로 판정하면 위양성이 난다.** 닫는 비행은 원래 크게 쓸어
-   *    내려오므로(방위각을 끝까지 돌려 둔 상태면 더) 한 프레임 이동이
-   *    **562px** 까지 나온다 — 드래그가 없어도 그렇다(실측 2026-09-17).
-   *    그래서 같은 시나리오를 **드래그 있음/없음으로 두 번** 돌려 그 **차이**
-   *    를 본다. 제약이 튀면 드래그 쪽만 커진다.
-   */
+  // ⑦ 비행 도중 드래그로 중단해도 한 프레임에 튀지 않는가 — 중단 지점에는 목적지·출발 제약 둘 다 안전하지 않다
+  // 절대값으로 판정하면 위양성 — 닫는 비행은 원래 크게 쓸어내린다. 드래그 있음/없음 두 번 돌려 차이를 본다
   const run = async (phase, withDrag, pressAt) => {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const pg = await ctx.newPage()
@@ -404,17 +291,8 @@ async function shotNow(pg) {
     })
     await pg.waitForTimeout(1200)
 
-    /**
-     * **매 프레임 캔버스 픽셀 변화**의 최댓값을 기록한다.
-     *
-     * 🔴 마커 좌표로 재면 F2(방위각 97° 스냅)를 못 잡는다 — 닫는 비행은
-     *    자체 쓸어내림이 커서 스냅이 그 안에 묻히고, 화면 밖으로 발산한
-     *    마커를 빼면 신호가 사라진다. **그림 자체의 변화**가 더 곧다.
-     *
-     * 🔴 R3F 의 렌더 콜백보다 **뒤**에서 읽어야 한다 — 앞에서 읽으면
-     *    drawingBuffer 가 비어 전부 0 이다(CLAUDE.md). 0 이 연속 읽히면
-     *    `setTimeout` 을 한 번 거쳐 줄 맨 뒤로 다시 선다.
-     */
+    // 매 프레임 캔버스 픽셀 변화의 최댓값 — 마커 좌표는 닫는 비행의 쓸어내림에 스냅이 묻힌다
+    // R3F 렌더 콜백보다 뒤에서 읽어야 한다(앞이면 drawingBuffer 가 비어 0). 0 이 이어지면 setTimeout 으로 줄 뒤에 다시 선다
     const watch = () =>
       pg.evaluate(
         () =>
@@ -472,7 +350,7 @@ async function shotNow(pg) {
     if (phase === '여는 비행') {
       await pg.$eval('button[class*="marker"]', (e) => e.click())
     } else {
-      // 먼저 열고, FOCUS 범위 끝까지 돌려 둔 뒤 닫는다 — 방위각 판을 만든다.
+      // 먼저 열고 FOCUS 범위 끝까지 돌려 둔 뒤 닫는다
       await pg.$eval('button[class*="marker"]', (e) => e.click())
       await pg.waitForTimeout(2600)
       await pg.mouse.move(480, 460)
@@ -482,19 +360,12 @@ async function shotNow(pg) {
       await pg.waitForTimeout(600)
       await pg.keyboard.press('Escape')
     }
-    // 비행이 도는 중(200ms)에 손을 댄다.
+    // 비행이 도는 중에 손을 댄다
     const rec = watch()
     await pg.waitForTimeout(pressAt)
     let onCanvas = true
     if (withDrag) {
-      /*
-       * 🔴 **양성 대조 — 누른 지점이 캔버스여야 한다.**
-       *    마커는 캔버스 위에 뜬 **DOM 버튼**이고 비행 중에 화면을 돌아다닌다.
-       *    그 자리에 마커가 오면 pointerdown 을 버튼이 먹어 OrbitControls 의
-       *    `'start'` 가 아예 안 뜬다 — 그러면 **"안 튀었다" 가 아니라
-       *    "아무 일도 안 일어났다"** 인데 차이가 0 이라 초록이 뜬다
-       *    (실측 2026-09-17: 패널 위를 눌렀더니 `start 0회 · 차이 0.0 · 통과`).
-       */
+      // 양성 대조 — 누른 지점이 캔버스여야 한다. 마커 버튼이 pointerdown 을 먹으면 아무 일도 안 일어나 차이 0 으로 통과한다
       onCanvas = await pg.evaluate(
         ([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS',
         [480, 460],
@@ -509,14 +380,7 @@ async function shotNow(pg) {
     return { worst, onCanvas }
   }
 
-  /*
-   * ⚠️ **두 시점을 다 본다.** 초점 effect 의 deps 에 `size` 가 있어, 마커를
-   *    열면 캔버스가 0.44초 걸쳐 좁아지며 effect 가 여러 번 다시 돌고
-   *    **새 비행을 만든다** — 그래서 `abort` 로 죽인 비행이 되살아난다.
-   *    200ms 는 그 "되살아나는" 구간이고, 700ms 는 중단이 유지되는 구간이다
-   *    (실측 2026-09-17: 200ms 에 누르면 3초 뒤 거리가 목표 5.29 로 착지,
-   *     700ms 면 6.5 에서 멈춘다). 한쪽만 재면 반쪽이다.
-   */
+  // 두 시점을 다 본다 — 200ms 는 캔버스 폭 변화로 중단한 비행이 되살아나는 구간, 700ms 는 중단이 유지되는 구간
   for (const phase of ['여는 비행', '닫는 비행']) {
     for (const pressAt of [200, 700]) {
       const a = await run(phase, false, pressAt)

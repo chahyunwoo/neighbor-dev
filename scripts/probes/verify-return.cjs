@@ -1,47 +1,15 @@
-/**
- * 이슈 #15·#88 — 복귀 비행이 **짧고 곧게** 끝나는가.
- *
- * 🔴 **GPU 플래그로 연다**(`_pw.cjs` 의 `LAUNCH`). 기본 headless 는 SwiftShader 로
- *    떨어져 프레임이 안 나오고, 그러면 카메라 비행 자체를 못 본다
- *    (이 저장소가 그 오진을 두 번 밟았다).
- *
- * 🔴 **`pg.goto` 로만 재지 않는다** (#88).
- *    전에는 전체 리로드로 `/work → /` 하나만 쟀다. 그래서
- *    **로고 클릭(클라이언트 내비게이션)** 도 **상세(`/work/<id>`) → 홈** 도
- *    검사 밖이었고, 사용자가 "덜덜 떨리면서 제자리로 간다" 고 지적하고서야 찾았다.
- *    실제 방문자는 `goto` 로 이동하지 않는다 — 링크를 누른다.
- *
- * 🔴 **정착 시간만으로는 지그재그를 못 본다** (#88).
- *    라우트 전환 중 캔버스가 25프레임에 걸쳐 커지는데, 초점 effect 의 deps 에
- *    `size` 가 있어 **매 프레임 비행이 처음부터 다시 시작**됐다. 카메라가 목표로
- *    가다 말다를 반복하는데 **총 소요는 예산 안**이라 옛 판정은 초록이었다.
- *    → 마커가 진행하는 **방향이 몇 번 뒤집히는지**를 함께 본다.
- */
+// 복귀 비행이 짧고 곧게 끝나는가 — goto 가 아니라 링크 클릭(클라이언트 내비게이션)으로, 목록·상세·직접 진입 경로를 다 본다.
+// 정착 시간만으로는 지그재그(비행이 매 프레임 다시 시작)를 못 봐 마커 진행 방향이 뒤집히는 횟수를 함께 센다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
-/** 복귀 비행은 이 안에 끝나야 한다(ms). 첫 진입은 4.2초짜리 연출이라 훨씬 길다. */
+// 복귀 비행 예산(ms). 첫 진입은 4.2초짜리 연출이라 훨씬 길다
 const RETURN_BUDGET = 1500
-/**
- * 마커 진행 방향이 뒤집혀도 되는 횟수.
- *
- * ⚠️ **0 이 아니다.** 비행은 easing 이 걸려 있고 마커는 3D 좌표의 화면 투영이라,
- *    카메라가 곧게 날아도 투영 x 가 한 번은 꺾일 수 있다(회전 성분). 그 이상은
- *    비행이 다시 시작됐다는 뜻이다 — 실측 2026-09-17: 고치기 전 2회, 고친 뒤 1회.
- */
+// 0 이 아니다 — 곧게 날아도 투영 x 가 회전 성분으로 한 번은 꺾일 수 있다. 그 이상은 비행이 다시 시작된 것
 const MAX_FLIPS = 1
-/** 이보다 작은 이동은 방향 판정에서 무시한다(px). 정착 후 미세 진동 오탐 방지. */
+// 방향 판정에서 무시하는 이동(px) — 정착 후 미세 진동 오탐 방지
 const NOISE = 0.5
 
-/**
- * 매 프레임 마커 x 를 기록하기 시작한다.
- *
- * 🔴 **앞서 돌던 루프를 반드시 멈춘다.** 이 프로브는 경로마다 `track` 을 다시
- *    부르는데, 옛 루프를 세워 두지 않으면 rAF 콜백이 **겹쳐서 누적**된다.
- *    루프 N 개가 같은 배열에 push 하면 한 프레임에 샘플이 N 개 들어가고 순서가
- *    섞여 **없는 방향 반전이 만들어진다** — 실측 2026-09-17: 단독 측정 3회가
- *    이 프로브 안에서는 53회로 나왔다. 증상이 아니라 계측기가 틀린 것이었다.
- *    (CLAUDE.md: 프로브 판정의 위양성 — 새 검사기의 첫 판정은 대개 틀린다.)
- */
+// 앞서 돌던 rAF 루프를 반드시 멈춘다 — 루프가 겹치면 샘플이 섞여 없는 방향 반전이 만들어진다
 const track = (pg) =>
   pg.evaluate(() => {
     window.__gen = (window.__gen ?? 0) + 1
@@ -57,10 +25,6 @@ const track = (pg) =>
     requestAnimationFrame(t)
   })
 
-/**
- * 기록을 읽어 (정착 시간, 방향 반전 수) 를 낸다.
- * @returns {{settle: number, flips: number, frames: number} | null}
- */
 const measure = async (pg) => {
   const c = await pg.evaluate(() => window.__c || [])
   if (c.length < 3) return null
@@ -75,12 +39,7 @@ const measure = async (pg) => {
     }
   }
 
-  /*
-   * 🔴 **정착 전 구간만 센다.** 정착한 뒤에도 마커는 소수점 단위로 흔들리는데
-   *    (투영 반올림), 그걸 세면 노이즈가 압도한다 — 실측 2026-09-17: 전체를
-   *    세면 53회, 정착 전만 세면 2회. 판정하려는 것은 "비행 중 경로가
-   *    지그재그인가" 이지 "정착 후 떨리는가" 가 아니다.
-   */
+  // 정착 전 구간만 센다 — 정착 후 투영 반올림 흔들림을 세면 노이즈가 압도한다
   const until = c.findIndex((s) => s.t - t0 > settle)
   const moving = until > 2 ? c.slice(0, until) : c
 
@@ -96,7 +55,7 @@ const measure = async (pg) => {
   return { settle, flips, frames: c.length }
 }
 
-/** 링크를 눌러 이동한다 — `goto` 가 아니라 방문자가 하는 그대로. */
+// goto 가 아니라 방문자가 하듯 링크를 눌러 이동한다
 const clickNav = (pg, sel) => pg.$eval(sel, (el) => el.click())
 
 ;(async () => {
@@ -120,14 +79,14 @@ const clickNav = (pg, sel) => pg.$eval(sel, (el) => el.click())
     if (!okLine) console.log('      비행이 도중에 다시 시작된다 — 경로가 지그재그다(#88)')
   }
 
-  // ── 1) 첫 진입 — 연출이므로 길어도 된다. 기준선으로만 찍는다.
+  // 1) 첫 진입 — 연출이므로 길어도 된다. 기준선으로만 찍는다
   await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
   await track(pg)
   await pg.waitForTimeout(5000)
   const first = await measure(pg)
   console.log(`  - 첫 진입 비행 ${first ? first.settle : '?'}ms (연출이므로 길어도 된다)`)
 
-  // ── 2) 목록 → 홈, **로고 클릭**(클라이언트 내비게이션)
+  // 2) 목록 → 홈, 로고 클릭
   await clickNav(pg, 'nav a[href="/work"]')
   await pg.waitForTimeout(2500)
   await clickNav(pg, 'nav a[href="/"]')
@@ -135,7 +94,7 @@ const clickNav = (pg, sel) => pg.$eval(sel, (el) => el.click())
   await pg.waitForTimeout(5000)
   await check('목록 → 로고 → 홈', RETURN_BUDGET)
 
-  // ── 3) 상세 → 홈, **로고 클릭** — #88 이 난 자리
+  // 3) 상세 → 홈, 로고 클릭
   await clickNav(pg, 'nav a[href="/work"]')
   await pg.waitForTimeout(2000)
   await clickNav(pg, 'a[href^="/work/"]')
@@ -145,10 +104,7 @@ const clickNav = (pg, sel) => pg.$eval(sel, (el) => el.click())
   await pg.waitForTimeout(5000)
   await check('상세 → 로고 → 홈', RETURN_BUDGET)
 
-  // ── 4) 상세로 **직접 진입**한 뒤 복귀.
-  //    🔴 검색·공유 링크가 곧 수주 경로라 이쪽이 오히려 기본 경로다(AGENTS.md).
-  //    같은 탭을 쓰면 `sessionStorage` 의 intro-seen 이 남아 조건이 달라지므로
-  //    **새 컨텍스트**에서 연다.
+  // 4) 상세로 직접 진입한 뒤 복귀 — 같은 탭이면 sessionStorage 의 intro-seen 이 남아 조건이 달라져 새 컨텍스트에서 연다
   const ctx2 = await b.newContext({ viewport: { width: 1440, height: 900 } })
   const pg2 = await ctx2.newPage()
   await pg2.goto(`${BASE}/work/claude-board`, { waitUntil: 'networkidle' })
@@ -158,8 +114,7 @@ const clickNav = (pg, sel) => pg.$eval(sel, (el) => el.click())
   await pg2.waitForTimeout(6000)
   {
     const m = await measure(pg2)
-    // 이 경로는 방을 처음 보는 것이라 입장 연출이 도는 것이 맞다. 다만
-    // **복귀분까지 4.2초 전체를 다시 도는 것**은 아니어야 한다.
+    // 방을 처음 보는 경로라 입장 연출이 도는 것이 맞지만, 4.2초 전체를 다시 돌면 안 된다
     const budget = 4000
     const okTime = m && m.settle <= budget
     const okLine = m && m.flips <= MAX_FLIPS

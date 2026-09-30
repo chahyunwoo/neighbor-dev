@@ -1,13 +1,10 @@
-/**
- * 쿼터 검증 — 기획서 5절이 "일일 총량 캡이 비용 방어의 본체" 라고 못박은 부분.
- *
- * 돌리는 법:  node --test apps/api/src/diagnose/quota.spec.mjs
- */
+// 쿼터 — 일일 총량 캡과 IP·용도별 제한.
+// 돌리는 법: pnpm --filter @neighbor/api build && node --test apps/api/src/diagnose/quota.spec.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { nextMidnightKst, QuotaService } from '../../dist/diagnose/quota.service.js'
 
-/** ConfigService 흉내 — 값을 주입해 경계를 정확히 친다. */
+// ConfigService 흉내
 function svc(dailyCap, perIpHourly, contactDaily = 999, contactPerIp = 999) {
   const table = {
     AI_DAILY_TOTAL_CAP: dailyCap,
@@ -19,13 +16,12 @@ function svc(dailyCap, perIpHourly, contactDaily = 999, contactPerIp = 999) {
 }
 
 test('일일 캡에 닿으면 막힌다 — 다른 IP 여도 막힌다', () => {
-  // 캡 3, IP 시간당 넉넉히.
   const q = svc(3, 99)
   for (let i = 0; i < 3; i++) {
     assert.equal(q.check(`10.0.0.${i}`).allowed, true, `${i}번째는 통과해야 한다`)
     q.consume(`10.0.0.${i}`)
   }
-  // 🔴 IP 를 바꿔도 막혀야 한다 — 이것이 IP 제한과 총량 캡의 차이다.
+  // IP 를 바꿔도 막혀야 한다 — IP 제한과 총량 캡의 차이
   const d = q.check('10.0.0.99')
   assert.equal(d.allowed, false)
   assert.equal(d.reason, 'daily-cap')
@@ -73,7 +69,6 @@ test('자정(KST) 리셋 시각을 정확히 계산한다', () => {
 })
 
 test('용도가 서로의 예산을 깎지 않는다', () => {
-  // 🔴 이것이 용도를 나눈 이유다 — 진단을 많이 쓴 날에 문의가 막히면 안 된다.
   const q = svc(2, 99, 5, 99)
   q.consume('1.1.1.1', 'diagnose')
   q.consume('1.1.1.1', 'diagnose')

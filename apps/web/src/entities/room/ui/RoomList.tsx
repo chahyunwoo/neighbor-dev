@@ -2,12 +2,7 @@ import Link from 'next/link'
 import { ROOM_OBJECTS } from '@/entities/room/model/room'
 import styles from './RoomList.module.css'
 
-/**
- * 방의 물건을 목록으로 편다.
- *
- * 🔴 이 컴포넌트는 서버에서 렌더된다 — JS 를 꺼도 내용이 읽히고 링크가 눌린다.
- *    기획서 4절의 폴백 3단 중 3단(서버 렌더 HTML)이 이것이다.
- */
+// 서버에서 렌더된다 — JS 를 꺼도 내용이 읽히고 링크가 눌린다.
 export function RoomList() {
   return (
     <div className={styles.list}>

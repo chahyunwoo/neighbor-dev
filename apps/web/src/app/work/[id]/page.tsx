@@ -19,11 +19,7 @@ interface Params {
   params: Promise<{ id: string }>
 }
 
-/**
- * 🔴 사례 상세는 **`detail` 층만** 정적 생성한다.
- *    `summary` 층 id 로 들어오면 404 다 — 경력 요약 건에는 상세 화면이 없다.
- *    이것이 층 규칙의 마지막 방어선이다(빌드 → 타입 → 라우트).
- */
+// detail 층만 정적 생성한다 — summary 층에는 상세 화면이 없다.
 export function generateStaticParams() {
   return getDetailProjects().map((p) => ({ id: p.id }))
 }
@@ -33,7 +29,7 @@ export const dynamicParams = false
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params
   const project = getProject(id)
-  // 🔴 없는 사례는 색인시키지 않는다. 남는 URL 이 검색 결과에 뜨면 방문자가 막힌다.
+  // 없는 사례는 색인시키지 않는다.
   if (project?.tier !== 'detail') {
     return { title: '사례를 찾을 수 없음', robots: { index: false, follow: false } }
   }
@@ -59,20 +55,13 @@ export default async function ProjectPage({ params }: Params) {
   const { id } = await params
   const project = getProject(id)
 
-  // 층 검사를 라우트에서 한 번 더 한다. 타입만 믿지 않는다 —
-  // id 는 URL 에서 오는 외부 입력이다.
+  // id 는 URL 에서 오는 외부 입력이라 층 검사를 라우트에서 한 번 더 한다.
   if (project?.tier !== 'detail') notFound()
 
   return (
     <>
       <Nav />
-      {/*
-       * 사례 구조화 데이터.
-       *
-       * 🔴 **`client`(사명)를 넣지 않는다.** 공개 데이터에 애초에 없지만
-       *    (`build-data.mjs` 가 불리언만 뽑는다) 여기서 다시 확인해 둔다.
-       *    도메인·기간·기술은 화면에 이미 나가 있는 것이라 추가 노출이 아니다.
-       */}
+      {/* client(사명)를 넣지 않는다. */}
       <JsonLd
         data={{
           '@context': 'https://schema.org',
@@ -235,11 +224,6 @@ function Metrics({ project }: { project: DetailProject }) {
   )
 }
 
-/**
- * 쓴 기술 — 정본의 원시 표기가 아니라 기술명으로, 그리고 **접어서** 싣는다.
- * 근거는 `StackTags.tsx` 주석(이슈 #2). 여기는 이미 상세 화면이라
- * 카드보다는 넉넉히 보인다.
- */
 function Stack({ project }: { project: DetailProject }) {
   const names = displayStack(project.stack)
   if (names.length === 0) return null

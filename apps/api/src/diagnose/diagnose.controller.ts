@@ -21,7 +21,6 @@ export class DiagnoseController {
     private readonly quota: QuotaService,
   ) {}
 
-  /** 화면이 "지금 쓸 수 있는가" 를 먼저 묻는다. 남은 횟수도 같이 준다. */
   @Get('status')
   status() {
     const q = this.quota.snapshot()
@@ -32,12 +31,7 @@ export class DiagnoseController {
     }
   }
 
-  /**
-   * 스트리밍 진단. 조각이 나오는 대로 SSE 로 흘려보낸다.
-   *
-   * 🔴 게이트가 늦게 온다(서비스 주석 참고). 끝에서 `done` 이벤트로
-   *    통과 여부를 알리고, 걸리면 화면이 지운다.
-   */
+  // 게이트 판정이 스트림 끝에 온다 — done 이벤트로 통과 여부를 알리고, 걸리면 화면이 지운다
   @Post('stream')
   async stream(@Body() dto: DiagnoseDto, @Ip() ip: string, @Res() res: Response) {
     const decision = this.quota.check(ip)
@@ -56,7 +50,7 @@ export class DiagnoseController {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
-      // 프록시가 버퍼링하면 스트리밍이 통째로 뭉쳐 온다.
+      // 프록시가 버퍼링하면 스트림이 한꺼번에 뭉쳐 온다
       'X-Accel-Buffering': 'no',
     })
 
@@ -72,7 +66,7 @@ export class DiagnoseController {
         this.quota.consume(ip)
         send('done', { ok: true })
       } else {
-        // 게이트에 걸렸다. 무엇이 걸렸는지는 알리지 않는다.
+        // 무엇에 걸렸는지는 알리지 않는다
         send('done', {
           ok: false,
           message:
@@ -94,7 +88,7 @@ export class DiagnoseController {
   @Post()
   @HttpCode(HttpStatus.OK)
   async diagnose(@Body() dto: DiagnoseDto, @Ip() ip: string) {
-    // 🔴 캡 검사가 먼저다. 모델을 부르기 전에 막아야 비용 방어가 된다.
+    // 캡 검사는 모델 호출 전에 — 그래야 비용 방어가 된다
     const decision = this.quota.check(ip)
     if (!decision.allowed) {
       throw new HttpException(
@@ -111,7 +105,7 @@ export class DiagnoseController {
     }
 
     const result = await this.service.diagnose(dto.requirement)
-    // 실제로 부른 뒤에 소비한다 — 실패한 호출로 캡이 깎이지 않게.
+    // 부른 뒤에 소비한다 — 실패한 호출로 캡이 깎이지 않게
     this.quota.consume(ip)
     return { result }
   }

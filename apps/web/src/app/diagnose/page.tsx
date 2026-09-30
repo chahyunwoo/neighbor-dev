@@ -13,12 +13,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/diagnose',
 })
 
-/**
- * 🔴 서버에서만 읽는다. `NEXT_PUBLIC_` 접두사를 쓰지 않는 것이 요점이다 —
- *    그 접두사를 붙이면 값이 브라우저 번들에 박혀 api 주소가 공개된다.
- *    방문자 요청은 `app/api/diagnose/route.ts` 프록시를 거친다.
- */
-/** 매 요청마다 api 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
+// 매 요청마다 api 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다.
 export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
@@ -32,14 +27,7 @@ async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: numb
   }
 }
 
-/**
- * 노트북 — 상담 전 자가진단 (기획서 5절).
- *
- * 🔴 "하지 않을 것" 을 먼저 적는다. 금액을 말하지 않는 것과 저장하지 않는 것이
- *    이 기능의 요지다 — 방문자가 안심하고 적을 수 있어야 쓸모가 생긴다.
- *
- * ⚠️ 이 설명은 서버 렌더라 JS 를 꺼도 읽힌다. 입력 폼만 클라이언트다.
- */
+// "하지 않을 것" 을 먼저 적는다. 설명은 서버 렌더라 JS 가 꺼져도 읽힌다.
 export default async function DiagnosePage() {
   const status = await fetchStatus()
   const usable = status?.available === true && (status?.dailyRemaining ?? 0) > 0

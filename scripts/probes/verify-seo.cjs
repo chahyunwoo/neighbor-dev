@@ -1,14 +1,5 @@
-/**
- * 이슈 #82 프로브 — **렌더된 HTML 에서** SEO 요소를 센다.
- *
- * 🔴 "설정했다" 를 믿지 않는다. `metadataBase` 가 없으면 Next 는 canonical·og:url 을
- *    **경고 없이 통째로 빼버린다.** 소스에 `alternates` 를 써놓고도 태그가 안 나간다.
- *    실측 2026-09-17: 그 상태로 있었고, 고친 뒤에도 하위 화면의 canonical 이
- *    전부 루트를 가리켰다(layout 의 값이 상속된다).
- *
- * 🔴 **canonical 이 자기 경로를 가리키는지까지 본다.** 존재 검사만 하면
- *    "전부 루트를 가리키는" 상태를 통과시킨다 — 그게 원래 버그였다.
- */
+// 렌더된 HTML 에서 SEO 요소를 센다. metadataBase 가 없으면 Next 가 canonical·og:url 을 경고 없이 뺀다.
+// canonical 이 자기 경로를 가리키는지까지 본다 — 존재만 보면 전부 루트를 가리키는 상태를 통과시킨다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const PAGES = ['/', '/work', '/career', '/stack', '/team', '/contact', '/diagnose']
@@ -35,7 +26,7 @@ const PAGES = ['/', '/work', '/career', '/stack', '/team', '/contact', '/diagnos
   }
   await ctx0.close()
 
-  // 2) 화면마다 canonical·og 가 있고 **자기 경로**를 가리키는가
+  // 2) 화면마다 canonical·og 가 있고 자기 경로를 가리키는가
   console.log('화면          canonical                    og:title                       og:image')
   for (const p of PAGES) {
     const ctx = await b.newContext()

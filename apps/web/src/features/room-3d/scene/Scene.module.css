@@ -1,12 +1,4 @@
-/*
- * 3D 마커 — 시안(Main.dc.html `.mk`)의 형태를 그대로 옮겼다.
- *
- * 🔴 **라벨을 상시로 띄우지 않는다.** 이전 구현은 이름표 6개가 항상 떠서
- *    방을 덮었다(실측 스크린샷 2026-09-09). 시안 주석도 같은 실패를 적어놨다 —
- *    "플럼봅은 요란했고 11px 점은 안 보였다. 링이 계속 퍼져서 눈에 띄되 조용하다."
- *
- * 형태: 점 하나 + 퍼지는 링 2겹(시차). 라벨은 hover·포커스·열림에만.
- */
+/* 라벨을 상시로 띄우지 않는다 — 이름표가 방을 덮는다. 라벨은 hover·포커스·열림에만. */
 
 .marker {
   position: relative;
@@ -46,7 +38,6 @@
     box-shadow 0.22s;
 }
 
-/* 부 동선은 블루 — 아트디렉션의 두 축을 마커에서도 지킨다. */
 .marker[data-accent="blue"] .dot {
   background: radial-gradient(circle at 34% 30%, #fff 0%, var(--color-blue) 62%, #3d6ea8 100%);
   box-shadow:
@@ -54,7 +45,6 @@
     0 0 14px 2px rgba(107, 163, 232, 0.55);
 }
 
-/* 퍼지는 링 2겹 — 시차를 둬서 물결처럼. 이게 "여기 누르세요" 를 말한다. */
 .dot::before,
 .dot::after {
   content: "";
@@ -94,7 +84,6 @@
     0 0 20px 5px rgba(232, 168, 124, 0.85);
 }
 
-/* 열려 있는 것 — 초록으로 "지금 여기" 를 말한다(시안 .mk.now). */
 .marker[data-open="true"] .dot {
   transform: scale(1.25);
   background: radial-gradient(circle at 34% 30%, #fff 0%, #8fe6a8 55%, #2fa855 100%);
@@ -107,7 +96,6 @@
   border-color: rgba(120, 235, 160, 0.8);
 }
 
-/* 라벨 — 평소엔 없다. */
 .markerName {
   position: absolute;
   left: 48px;
@@ -148,7 +136,7 @@
   opacity: 1;
 }
 
-/* 펜던트 스위치 — 전등을 감싸는 원이 숨 쉬듯 깜빡이고, 위에 문구가 붙는다(아래는 테이블 마커 자리다). */
+/* 문구는 위에 붙는다 — 아래는 테이블 마커 자리다. */
 .lampSwitch {
   position: relative;
   display: block;

@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { apiFetch } from '@/shared/api'
 
-/**
- * 문의 프록시.
- *
- * 🔴 브라우저가 api 를 직접 부르지 않게 한다 — 직접 부르면 api 주소가 페이지에
- *    박히고, 배포하면 그게 곧 자체 호스팅 구성 노출이다(기획서 8절).
- *    자가진단 프록시와 같은 이유·같은 구조다.
- */
+// 브라우저가 api 를 직접 부르지 않게 하는 프록시 — 직접 부르면 api 주소가 HTML 에 실린다.
 
 export async function POST(request: Request) {
   let body: unknown

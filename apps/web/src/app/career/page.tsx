@@ -12,13 +12,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/career',
 })
 
-/**
- * 서랍 — 경력 요약 층.
- *
- * 🔴 이 화면은 `getSummaryProjects()` 만 부른다. 상세 필드는 타입에 없으므로
- *    실수로 넣을 수 없다. "왜 여기는 내용이 적은가"를 화면에서 직접 설명한다 —
- *    설명이 없으면 다음 사람이 채우려 든다.
- */
+// getSummaryProjects() 만 부른다. 내용이 적은 이유를 화면에서 설명한다 — 없으면 다음 사람이 채우려 든다.
 export default function CareerPage() {
   const summary = getSummaryProjects()
 
@@ -34,7 +28,7 @@ export default function CareerPage() {
       >
         <RevealGroup className={styles.rows}>
           {summary.map((p) => (
-            // 🔴 key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
+            // key 에 id(=저장소명)를 쓰지 않는다 — RSC 페이로드로 HTML 에 실린다.
             <RevealItem key={`${p.label}${p.period}`} className={styles.row}>
               <span className={styles.rowLabel}>{p.label}</span>
               <span className={styles.rowPeriod}>{p.period}</span>

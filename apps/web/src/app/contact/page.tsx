@@ -12,7 +12,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/contact',
 })
 
-/** 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
+// 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다.
 export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
@@ -24,12 +24,7 @@ async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: numb
   }
 }
 
-/**
- * 현관문 — 문의.
- *
- * 🔴 폼이 안 뜨는 상태에서도 **무엇을 어떻게 하는지는 서버 렌더로 읽힌다.**
- *    JS 가 없거나 접수가 닫혔을 때 빈 화면이 되지 않게.
- */
+// 폼이 안 떠도 무엇을 하는지는 서버 렌더로 읽힌다.
 export default async function ContactPage() {
   const status = await fetchStatus()
   const usable = status?.available === true && (status?.dailyRemaining ?? 0) > 0

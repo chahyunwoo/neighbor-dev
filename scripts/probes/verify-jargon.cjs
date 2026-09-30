@@ -1,35 +1,12 @@
-/**
- * 이슈 #2 프로브 — 화면에 **실제로 보이는** 기술용어를 센다.
- *
- * 정적 regex 로는 못 잰다: `hidden` 은 속성이지만 실제 가시성은 CSS 가 정하고,
- * `.rest{display:contents}` 같은 것이 브라우저 기본값을 이길 수 있다
- * (ProjectLens 에서 실측된 함정). 그래서 innerText 로 잰다 —
- * innerText 는 보이는 것만 준다.
- */
+// 화면에 실제로 보이는 기술용어를 센다 — 가시성은 CSS 가 정하므로 innerText 로 잰다.
+// 돌리는 법: node scripts/probes/verify-jargon.cjs
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
-/*
- * ⚠️ **스택명만 세면 제목의 개발 용어를 놓친다.**
- *    실측 2026-09-17(#80): 카드 제목이 `모노레포 — OpenAPI 타입 파이프라인` 이고
- *    도메인이 `모노레포 · 디자인시스템 · 공통 인프라` 인데 이 프로브는 **0을 셌다.**
- *    화면에서 가장 크게 보이는 글자가 검사 밖에 있었다.
- *    → 스택명(1행)과 **설명 언어**(2행)를 함께 센다.
- */
+// 스택명(1행)과 제목·도메인의 설명 언어(2행)를 함께 센다 — 스택명만 세면 가장 큰 글자를 놓친다
 const PAT =
   /NestJS|Next\.js|Spring Boot|PostgreSQL|Docker|TypeScript|React|SSE|API|CRUD|JSONL|ProcessBuilder|NIO|RandomAccessFile|DTO|SwiftUI|launchd|멱등|상태 전이|스키마|파싱|캐시|쿼리|모노레포|OpenAPI|RFQ|콘솔|어드민|대시보드|CMS|SaaS|B2B|디자인시스템|컴포넌트|오픈소스|파이프라인|렌더링|인터랙티브|백엔드|프론트엔드|프론트|REST|MDX|Three\.js|SVG|Turborepo|멀티테넌트|위젯|스케줄러/g
-/*
- * 화면별 상한(기술용어 수). ⚠️ 서버 주소인 `BASE` 와 헷갈리지 않게 이름을 가른다.
- *
- * 🔴 **넘으면 실패한다.** 전에는 숫자를 찍기만 하고 `exit 0` 이라, 늘어나도
- *    아무 일이 일어나지 않았다 — 계측기였지 게이트가 아니었다.
- *
- * 값은 #80 시점의 실측이다(PAT 를 제목·도메인 언어까지 넓힌 뒤 다시 잡았다).
- * 재현: `node scripts/probes/verify-jargon.cjs`
- *
- * ⚠️ **줄었다고 상한을 따라 내리지 않는다.** 상한은 "이 이상 늘면 회귀" 를 뜻하고,
- *    값에 맞춰 계속 조이면 무관한 문구 수정마다 빨개져 사람이 이 검사를 끈다.
- *    의도적으로 낮추는 것은 사람이 판단해서 한다.
- */
+// 화면별 상한 — 넘으면 실패한다. 서버 주소 BASE 와 헷갈리지 않게 이름을 가른다
+// 줄었다고 따라 내리지 않는다 — 계속 조이면 무관한 문구 수정마다 빨개져 사람이 검사를 끈다
 const BASELINE = { '/': 3, '/work': 46, '/work/claude-board': 25, '/career': 12, '/stack': 14 }
 
 ;(async () => {

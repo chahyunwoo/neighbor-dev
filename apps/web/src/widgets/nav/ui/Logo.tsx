@@ -1,4 +1,3 @@
-/** 로고 A안(처마) — 시안 Logo.dc.html 확정본. */
 export function Logo({ size = 24 }: { size?: number }) {
   return (
     <svg

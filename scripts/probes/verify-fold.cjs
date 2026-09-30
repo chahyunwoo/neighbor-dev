@@ -11,9 +11,7 @@ const ok = (c, l, d) => {
   await pg.waitForTimeout(4500)
 
   // 1. 접힌 태그가 실제로 안 보이는가 (display:contents 함정)
-  // ⚠️ `[hidden]` 전체를 세면 무관한 요소가 잡혀 **검사 대상에 닿지 못한다**
-  //    (실측: 첫 [hidden] 이 className 없는 남의 요소라 방어를 지워도 초록이었다).
-  //    접힌 태그 **자식들의 실제 높이**를 본다.
+  // [hidden] 전체를 세지 않는다 — 무관한 요소가 잡혀 검사 대상에 닿지 못한다. 접힌 태그 자식들의 실제 높이를 본다
   const fold = await pg.evaluate(() => {
     const wraps = [...document.querySelectorAll('[class*="rest"][hidden]')]
     let kids = 0,

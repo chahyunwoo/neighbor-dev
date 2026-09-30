@@ -1,21 +1,12 @@
-/**
- * 브라우저 프로브 전체 실행.
- *
- * 🔴 **정적 검사기로는 못 잡는 것만 여기 있다.** `pnpm verify` 가 초록이어도
- *    화면이 깨져 있을 수 있다 — 이 저장소가 그 형태로 여러 번 당했다(CLAUDE.md).
- *
- * 🔴 **api·web 이 떠 있어야 한다.** 안 떠 있으면 `/contact` 가 폼 대신
- *    "접수 창구에 연결할 수 없습니다" 를 보여주고, 그걸 정상으로 착각한다.
- *
- *   pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
- *   pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
- *   node scripts/probes/run-all.mjs
- */
+// 정적 검사기로 못 잡는 브라우저 프로브 전체 실행. api·web 이 떠 있어야 한다(안 뜨면 /contact 오류 화면을 정상으로 착각한다).
+//   pnpm --filter @neighbor/api build && API_PORT=21201 node apps/api/dist/main.js &
+//   pnpm --filter @neighbor/web build && PORT=21200 pnpm --filter @neighbor/web start &
+//   node scripts/probes/run-all.mjs
 import { execFileSync } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 
 const DIR = 'scripts/probes'
-/** 판정을 사람이 하는 것 — 촬영만 하므로 자동 실행에서 뺀다. */
+// 판정을 사람이 하는 것(촬영만) — 자동 실행에서 뺀다
 const MANUAL = new Set(['verify-each-object.cjs'])
 
 const files = readdirSync(DIR)

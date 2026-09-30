@@ -1,10 +1,7 @@
-/**
- * 낮/밤 전환 진행도 — 프로토타입(.wip/room2.html)의 `lightT`·`applyLight` 를 옮겼다.
- * `t` 는 1 이 밤(기본), 0 이 낮이다. 조명·벽·배경·Bloom 이 매 프레임 이 값을 읽는다.
- */
+/** 낮/밤 진행도. t 는 1 이 밤(기본), 0 이 낮. 조명·벽·배경·Bloom 이 매 프레임 읽는다. */
 export const daylight = { t: 1, from: 1, to: 1, start: 0 }
 
-/** 낮의 광원 배수. 프로토타입 실측값 — 배수가 서로 멀면 한 광원만 뒤늦게 들어오는 것처럼 보인다. */
+/** 낮의 광원 배수 — 배수가 서로 멀면 한 광원만 뒤늦게 들어오는 것처럼 보인다. */
 export const DAY_MUL = {
   key: 0.42,
   lamp: 0.4,
@@ -30,7 +27,7 @@ export function setDaylightTarget(night: boolean) {
   daylight.start = performance.now()
 }
 
-/** 목표로 한 걸음 옮긴다. 스무스스텝이라 시작·끝이 완만하다. 값이 바뀌었으면 true. */
+/** 목표로 한 걸음 옮긴다(스무스스텝). 값이 바뀌었으면 true. */
 export function stepDaylight(): boolean {
   if (daylight.t === daylight.to) return false
   const u = Math.min(1, (performance.now() - daylight.start) / MS)

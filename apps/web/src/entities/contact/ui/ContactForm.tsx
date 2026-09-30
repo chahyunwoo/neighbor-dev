@@ -6,15 +6,7 @@ import styles from './ContactForm.module.css'
 const MIN_MESSAGE = 20
 const MAX_MESSAGE = 8000
 
-/**
- * 문의 폼.
- *
- * 🔴 받는 항목을 최소로 둔다 — 이름·이메일·내용뿐이다. 회사명도 전화번호도
- *    묻지 않는다. 필요하면 답장에서 물어보면 되고, 안 받은 개인정보는
- *    지킬 필요도 없다.
- *
- * 🔴 저장하지 않는다. api 가 메일로 넘기고 끝낸다.
- */
+// 받는 항목은 이름·이메일·내용뿐이고 저장하지 않는다 — 안 받은 개인정보는 지킬 필요도 없다.
 export function ContactForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')

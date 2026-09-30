@@ -10,7 +10,6 @@ export class ContactController {
     private readonly quota: QuotaService,
   ) {}
 
-  /** 화면이 "지금 받을 수 있는가" 를 먼저 묻는다. */
   @Get('status')
   status() {
     const q = this.quota.snapshot('contact')
@@ -39,7 +38,7 @@ export class ContactController {
     }
 
     await this.service.send(dto)
-    // 실제로 보낸 뒤에 소비한다 — 실패한 발송으로 캡이 깎이지 않게.
+    // 보낸 뒤에 소비한다 — 실패한 발송으로 캡이 깎이지 않게
     this.quota.consume(ip, 'contact')
     return { ok: true }
   }

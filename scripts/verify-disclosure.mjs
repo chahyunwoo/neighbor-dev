@@ -1,11 +1,6 @@
 #!/usr/bin/env node
-/**
- * 생성된 공개 데이터를 검사한다(항목 수는 `CHECK_NAMES.length`). **데이터를 바꿀 때마다 돌린다.**
- *
- * ⚠️ 주석에 숫자를 박지 않는다 — 항목이 늘 때마다 낡는다(실측: 12 라고 적혀 있는데 17 이었다).
- *
- * 한 건이라도 걸리면 종료코드 1 — CI·훅에서 그대로 게이트로 쓴다.
- */
+// 생성된 공개 데이터를 검사한다 — 데이터를 바꿀 때마다 돌린다. 한 건이라도 걸리면 종료코드 1.
+// 돌리는 법: node scripts/build-data.mjs && node scripts/verify-disclosure.mjs
 
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -24,26 +19,16 @@ import { realCompanyNames } from './source.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DATA = join(ROOT, 'data', 'generated', 'projects.json')
-/*
- * 감사 명단은 `data/generated/` **밖**에 있다 — 앱의 `@data/*` 별칭이
- * 그 폴더만 가리키므로 밖에 두면 앱이 부를 수 없다(#78). build-data.mjs 참고.
- */
+// 감사 명단은 data/generated/ 밖에 둔다 — 앱의 @data/* 별칭이 그 폴더만 가리켜 앱이 부를 수 없게
 const AUDIT = join(ROOT, 'data', 'audit.json')
 
-/*
- * 🔴 사명 목록은 source.mjs 가 만든다 — 정본을 못 찾으면 거기서 throw 한다.
- *    전에는 이 파일이 `if (!existsSync(dir)) return []` 로 넘어갔다. 그러면
- *    경로가 틀어졌을 때 **사명 검사만 조용히 사라지고 초록이 뜬다.**
- */
-
-/** 워크스페이스의 package.json 들을 이어 읽는다. 없으면 빈 문자열. */
 function readManifests() {
   const files = [
     join(ROOT, 'package.json'),
     join(ROOT, 'apps', 'web', 'package.json'),
     join(ROOT, 'apps', 'api', 'package.json'),
   ]
-  // 게이트 검증(verify-gates.py)이 실제 앱 파일 대신 탐침을 넘길 때 쓴다.
+  // verify-gates.py 가 실제 앱 파일 대신 탐침을 넘길 때 쓴다
   const probe = process.env.PDF_MANIFEST_EXTRA
   if (probe) files.push(probe)
   return files
@@ -63,41 +48,20 @@ function main() {
 
   const problems = []
 
-  /*
-   * 1~10. 텍스트 검사
-   *
-   * ⚠️ **게재분(detail·summary)만 훑는다.** `audit` 는 검사기 전용 메타데이터라
-   *    저장소에는 있어도 브라우저로 나가지 않는다(`lib/projects.ts` 가 안 읽는다).
-   *    파일 전체를 훑으면 감사 명단의 저장소명이 위반으로 잡혀, 정작 잡아야 할
-   *    "화면에 나간 것" 과 구별이 안 된다.
-   *    🔴 화면에 실제로 나가는지는 `verify-rendered.mjs` 가 서버 HTML 로 확인한다.
-   */
+  // 게재분(detail·summary)만 훑는다 — audit 는 검사기 전용이라 브라우저로 나가지 않는다. 실제 노출은 verify-rendered.mjs 가 본다
   const published = JSON.stringify({ detail: payload.detail, summary: payload.summary })
   for (const finding of scanText(published, realCompanyNames())) {
-    // 회사표기는 값을 출력하면 그 자체가 유출이므로 건수만 낸다.
+    // 회사표기는 값을 출력하면 그 자체가 유출이라 건수만 낸다
     const shown = finding.check === '회사표기' ? [`${finding.hits.length}건`] : finding.hits
     problems.push(`${finding.check}: ${shown.join(', ')}`)
   }
 
-  // 11. 층 규칙
   for (const v of checkTierRules(all)) {
     problems.push(`층규칙: ${v.id} 의 summary 층에 상세 필드 '${v.field}' 가 있다`)
   }
 
-  /*
-   * 12. 층 배정 — 명단을 직접 검사한다 (checkTierRules 로는 안 잡히는 형태)
-   *
-   * 🔴 **`audit` 를 본다.** 경력 요약 건은 `id` 가 저장소명이라 공개 항목에서
-   *    뺐는데(`tiers.mjs`), 그러자 이 검사가 `p.id` 를 못 읽어 게재 금지 건이
-   *    실려도 안 잡히게 됐다(실측: verify-gates 의 M6 이 '못 잡음' 이 됐다).
-   *    검사에 필요한 것과 화면에 나가는 것을 가른다.
-   */
-  /*
-   * 🔴 **없으면 빈 배열로 넘어가지 않는다.** 전에 `payload.audit ?? []` 였는데,
-   *    그 형태는 명단이 통째로 사라져도 아래 건수 비교에서만 걸린다. 파일이
-   *    아예 없는 것은 "생성이 안 돌았다" 는 뜻이므로 그 자리에서 멈춘다 —
-   *    `source.mjs` 가 정본을 못 찾을 때 throw 하는 것과 같은 이유다.
-   */
+  // 층 배정은 audit 로 본다 — 경력 요약은 공개 항목에 id 가 없다
+  // 명단이 없으면 빈 배열로 넘어가지 않고 멈춘다 — 생성이 안 돈 것이다
   if (!existsSync(AUDIT)) {
     process.stderr.write(`감사 명단이 없다: ${AUDIT}\n먼저 \`pnpm data\` 를 돌린다.\n`)
     process.exit(1)
@@ -110,22 +74,18 @@ function main() {
     problems.push(`층배정: ${v.id} — ${v.reason}`)
   }
 
-  // 13. 카드 본문 — 카드로 그려지는데 본문이 없는가 (#84)
   for (const v of checkCardBody(all)) {
     problems.push(`카드본문: ${v.id} — 카드로 그려지는데 cardBody 가 없다`)
   }
 
-  // 14. 게재 컷 — 2025.04 이전 건이 실렸는가
   for (const v of checkPeriodCutoff(all)) {
     problems.push(`게재컷: ${v.id} — ${v.reason}`)
   }
 
-  // 15. 소스에 PDF 생성 의존성이 들어왔는가 (CLAUDE.md 4번)
   for (const dep of checkNoPdfGeneration(readManifests())) {
     problems.push(`PDF생성의존성: ${dep} — 이력서 PDF 기능은 이 사이트에 구현하지 않는다`)
   }
 
-  // 14. 재현 명령 없는 metric
   for (const m of checkMetricEvidence(all)) {
     problems.push(`재현없는metric: ${m.id} / ${m.항목}`)
   }

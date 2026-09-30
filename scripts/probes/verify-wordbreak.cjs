@@ -1,11 +1,5 @@
-/**
- * 한국어 어절이 중간에서 줄바꿈되는가 — "프로젝트 / 가", "만 / 든 것" 같은 끊김을 센다.
- *
- * 글자마다 화면 사각형을 재서, 공백 없이 붙은 두 한글 글자 사이에서 줄이 바뀌면 한 건으로 센다.
- * 데스크톱과 모바일 폭 둘 다 본다.
- *
- * 돌리는 법:  node scripts/probes/verify-wordbreak.cjs
- */
+// 한국어 어절이 중간에서 줄바꿈되는가 — 붙은 두 한글 글자 사이에서 줄이 바뀌면 한 건. 데스크톱·모바일 폭 둘 다.
+// 돌리는 법: node scripts/probes/verify-wordbreak.cjs
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const PAGES = [
