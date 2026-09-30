@@ -91,3 +91,12 @@ test('snapshot 이 용도별로 답한다', () => {
   assert.equal(q.snapshot('contact').dailyCap, 20)
   assert.equal(q.snapshot('contact').dailyUsed, 1)
 })
+
+test('빈 값·숫자 아닌 값은 기본값을 쓴다 — 상한이 0 이 되어 전부 막히지 않는다', () => {
+  for (const v of ['', 'abc', '0', '-1', undefined]) {
+    const q = new QuotaService({ get: () => v })
+    assert.equal(q.check('1.1.1.1', 'contact').allowed, true, JSON.stringify(v))
+    assert.equal(q.check('1.1.1.1', 'diagnose').allowed, true, JSON.stringify(v))
+    assert.ok(q.snapshot('contact').dailyCap > 0, JSON.stringify(v))
+  }
+})

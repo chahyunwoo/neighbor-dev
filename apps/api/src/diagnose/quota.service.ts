@@ -13,6 +13,12 @@ export type QuotaDecision =
 
 const HOUR_MS = 60 * 60 * 1000
 
+// 빈 값(KEY=)·숫자 아님·0 이하는 기본값 — ?? 로 받으면 Number('') 가 0 이 되어 전부 막힌다
+export function positiveOr(value: unknown, fallback: number): number {
+  const n = Number(value)
+  return value == null || !Number.isFinite(n) || n <= 0 ? fallback : n
+}
+
 @Injectable()
 export class QuotaService {
   private readonly log = new Logger(QuotaService.name)
@@ -31,11 +37,11 @@ export class QuotaService {
 
   constructor(config: ConfigService) {
     // 월 $20 상한 ≈ 하루 약 33건. 환경변수가 없으면 상한을 넘지 않는 보수적 기본값
-    this.dailyCap = Number(config.get('AI_DAILY_TOTAL_CAP') ?? 30)
-    this.perIpHourly = Number(config.get('AI_RATE_LIMIT_PER_IP_HOUR') ?? 3)
+    this.dailyCap = positiveOr(config.get('AI_DAILY_TOTAL_CAP'), 30)
+    this.perIpHourly = positiveOr(config.get('AI_RATE_LIMIT_PER_IP_HOUR'), 3)
     // 문의는 모델을 안 부르므로 비용이 아니라 스팸 방어용 상한
-    this.contactDailyCap = Number(config.get('CONTACT_DAILY_CAP') ?? 50)
-    this.contactPerIpHourly = Number(config.get('CONTACT_RATE_LIMIT_PER_IP_HOUR') ?? 2)
+    this.contactDailyCap = positiveOr(config.get('CONTACT_DAILY_CAP'), 50)
+    this.contactPerIpHourly = positiveOr(config.get('CONTACT_RATE_LIMIT_PER_IP_HOUR'), 2)
     this.dailyResetAt = nextMidnightKst()
   }
 
