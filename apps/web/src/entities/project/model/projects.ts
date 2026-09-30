@@ -1,13 +1,4 @@
-/**
- * 공개 데이터 읽기 — 빌드 타임에 생성된 JSON 하나만 본다.
- *
- * 🔴 정본(portfolio-source)을 여기서 읽지 않는다. 그건 PRIVATE 이고,
- *    걸러내는 일은 `scripts/build-data.mjs` 가 빌드 타임에 이미 했다.
- *
- * 🔴 타입이 층 규칙을 한 번 더 강제한다 — `SummaryProject` 에는 상세 필드가
- *    아예 없으므로, 화면에서 `summary.problem` 을 쓰면 타입 에러가 난다.
- *    지난 세션의 사고(경력 요약 층에 문제·판단·수치를 실음)가 정확히 이 형태였다.
- */
+// 빌드 타임에 걸러진 공개 JSON 만 본다 — PRIVATE 정본을 여기서 읽지 않는다. SummaryProject 에 상세 필드가 없는 것이 타입 게이트다.
 
 import generated from '@data/projects.json' with { type: 'json' }
 
@@ -18,20 +9,11 @@ export interface BaseProject {
   period: string
   domain: string[]
   stack: string[]
-  /**
-   * 의뢰받아 만든 일인가. 직접 만든 것(개인 사이트·도구)과 가른다.
-   *
-   * 🔴 **`client` 값 자체는 여기 오지 않는다.** 익명 표기라도 여러 건을
-   *    나란히 놓으면 조합으로 좁혀진다 — `build-data.mjs` 의 `isCommissioned`
-   *    가 정본에서 불리언 하나만 뽑는다.
-   *
-   * 🔴 화면은 이 값으로 **비중**을 가른다(`/work`). 공개 수준(`tier`)과는
-   *    다른 축이다 — 개인 프로젝트도 `detail` 이라 상세는 다 있다.
-   */
+  /** 의뢰받은 일인가. client 값 자체는 싣지 않는다 — 익명이라도 조합하면 좁혀진다. */
   commissioned: boolean
 }
 
-/** 경력 요약 층. **상세 필드가 없다.** 이것이 타입 수준의 게이트다. */
+/** 경력 요약 층. 상세 필드가 없는 것이 타입 수준의 게이트다. */
 export interface SummaryProject extends BaseProject {
   tier: 'summary'
 }
@@ -46,7 +28,7 @@ export interface Decision {
 export interface Metric {
   항목: string
   값: string
-  /** 재현 명령. 없는 metric 은 빌드 단계에서 이미 걸러졌다(기획서 9절). */
+  /** 재현 명령. 없는 metric 은 빌드 단계에서 이미 걸러졌다. */
   재현: string
 }
 
@@ -63,13 +45,7 @@ export interface Brief {
 export interface DetailProject extends BaseProject {
   tier: 'detail'
   role?: string
-  /**
-   * 카드 본문 한 문장(#84) — **목록을 훑는 발주자가 읽는 자리**다.
-   *
-   * 🔴 `problem` 과 바꿔 쓰지 않는다. `problem` 은 상세 화면의
-   *    「무엇이 문제였나」로, 더 읽으러 들어온 사람이 읽는 사실 기록이다.
-   *    카드에서 그것을 잘라 쓰던 것이 #84 에서 고친 문제다.
-   */
+  /** 카드 본문 한 문장. 상세의 `problem` 과 바꿔 쓰지 않는다. */
   cardBody?: string
   brief?: Brief
   problem?: string
@@ -112,14 +88,7 @@ export function getCounts() {
   return payload.counts
 }
 
-export function getGeneratedAt(): string {
-  return payload.generatedAt
-}
-
-/**
- * 책장(기술 스택 화면)이 쓰는 집계.
- * 두 층 모두 스택은 실을 수 있으므로 전체를 센다.
- */
+/** 두 층 모두 스택은 실을 수 있으므로 전체를 센다. */
 export function getStackFrequency(): { name: string; count: number }[] {
   const counts = new Map<string, number>()
   for (const p of getAllProjects()) {
@@ -133,29 +102,13 @@ export function getStackFrequency(): { name: string; count: number }[] {
   return (
     [...counts.entries()]
       .map(([name, count]) => ({ name, count }))
-      // 🔴 한 번만 쓴 것은 싣지 않는다. 이 화면의 요지는 "무엇을 아는가" 가
-      //    아니라 **"무엇을 반복해서 썼는가"** 다. 1회짜리를 다 실으면
-      //    140종이 깔려 아무것도 안 읽힌다(실측 2026-09-09, 화면으로 확인).
+      // 한 번만 쓴 것은 싣지 않는다 — 요지는 "반복해서 쓴 것" 이고, 다 실으면 안 읽힌다.
       .filter((f) => f.count >= 2)
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
   )
 }
 
-/**
- * 한 프로젝트의 스택을 **화면에 쓸 기술명 목록**으로 줄인다.
- *
- * 🔴 화면은 정본의 `stack` 을 **그대로 쓰지 않는다.** 정본은 작업 노트라
- *    `PostgreSQL 16 (multi-schema)`, `Fastify 5 (@nestjs/platform-fastify)`
- *    처럼 **개발자용 내부 표기**를 담고 있다(212종 중 90종이 20자 초과 —
- *    2026-09-09 실측). 그게 카드 앞면에 깔리면 이 사이트를 보러 온
- *    발주자가 읽을 것이 사라진다(이슈 #2).
- *
- * `/stack` 화면은 이미 `normalizeStackName()` 으로 이 정리를 하고 있었는데
- * `/work`·`/career` 만 원시값을 쓰고 있었다 — 그래서 **같은 함수를 쓰게**
- * 묶는다. 화면마다 다른 규칙으로 줄이면 표기가 갈린다.
- *
- * @returns 중복을 뗀 기술명 목록. 기술명으로 볼 수 없는 서술은 빠진다.
- */
+/** 정본 stack 을 화면용 기술명 목록으로 줄인다. 화면마다 같은 규칙을 쓰도록 여기서 묶는다. */
 export function displayStack(stack: string[]): string[] {
   const out: string[] = []
   for (const raw of stack) {
@@ -165,19 +118,7 @@ export function displayStack(stack: string[]): string[] {
   return out
 }
 
-/**
- * 스택 이름을 기술명 하나로 줄인다.
- *
- * ⚠️ 정본의 `stack` 은 기술명이 아니라 **서술**을 담고 있다(실측 2026-09-09):
- *      "Next.js Route Handler — `/api/revalidate` (시크릿 검증 후 …)"
- *      "별도 저장소의 NestJS API 서버가 커밋한 스펙을 소비 (이 저장소에 서버 코드 없음)"
- *    그대로 태그로 쓰면 화면에 170종이 깔려 아무것도 안 읽힌다 — 실제로 그랬다.
- *
- * 그래서 (1) 괄호·수식어·버전을 떼고 (2) 그래도 문장인 것은 **버린다**.
- * 버리는 쪽을 택한 이유: 억지로 줄이면 없는 기술명을 만들어내게 된다.
- *
- * @returns 기술명, 또는 기술명으로 볼 수 없으면 null
- */
+// 정본 stack 은 서술이 섞여 있다. 괄호·수식어·버전을 떼고, 그래도 문장이면 버린다 — 없는 기술명을 만들지 않는다.
 function normalizeStackName(raw: string): string | null {
   const name = raw
     // 괄호 설명: "PostgreSQL 17 (btree_gist, …)" → "PostgreSQL 17"
@@ -199,10 +140,7 @@ function normalizeStackName(raw: string): string | null {
   return CANONICAL.get(canonicalKey(name)) ?? name
 }
 
-/**
- * CANONICAL 조회용 키. 공백·하이픈·점을 뗀 소문자.
- * ⚠️ 점을 빼먹으면 `Next.js …` 계열이 안 걸린다(실측: 키가 `next.jsroutehandler`).
- */
+// 점까지 떼야 `Next.js …` 계열이 걸린다.
 function canonicalKey(name: string): string {
   return name.toLowerCase().replace(/[\s.-]/g, '')
 }
@@ -220,27 +158,23 @@ const CANONICAL = new Map<string, string>([
   ['vitest', 'Vitest'],
   ['junit5', 'JUnit 5'],
   ['junit', 'JUnit'],
-  // 표기만 다른 같은 라이브러리 (실측: 화면에 나란히 떠서 발견).
+  // 표기만 다른 같은 라이브러리.
   ['reacthookform', 'React Hook Form'],
   // 프레임워크의 한 기능을 별도 종으로 세지 않는다.
   ['nextjsroutehandler', 'Next.js'],
   ['githubactionsci', 'GitHub Actions'],
-  // 같은 것을 한글/영문으로 나눠 적은 경우 (실측: 커머스 건에 둘 다 있었다).
+  // 같은 것을 한글/영문으로 나눠 적은 경우.
   ['바닐라javascript', 'Vanilla JavaScript'],
 ])
 
-/**
- * 기술명으로 볼 수 있는가.
- * 문장·서술을 걸러낸다 — 여기서 걸린 것은 화면에 나오지 않는다.
- */
+// 문장·서술을 걸러낸다 — 여기서 걸린 것은 화면에 나오지 않는다.
 function isTechName(name: string): boolean {
   if (name.length === 0) return false
   // 조사·서술어가 붙은 것은 문장이다: "…를 소비", "…으로 빌드", "…이 없음"
   if (/(를|을|의|에|으로|로)\s|소비$|빌드$|없음$|대상$|기반$|생성$|사용$/.test(name)) return false
   // 한글이 두 어절 이상이면 서술로 본다 (기술명은 대개 한 덩어리다).
   if (/^[가-힣\s]+$/.test(name) && name.split(/\s+/).length >= 2) return false
-  // ⚠️ 길이가 아니라 어절 수로 자른다. 길이로 자르면 `Vercel Serverless
-  //    Functions`(25자) 같은 멀쩡한 제품명이 버려진다(실측 위양성).
+  // 길이가 아니라 어절 수로 자른다 — 길이로 자르면 멀쩡한 제품명이 버려진다.
   if (name.split(/\s+/).length > 3) return false
   return true
 }

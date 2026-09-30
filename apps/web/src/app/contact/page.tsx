@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ContactForm } from '@/entities/contact'
+import { apiFetch } from '@/shared/api'
 import { COMPANY, pageMetadata } from '@/shared/lib'
 import styles from '@/shared/ui/styles/form-page.module.css'
 import { Nav } from '@/widgets/nav'
@@ -11,27 +12,22 @@ export const metadata: Metadata = pageMetadata({
   path: '/contact',
 })
 
-/** api 상태는 서버에서 본다. 브라우저에는 api 주소를 내보내지 않는다. */
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
-
-/** 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다. */
+// 매 요청마다 상태를 다시 본다 — 캡에 닿으면 화면이 바뀌어야 한다.
 export const dynamic = 'force-dynamic'
 
 async function fetchStatus(): Promise<{ available: boolean; dailyRemaining: number } | null> {
   try {
-    const res = await fetch(`${API_BASE}/contact/status`, { cache: 'no-store' })
+    const res = await apiFetch('/contact/status', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5000),
+    })
     return res.ok ? await res.json() : null
   } catch {
     return null
   }
 }
 
-/**
- * 현관문 — 문의.
- *
- * 🔴 폼이 안 뜨는 상태에서도 **무엇을 어떻게 하는지는 서버 렌더로 읽힌다.**
- *    JS 가 없거나 접수가 닫혔을 때 빈 화면이 되지 않게.
- */
+// 폼이 안 떠도 무엇을 하는지는 서버 렌더로 읽힌다.
 export default async function ContactPage() {
   const status = await fetchStatus()
   const usable = status?.available === true && (status?.dailyRemaining ?? 0) > 0
@@ -46,10 +42,7 @@ export default async function ContactPage() {
         lede="요구사항이 정리되지 않았어도 문의하실 수 있습니다. 범위 정의부터 함께 진행합니다."
       >
         <div className={styles.wrap}>
-          <p className={styles.prose}>
-            기획서가 없어도, 화면 시안 몇 장만으로도 상담할 수 있습니다. 진행 순서는 다음과
-            같습니다.
-          </p>
+          <p className={styles.prose}>진행 순서는 다음과 같습니다.</p>
           <ul className={styles.points}>
             <li className={styles.point}>
               <span className={styles.pointNo}>01</span>

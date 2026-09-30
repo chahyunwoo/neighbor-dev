@@ -1,12 +1,5 @@
-/**
- * 자가진단 파서 검증.
- *
- * 돌리는 법:  node --experimental-strip-types --test apps/web/src/lib/diagnose-parse.spec.mjs
- *
- * 🔴 여기서 확인하려는 것은 "형식에 맞으면 잡는다" 만이 아니다.
- *    **형식이 어긋났을 때 조용히 문단으로 떨어지는가** 가 같은 무게로 중요하다 —
- *    스트리밍 도중에는 줄이 반쯤 온 상태가 매번 정상이기 때문이다.
- */
+// 자가진단 파서 검증. 형식이 어긋난 줄이 조용히 문단으로 떨어지는지도 본다(스트리밍 중엔 반쯤 온 줄이 정상이다).
+// 돌리는 법: node --experimental-strip-types --test apps/web/src/entities/diagnose/lib/diagnose-parse.spec.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
@@ -38,7 +31,7 @@ test('전각 대괄호와 다른 불릿 기호도 받는다', () => {
 test('형식에 안 맞는 줄은 null 이다 — 버리지 않고 문단으로 떨어뜨리기 위해서다', () => {
   assert.equal(parseScopeLine('그냥 문단입니다'), null)
   assert.equal(parseScopeLine('- 대괄호 없는 목록'), null)
-  // 🔴 스트리밍 도중 반쯤 온 줄. 여기서 예외가 나면 화면이 통째로 죽는다.
+  // 스트리밍 도중 반쯤 온 줄 — 여기서 예외가 나면 화면이 통째로 죽는다.
   assert.equal(parseScopeLine('- [먼'), null)
   assert.equal(parseScopeLine('- [먼저]'), null, '내용이 비면 항목이 아니다')
   assert.equal(parseScopeLine(''), null)
@@ -59,7 +52,7 @@ test('없는 등급은 받지 않는다', () => {
 })
 
 test('기간을 범위로 읽는다 — 괄호 안에 "주" 가 붙은 형태도 받는다', () => {
-  // 실측 2026-09-09: 모델이 두 형태를 다 쓴다.
+  // 모델이 두 형태를 다 쓴다.
   assert.deepEqual(parsePeriod('8주 (6~10)').typical, 8)
   const a = parsePeriod('8주 (6~10)')
   assert.equal(a.min, 6)

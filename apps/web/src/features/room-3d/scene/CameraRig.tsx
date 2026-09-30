@@ -7,52 +7,13 @@ import * as THREE from 'three'
 import { frame, readFrame } from '@/features/room-3d/model/frame'
 import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
 
-/**
- * OrbitControls 인스턴스 타입.
- *
- * ⚠️ `three-stdlib` 에서 직접 가져오지 않는다 — drei 의 **의존성**이라
- *    이 워크스페이스에 직접 설치돼 있지 않다(실측: TS2307).
- *    drei 컴포넌트의 ref 타입을 그대로 뽑아 쓴다 — 그래야 `<OrbitControls ref>`
- *    에 그대로 넘길 수 있다(구조만 흉내 낸 인터페이스는 거부당한다, 실측 TS2322).
- */
+// three-stdlib 는 직접 설치돼 있지 않다 — drei ref 타입을 뽑아 써야 <OrbitControls ref> 에 넘길 수 있다.
 export type OrbitControlsLike = NonNullable<React.ComponentRef<typeof DreiOrbitControls>>
 
-/**
- * 물건을 열면 카메라가 그리로 날아간다 (시안 `flyTo` · `focusOn`).
- *
- * 🔴 이전 구현에는 **카메라 이동이 아예 없었다.** 마커를 눌러도 시점이 그대로라
- *    "방을 돌아다닌다" 가 성립하지 않았다 — 패널만 딱딱 바뀌었다(사용자 지적).
- *    실측으로도 확인했다: 클릭 전후 마커 화면좌표가 전부 정확히 같은 값만큼만
- *    움직였는데, 그건 카메라가 아니라 **캔버스 폭이 줄어서** 생긴 이동이었다.
- *
- * 시안이 쓴 방법 그대로다:
- *   - 대상이 화면 세로의 약 45%(`FILL`)를 차지하도록 **거리를 역산**한다
- *   - 그 사이를 `easeInOutCubic` 으로 잇는다 — 선형이면 기계처럼 보인다
- *   - **사용자가 드래그하면 비행을 포기한다.** 카메라가 고집부리면
- *     "내가 조종하는 방" 이 아니게 된다
- *
- * ⚠️ 값(FILL·DUR·거리 하한)은 시안 실측이다. 눈대중으로 바꾸지 않는다(CLAUDE.md).
- */
-
-/**
- * 대상이 화면 세로에서 차지할 비율. 시안 실측.
- *
- * ⚠️ 이 값만으로 거리를 정하면 **너무 가까이 붙는다.** 실측 2026-09-09:
- *    현관문을 열었더니 거리 3.0 이 나와 문이 화면을 꽉 채우고 방이 안 보였다
- *    (처음 구도의 거리는 9.5 다). 아래 `CAMERA_LIMITS_FOCUS` 로 하한을 걸고,
- *    비율도 0.45 → 0.30 으로 낮췄다.
- *
- *    🔴 **방 맥락이 남아야 한다.** 대상만 화면을 채우면 "물건에 다가갔다" 가
- *       아니라 "다른 화면으로 넘어갔다" 로 읽힌다 — 그러면 패널로 안 떠나고
- *       3D 를 유지한 이유가 사라진다. 대상이 눈에 띄되 방이 보이는 선을 잡았다.
- */
+// 대상이 화면 세로의 FILL 만큼 차지하도록 거리를 역산하고 easeInOutCubic 으로 날아간다. 드래그하면 비행을 포기한다.
+// FILL 을 키우면 대상만 화면을 채워 방 맥락이 사라진다. 값은 실측이라 눈대중으로 바꾸지 않는다.
 const FILL = 0.2
-/**
- * 연출이 도는 동안만 쓰는 "제약 없음".
- *
- * 🔴 OrbitControls 는 `update()` 마다 카메라를 제약 안으로 되돌린다. 우리가
- *    좌표를 직접 넣는 연출 구간에서는 그 보정이 **연출을 덮어쓴다.**
- */
+/** 연출 구간 전용 "제약 없음" — update() 가 직접 넣은 좌표를 제약 안으로 되돌려 연출을 덮어쓴다. */
 export const FREE_LIMITS = {
   minDistance: 0.1,
   maxDistance: 1000,
@@ -62,35 +23,11 @@ export const FREE_LIMITS = {
   maxAzimuthAngle: Number.POSITIVE_INFINITY,
 } as const
 
-/**
- * **비행 동안** 거는 제약 — `CAMERA_LIMITS` 와 `CAMERA_LIMITS_FOCUS` 의 합집합.
- *
- * 🔴 출발(개요, 거리 9.36)과 도착(초점, 6.5 이하)이 **서로 다른 제약** 아래
- *    있다. 어느 한쪽을 비행 내내 걸면 반대 방향이 잘린다:
- *    - 도착 것(FOCUS 상한 6.5)을 시작에 걸면 **들어가는** 비행이 첫 프레임에
- *      30.6% 당겨진다(202px 점프)
- *    - 출발 것(ROOM 상한 12)을 끝까지 두면 **나오는** 비행이 6.5 에서 잘려
- *      **영영 안 돌아온다**(205px)
- *    둘 다 실제로 났다. 합집합이면 경로 전체가 안에 들어간다.
- *
- * ⚠️ 제약을 아예 푸는 것(`FREE_LIMITS`)과 다르다 — 그러면 사용자가 그 창에
- *    드래그해 방을 뚫을 수 있다.
- *
- * ⚠️ **엄밀히는 "합집합" 이 아니라 축별 min/max 를 취한 "외접 상자" 다.**
- *    그래서 **두 범위 어디에도 없는 조합**이 나올 수 있다 — 실측 2026-09-17:
- *    `방위각 79.2° + 거리 8.94`(FOCUS 는 거리 6.5 까지, ROOM 은 방위각
- *    97.2°부터). 화면으로는 "개요 구도인데 설계 한계보다 ~18° 더 돌아가
- *    벽이 앞쪽에 들어온다" 정도이고, **벽·바닥·천장을 뚫지는 않는다**
- *    (사방 끝까지 끌어 20장으로 확인). 아트디렉션 밖일 뿐이다.
- *    더 좁히려면 상자가 아니라 **진짜 합집합**(두 범위 중 하나에 속하는지
- *    매 프레임 판정)이 필요한데, OrbitControls 의 제약은 축별 값만 받는다.
- *
- * 🔴 **입장 비행에는 이것을 걸지 마라.** 합집합이 입장 경로를 **못 담는다** —
- *    시작 방위각이 **237.3°** 인데 합집합 상한이 194.4° 다(거리·극각은 들어간다).
- *    걸면 첫 프레임에 방위각이 꺾인다. 입장 동안의 제약은 `Scene` 이
- *    `{...(entered ? CAMERA_LIMITS : FREE_LIMITS)}` 로 **`FREE_LIMITS`** 를
- *    건다 — 그래서 `FREE_LIMITS` 는 죽은 코드가 아니다.
- *    여기서 말하는 "비행" 은 **초점 비행**(물건 사이 이동)뿐이다.
+/*
+ * 초점 비행 동안 거는 제약 — CAMERA_LIMITS 와 CAMERA_LIMITS_FOCUS 의 축별 외접 상자.
+ * 한쪽만 걸면 들어가는 비행은 첫 프레임에 당겨지고 나오는 비행은 6.5 에서 잘려 안 돌아온다.
+ * FREE_LIMITS 와 다르다 — 그건 드래그로 방을 뚫게 한다. 외접 상자라 두 범위 밖 조합이 나올 수 있지만 벽은 안 뚫는다.
+ * 입장 비행에는 걸지 않는다 — 시작 방위각이 상자 밖이라 첫 프레임에 꺾인다(입장은 Scene 이 FREE_LIMITS 를 건다).
  */
 const FLIGHT_LIMITS = {
   minDistance: Math.min(CAMERA_LIMITS.minDistance, CAMERA_LIMITS_FOCUS.minDistance),
@@ -101,7 +38,7 @@ const FLIGHT_LIMITS = {
   maxAzimuthAngle: Math.max(CAMERA_LIMITS.maxAzimuthAngle, CAMERA_LIMITS_FOCUS.maxAzimuthAngle),
 } as const
 
-/** 물건 사이를 옮길 때의 비행 시간(ms). 시안 DUR. */
+/** 물건 사이 비행 시간(ms). */
 const DUR = 900
 
 export interface FocusTarget {
@@ -109,89 +46,21 @@ export interface FocusTarget {
   radius: number
 }
 
-/**
- * 입장 연출 — 현관문 안쪽에서 방으로 걸어 들어온다 (시안 `introFly`).
- *
- * 🔴 이 연출이 **통째로 빠져 있었다.** 방이 그냥 딱 떠 있었다 —
- *    "들어와서 둘러보세요" 라고 써 놓고 정작 들어오는 순간이 없었다.
- *
- * 🔴 **문틀 바로 안쪽에서 시작한다.** 실제 값은 아래 `INTRO` 가 정본이다 —
- *    이 머리 주석에는 숫자를 적지 않는다. 한때 여기에 "문 밖 (-4.70, 1.35,
- *    -1.60) · 3.2초" 라고 적혀 있었는데 상수는 이미 문 안쪽 (-2.35, 1.35,
- *    -1.15) · 4.2초 였다. CLAUDE.md 가 "값을 바꾸기 전에 주석을 읽는다" 를
- *    규칙으로 걸어 둔 만큼, 어긋난 주석은 그 규칙을 정확히 해롭게 만든다.
- *    문 밖에서 시작하지 않는 이유는 `INTRO.from` 주석에 있다.
- *
- * ⚠️ 높이를 낮게(1.35) 잡는 것이 핵심이다. 처음에 1.55 로 뒀더니 **왼쪽 벽
- *    (높이 3.0, x=-3.1)을 넘겨다봐서** 문 밖인데도 방이 통째로 보였다 —
- *    "들어왔다" 가 안 보이고 그냥 줌아웃처럼 읽혔다(실측 스크린샷).
- *    문(높이 2.1, z=-2.12~-1.08) 중앙을 통과하는 눈높이라야 문틀이 프레임이
- *    되어 "밖에서 안을 들여다본다" 가 성립한다.
- *
- * ⚠️ 문이 **먼저** 열리고 그다음 들어간다. 닫히는 것은 다 들어온 뒤다 —
- *    닫힌 문을 통과하면 벽을 뚫는 것처럼 보인다.
- *
- * ⚠️ `prefers-reduced-motion` 이면 생략한다. 움직임을 원치 않는 사람에게
- *    3초짜리 카메라 비행은 그 자체가 장벽이다.
- */
+// 입장 연출 — 문틀 바로 안쪽에서 방으로 걸어 들어온다. 숫자는 INTRO 가 정본이다.
+// 눈높이 1.35 가 핵심이다 — 높이면 왼쪽 벽을 넘겨다봐 "들어왔다" 가 줌아웃처럼 읽힌다.
+// 문이 먼저 열리고 다 들어온 뒤 닫힌다 — 닫힌 문을 통과하면 벽을 뚫는 것처럼 보인다.
 export const INTRO = {
-  /**
-   * 시작 위치 — **문틀 바로 안쪽, 사람 눈높이.**
-   *
-   * 🔴 문 **밖**(x -4.7)에서 시작하지 않는다. 그렇게 했더니 카메라가 문에서
-   *    1.88 밖에 안 떨어져 문이 잘렸고, 거리를 벌리면 벽 밖으로 나가 화면이
-   *    통째로 검어졌다(실측 2026-09-16: 거리 3.6 에서 문틀조차 안 보임).
-   *    화각을 58° 로 넓혀 우겨넣어 봤지만 **그 광각 자체가 어색했다**
-   *    (사용자 지적: "시야각이 이상하게 나오잖음").
-   *
-   *    → 필요한 것은 "문 밖에서 걸어온다" 가 아니라 **"문 열고 들어선다"** 다.
-   *      문틀을 막 지난 자리에서 시작하면 그 느낌이 나면서 화각도 정상이다.
-   *
-   * ⚠️ 너무 안쪽(시안의 x -1.30)은 안 된다 — 이미 방 한가운데라 "들어왔다" 가
-   *    아니라 그냥 뒤로 줄어드는 것처럼 보인다(예전 사용자 지적).
-   *    현관문이 x -2.89 이므로 그 바로 안쪽을 쓴다.
-   */
+  /** 문 밖에서 시작하면 문이 잘리거나 벽 밖이 검게 나온다. 너무 안쪽이면 뒤로 줄어드는 것처럼 보인다. */
   from: [-2.35, 1.35, -1.15] as [number, number, number],
   lookAt: [-0.4, 1.15, 0.1] as [number, number, number],
-  /**
-   * 입장에 쓰는 시간(ms).
-   *
-   * ⚠️ 3200 이었는데 **"확 들어온다"** 는 말을 들었다. 이동 거리가 줄어든 만큼
-   *    (문 밖 → 문 안쪽) 같은 시간이면 더 느려지지만, 그것만으로는 모자랐다.
-   */
   ms: 4200,
-  /*
-   * ⚠️ `doorOpenAt` 은 없앴다. 참조가 0 이었다 — 문은 `onIntroDoor(true)` 로
-   *    **effect 에서 즉시** 연다(비행이 시작되기 전에 열려 있어야 한다).
-   *    값이 0 이라 "우연히 맞는" 상태였고, 고쳐도 아무 일도 안 일어났다.
-   */
-  /** 문이 닫히는 시각(ms). 다 들어온 뒤다. */
+  /** 문이 닫히는 시각(ms). 문 열기는 비행 전에 effect 에서 즉시 한다. */
   doorCloseAt: 2600,
 } as const
 
-/**
- * 이 세션에서 입장 연출을 이미 봤는가.
- *
- * ⚠️ 모듈 스코프에 둔다 — 컴포넌트가 라우트마다 다시 마운트되므로 `useRef`
- *    로는 기억하지 못한다. 새로고침하면 초기화되는 것이 맞다(그때는 방에
- *    처음 들어오는 것이다).
- */
 const SEEN_KEY = 'room:intro-seen'
 
-/**
- * 이 탭에서 입장 연출을 이미 봤는가.
- *
- * 🔴 **`sessionStorage` 에 둔다.** 모듈 스코프 `Set` 으로 뒀더니 **복귀에도
- *    3.2초짜리 연출이 그대로 재생됐다** — 실측 2026-09-09: 첫 진입 2748ms,
- *    복귀 2713ms 로 거의 같았다. 라우트를 풀 페이지로 이동하면 모듈이 새로
- *    평가되어 그 `Set` 이 비기 때문이다.
- *
- *    방을 나갔다 오는 사람에게 매번 "걸어 들어오기" 를 보이는 것은 연출이
- *    아니라 대기다. 탭을 새로 열면 초기화되는 것이 맞다(그때는 처음 오는 것이다).
- *
- * ⚠️ `sessionStorage` 는 접근 자체가 던질 수 있다(사생활 보호 모드 등).
- *    막히면 "처음 온 것" 으로 보고 연출을 보인다 — 안전한 쪽이다.
- */
+// sessionStorage 에 둔다 — 모듈 스코프는 풀 페이지 이동에 비어 복귀에도 연출이 재생된다. 접근이 던지면 처음 온 것으로 본다.
 function hasSeenIntro(): boolean {
   try {
     return sessionStorage.getItem(SEEN_KEY) === '1'
@@ -204,51 +73,29 @@ function markIntroSeen(): void {
   try {
     sessionStorage.setItem(SEEN_KEY, '1')
   } catch {
-    // 저장이 막히면 다음에도 연출을 본다. 기능이 깨지지는 않는다.
+    // 저장이 막히면 다음에도 연출을 본다.
   }
 }
 
-/** 시안 easeInOutCubic. */
 function ease(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 }
 
-/**
- * 왼쪽 UI(카피·번호 목록)가 차지하는 폭. 시안 `UIW`.
- * 이 폭만큼 3D 의 실제 가용 영역이 줄어든다.
- */
+/** 왼쪽 UI(카피·번호 목록)가 덮는 폭. */
 const UI_WIDTH = 520
-/** 열렸을 때 오른쪽 패널이 먹는 폭. `RoomPanel` 과 같아야 한다. */
+/** 열렸을 때 오른쪽 패널 폭. RoomPanel 과 같아야 한다. */
 export const PANEL_WIDTH = 480
 
-/**
- * 페이지에서 **캔버스 왼쪽이 마스크로 지워지는 비율.**
- *
- * 🔴 `tokens.css` 의 `html[data-canvas-mode="object"] .canvas-shell` 이 거는
- *    `mask-image: linear-gradient(90deg, transparent 0%, #000 42%, …)` 과
- *    **같은 값이어야 한다.** 어긋나면 3D 가 지워진 영역 뒤로 들어간다.
- *
- * 🔴 **본문 폭(980px)을 쓰면 안 된다.** 그렇게 계산하다 하위 화면의 3D 가
- *    통째로 프레임 밖으로 밀려났다 — 실측 2026-09-16(`/work`, 프로드 빌드):
- *    캔버스 340x900 인데 보정량이 **490px**(캔버스 폭의 1.44배)이라
- *    최대 휘도가 20 이었다(홈은 255). 사실상 검은 화면이다.
- *
- *    원인은 단위가 섞인 것이다. 홈에서는 캔버스가 뷰포트를 다 쓰므로
- *    "왼쪽 UI 520px" 이 곧 "캔버스를 덮는 520px" 이다. 그런데 하위 화면은
- *    `--cv-left` 로 캔버스 자체가 오른쪽 띠에 들어가 있어 **본문이 캔버스를
- *    아예 안 덮는다.** 덮는 것은 마스크뿐이다.
- */
+// 페이지에서 캔버스 왼쪽이 마스크로 지워지는 비율. tokens.css object 모드의 mask-image 42% 와 같아야 한다.
+// 본문 폭을 쓰면 안 된다 — 하위 화면에서는 본문이 캔버스를 안 덮고 마스크만 덮는다.
 const PAGE_MASK_LEFT = 0.42
 
-/** 패널이 캔버스 오른쪽을 덮는 폭. 캔버스는 줄이지 않는다 — 줄이면 매 프레임 드로잉 버퍼·렌더 타깃을 다시 만든다. */
+/** 패널이 캔버스 오른쪽을 덮는 폭. 캔버스는 줄이지 않는다 — 줄이면 매 프레임 버퍼를 다시 만든다. */
 function panelCover(mode: 'room' | 'page', open: boolean): number {
   return mode === 'room' && open ? PANEL_WIDTH : 0
 }
 
-/**
- * 보이는 영역(`frame`)을 한 화면으로 삼은 투영을 뷰포트 크기 캔버스에 그린다. `shift` 만큼 오른쪽으로 민다.
- * 영역이 캔버스 전체면 `setViewOffset(vw, vh, -shift, 0, vw, vh)` 와 같다.
- */
+/** 보이는 영역(frame)을 한 화면으로 삼은 투영을 뷰포트 크기 캔버스에 그리고 shift 만큼 오른쪽으로 민다. */
 function applyView(persp: THREE.PerspectiveCamera, vw: number, vh: number, shift: number) {
   const { x, y, w, h } = frame
   if (!w || !h) return
@@ -257,19 +104,7 @@ function applyView(persp: THREE.PerspectiveCamera, vw: number, vh: number, shift
   persp.updateProjectionMatrix()
 }
 
-/**
- * 페이지에서 물건에 다가가는 거리의 하한.
- *
- * 🔴 홈(4.8)보다 멀다. 배경이라 물건만 크게 보이면 "작업실 안" 이 사라지고
- *    그냥 큰 3D 오브젝트가 된다.
- *
- * ⚠️ **`CAMERA_LIMITS_FOCUS.maxDistance` 를 넘길 수 없다.** 거리는
- *    `min(maxDistance, max(floor, raw))` 로 잡히므로, 하한이 상한보다 크면
- *    **그 식이 늘 상한 하나를 뱉는 죽은 설정**이 된다 — 한때 7.4 였는데
- *    상한이 6.5 라, raw 가 무엇이든 결과가 6.5 였다. 고쳐도 아무 일도
- *    안 일어나는 자리였다(CLAUDE.md 의 `max(base, 설정)` 함정 그대로).
- *    더 멀리 세우려면 **상한부터** 올려야 한다.
- */
+// 페이지는 배경이라 홈보다 멀리 선다. CAMERA_LIMITS_FOCUS.maxDistance 를 넘기면 min/max 식이 늘 상한만 뱉는다 — 더 멀리는 상한부터 올린다.
 const PAGE_MIN_DISTANCE = CAMERA_LIMITS_FOCUS.maxDistance
 
 export function CameraRig({
@@ -281,41 +116,16 @@ export function CameraRig({
   skipIntro = false,
   mode = 'room',
 }: {
-  /** 열린 물건의 초점. `null` 이면 처음 구도로 돌아간다. */
+  /** null 이면 처음 구도로 돌아간다. */
   focus: FocusTarget | null
   controls: React.RefObject<OrbitControlsLike | null>
-  /** 입장 연출 중 문을 여닫는다. */
   onIntroDoor: (open: boolean) => void
-  /** 입장이 끝났다 — 부모가 UI 를 올린다. */
   onEntered: () => void
-  /**
-   * 입장 비행이 **지금 시작한다** — 부모가 OrbitControls 제약을 풀어야 한다.
-   *
-   * 🔴 없으면 **깊은 링크로 들어온 사람에게 입장이 깨진다.** `Scene` 의
-   *    `entered` 는 `useState(mode === 'page')` 라, 첫 화면이 `/work` 였다면
-   *    이미 `true` 다. 그 상태로 홈에 오면 제약이 걸린 채 비행이 시작돼
-   *    카메라가 끌려간다(같은 파일 `FREE_LIMITS` 주석의 그 증상).
-   */
+  /** 부모가 제약을 풀어야 한다 — 깊은 링크로 온 사람은 entered 가 이미 true 라 제약에 끌려간다. */
   onIntroStart: () => void
-  /**
-   * 입장 연출을 건너뛴다.
-   *
-   * 🔴 페이지에서 쓴다. 거기서는 방이 **배경**이고 이미 그 물건 앞에 와 있는
-   *    상태여야 한다 — 문 밖에서 3.2초 걸어 들어오면 본문을 읽으러 온 사람을
-   *    기다리게 한다.
-   */
+  /** 페이지 배경용 — 방이 이미 그 물건 앞에 와 있어야 한다. */
   skipIntro?: boolean
-  /**
-   * 이 방을 어떻게 쓰는가. 구도가 다르다.
-   *
-   * - `room` — 홈. 패널이 열리면 오른쪽 480px 이 가려지므로 그만큼 보정한다.
-   * - `page` — 본문 배경. **패널이 없고** 왼쪽 본문이 더 넓다. 그리고 물건에
-   *   바짝 붙으면 안 된다 — 배경이라 방이 보여야 "작업실 안" 이 유지된다.
-   *
-   * 🔴 실측 2026-09-16: 홈 값을 그대로 썼더니 물건이 화면을 꽉 채우고 방이
-   *    사라졌다가, viewOffset 이 패널 폭만큼 밀려 **3D 가 오른쪽 구석으로
-   *    빠져나갔다**(스크린샷으로 확인).
-   */
+  /** page 는 패널이 없고 물건에 바짝 붙지 않는다. */
   mode?: 'room' | 'page'
 }) {
   const { camera, size } = useThree()
@@ -326,68 +136,27 @@ export function CameraRig({
     t1: THREE.Vector3
     start: number
     ms: number
-    /**
-     * 입장 연출인가(문 여닫기·`onEntered` 가 달려 있다).
-     * ⚠️ 이전에는 `f.ms === INTRO.ms` 로 판별했는데, 다른 비행이 우연히 같은
-     *    길이가 되면 조용히 어긋난다. 종류를 값으로 들고 있는다.
-     */
+    /** 입장 연출인가. ms 로 판별하면 길이가 우연히 같을 때 어긋난다. */
     intro: boolean
   } | null>(null)
-  /** 입장 연출을 시작했는가. 두 번 하지 않는다. */
+  /** 두 번 하지 않는다. */
   const started = useRef(false)
-  /**
-   * 입장 비행이 **끝났는가**.
-   *
-   * 🔴 "시작했다" 와 "끝났다" 를 갈라야 한다. 하나로 두면 입장 도중
-   *    리렌더(문이 열리며 상태가 바뀐다)가 일어날 때 초점 effect 가
-   *    "이미 입장했다" 로 읽고 카메라를 홈으로 덮어써서 **연출이 통째로
-   *    사라진다** — 실측 2026-09-09: 250ms 시점에 이미 최종 구도였다.
-   */
+  /** started 와 갈라야 한다 — 하나로 두면 입장 중 리렌더에 초점 effect 가 카메라를 덮어써 연출이 사라진다. */
   const landed = useRef(false)
-  /** 입장 중 문을 이미 닫았는가. `useFrame` 이 매 프레임 돌므로 한 번만 부른다. */
+  /** useFrame 이 매 프레임 돌므로 한 번만 부른다. */
   const doorClosed = useRef(false)
-  /**
-   * 비행이 끝나면 걸 제약. **비행 중에는 안 건다** — 위 `limitsAfterFly` 주석 참고.
-   * `null` 이면 걸 것이 없다(사용자가 비행을 중단시킨 경우).
-   */
+  /** 비행이 끝나면 걸 제약. null 이면 걸 것이 없다(사용자가 비행을 중단). */
   const limitsAfterFly = useRef<Record<string, number> | null>(null)
-  /**
-   * 마지막으로 **비행을 시작시킨** 목표. `focusKey`(값) 와 `mode` 다.
-   *
-   * 🔴 왜 값인가: `focus` 는 부모(`Scene`)가 **매 렌더 새 객체**로 만든다.
-   *    참조를 deps 에 두면 리렌더마다 effect 가 돌아 비행이 처음부터 다시
-   *    시작된다 — 이슈 #88 의 절반이 이것이었다.
-   */
+  /** 비행을 시작시킨 목표를 값으로 든다 — focus 는 매 렌더 새 객체라 참조로 보면 비행이 계속 재시작된다. */
   const lastTarget = useRef<string | null>(null)
 
-  // 🔴 입장 — 처음 한 번, 현관문 안쪽에서 걸어 들어온다.
   useEffect(() => {
     const ctl = controls.current
     if (!ctl) return
 
-    /*
-     * 🔴 **`started` 가드보다 먼저 본다.**
-     *
-     *    전에는 `if (!ctl || started.current) return` 이 위에 있어서, **입장
-     *    연출이 도는 중에 다른 화면으로 나가면 이 분기에 못 들어왔다.**
-     *    그러면 카메라도 안 세우고 `landed` 도 false 로 남는데, 초점 effect 가
-     *    `if (!ctl || !landed.current) return` 으로 막혀 있다 —
-     *    **입장 비행이 4.2초를 끝까지 다 돌고 나서야** 그 화면의 구도가 잡혔다.
-     *
-     *    실측 2026-09-17 (홈 진입 후 N ms 에 `/work` 클릭):
-     *      이탈 600ms  → 도착 745ms  · 목표 구도 4847ms  (그 사이 4101ms)
-     *      이탈 1200ms → 도착 1311ms · 목표 구도 4838ms  (그 사이 3527ms)
-     *      이탈 2600ms → 도착 2680ms · 목표 구도 4852ms  (그 사이 2171ms)
-     *    그동안 화면에는 책상 램프 클로즈업이나 방 전체 개요가 오른쪽 띠에
-     *    밀려 있다가 4400~4850ms 에 **한 번에 휙 돈다.**
-     *    입장 4.2초 안에 나가는 것은 흔한 동작이다.
-     */
+    // started 가드보다 먼저 본다 — 입장 중 다른 화면으로 나가면 입장 비행이 끝날 때까지 그 화면 구도가 안 잡힌다.
     if (skipIntro) {
-      /*
-       * 🔴 **돌던 입장 비행을 접는다.** 방을 떠났는데 카메라가 계속 걸어
-       *    들어오고 있으면 그 화면의 초점 비행과 싸운다. 문도 닫는다 —
-       *    비행이 중간에 끊기면 `doorCloseAt` 진행도에 영영 못 닿는다.
-       */
+      // 돌던 입장 비행을 접고 문도 닫는다 — 끊긴 비행은 doorCloseAt 에 영영 못 닿는다.
       if (fly.current?.intro) {
         fly.current = null
         if (!doorClosed.current) {
@@ -395,23 +164,7 @@ export function CameraRig({
           onIntroDoor(false)
         }
       }
-      /*
-       * 🔴 **카메라를 처음 구도에 세운다.**
-       *
-       *    `Scene` 의 `<PerspectiveCamera makeDefault fov={...} />` 에는
-       *    `position` 이 없다 — 자리를 잡는 것은 이 effect 다. 홈을 거쳐 온
-       *    사람은 입장 비행이 이미 세워 놨지만, **주소로 바로 들어온 사람은
-       *    카메라가 기본 위치(원점 근처)에 있다.** 그 상태로 초점 비행이
-       *    `dir = camera.position - target` 을 잡으면 방향이 엉뚱해져 같은
-       *    주소인데 다른 화면이 나온다.
-       *
-       *    실측 2026-09-16(캔버스 평균 휘도): 홈경유 26.5 / 직접 5.7(`/work`),
-       *    29.9 / 4.4(`/stack`). 검색·공유 링크가 곧 수주 경로인 사이트라
-       *    **직접 진입이 오히려 기본 경로**다.
-       *
-       * ⚠️ 입장 도중 나온 것이라면 카메라가 이미 방 안 어딘가에 있다. 그때도
-       *    처음 구도로 세워야 초점 비행의 방향이 화면마다 같아진다.
-       */
+      // 카메라를 처음 구도에 세운다 — 주소로 바로 들어오면 카메라가 원점 근처라 초점 비행 방향이 엉뚱해진다.
       camera.position.set(...CAMERA_POSITION)
       ctl.target.set(...ROOM_CENTER)
       ctl.update()
@@ -422,15 +175,7 @@ export function CameraRig({
 
     if (started.current) return
 
-    /*
-     * 접근성: 모션을 줄이려는 사람에게는 생략한다(시안과 같다).
-     *
-     * ⚠️ **이 가지는 사실상 도달하지 않는다** — `shared/lib/can-3d.ts` 의
-     *    `REDUCED_QUERY` 때문에 reduced-motion 이면 **3D 자체가 안 뜨고**
-     *    (`CanvasShell` 이 마운트되지 않는다) 목록 폴백으로 간다.
-     *    지우지 않고 두는 것은 그 판정이 바뀌면 곧바로 필요해지기 때문이다.
-     *    "설정했는데 안 쓰인다" 로 오해하지 말 것.
-     */
+    // 사실상 도달하지 않는다(reduced-motion 이면 can-3d 가 3D 자체를 안 띄운다). 그 판정이 바뀌면 필요해지므로 둔다.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       started.current = true
       landed.current = true
@@ -438,38 +183,15 @@ export function CameraRig({
       return
     }
 
-    /*
-     * 🔴 **페이지 배경으로 쓸 때 `started` 를 세우지 않는다** (위 분기).
-     *
-     *    캔버스가 라우트를 넘어 살아 있으므로 이 컴포넌트는 **세션당 한 번만**
-     *    마운트된다. 검색으로 `/work` 에 바로 들어온 사람은 첫 마운트가
-     *    `mode='page'` 라 위에서 나가는데, 예전에는 그 자리에서
-     *    `started.current = true` 로 굳어 **그 뒤 홈에 와도 early-return** 했다.
-     *    문이 열리고 걸어 들어오는 연출을 그 방문자는 영영 못 봤다.
-     */
+    // 페이지 모드 분기에서 started 를 세우지 않는다 — 세우면 직접 진입한 방문자가 홈에 와도 입장을 못 본다.
     started.current = true
 
-    /*
-     * ⚠️ 위 경로를 지나 왔다면 `landed` 가 이미 true 다. 그대로 두면 초점
-     *    effect 가 "이미 입장했다" 로 읽고 비행 중에 카메라를 덮어쓴다
-     *    (`landed` 선언부 주석의 그 사고). 비행 상태를 처음부터 다시 잡는다.
-     */
+    // 위 경로를 지났다면 landed 가 true 라 초점 effect 가 비행을 덮어쓴다 — 처음부터 다시 잡는다.
     landed.current = false
     doorClosed.current = false
     onIntroStart()
 
-    /*
-     * 🔴 **전체 연출은 세션당 한 번이다.**
-     *
-     *    캔버스가 라우트를 넘어 살아남게 되면서, 홈을 나갔다 돌아오면
-     *    tunnel 의 In 이 다시 마운트되어 **입장 연출이 통째로 재생된다**
-     *    (실측 2026-09-09: 복귀 후 마커가 x=81 → 949 로 2.8초 걸쳐 이동하고
-     *    카피는 3.6초 뒤에야 떴다). 방을 나갔다 오는 사람에게 3.2초짜리
-     *    "걸어 들어오기" 를 매번 다시 보이는 것은 연출이 아니라 대기다.
-     *
-     *    → 처음 한 번만 문 밖에서 걸어 들어오고, 그다음부터는 짧게 자리를
-     *      잡는다. "돌아왔다" 는 보이되 기다리지는 않는다.
-     */
+    // 전체 연출은 탭당 한 번 — 복귀 때는 짧게 자리만 잡는다.
     const first = !hasSeenIntro()
     markIntroSeen()
     const introMs = first ? INTRO.ms : INTRO.ms * 0.28
@@ -480,44 +202,8 @@ export function CameraRig({
     ctl.target.copy(look)
     ctl.update()
 
-    /*
-     * 🔴 **입장 동안 OrbitControls 제약을 푼다.**
-     *
-     *    `CAMERA_LIMITS` 는 `minDistance 4.6` 과 방위각 범위
-     *    (`PI*0.54 ~ PI*0.98`)를 건다. 그런데 입장 시작 위치는 타깃에서
-     *    **3.96** 밖에 안 떨어져 있고 방위각도 그 범위 밖이다 —
-     *    `ctl.update()` 가 매 프레임 카메라를 제약 안으로 끌어당겨
-     *    **문 밖에서 시작하지도 못했다.**
-     *
-     *    실측 2026-09-16: 시작 위치가 `[-4.7, 1.35, -1.6]` 이어야 하는데
-     *    실제로는 `[3.53, 1.73, -0.77]`(이미 방 안)이었고, 비행 중간
-     *    (진행 0.45)에 제약 경계를 넘으면서 **한 프레임에 좌우각이 79.3°**
-     *    꺾였다. 사용자가 "갑자기 화면이 휙 돈다" 고 한 자리다.
-     *
-     * ⚠️ 비행이 끝나면 되돌린다 — 안 되돌리면 사용자가 방을 무한정 돌리거나
-     *    벽 밖으로 나갈 수 있다.
-     */
-    /*
-     * ⚠️ **제약은 `Scene` 이 prop 으로 바꾼다**(`entered` 상태).
-     *    입장 시작 시점에는 그 값이 아직 안 바뀌어 있을 수 있어, 여기서
-     *    인스턴스를 직접 만지면 곧바로 덮어써질 수 있다.
-     *
-     *    ⚠️ 2026-09-17 정정 — 한때 이 주석이 *"리렌더될 때마다 drei 가 그
-     *       값을 다시 설정해 인스턴스 조작을 덮어쓴다"* 고 단언했는데
-     *       **틀렸다.** R3F 는 **값이 바뀐 prop 만** 다시 적용한다
-     *       (실측: `/work` 에서 인스턴스가 `1.2/6.5` 를 유지하는 동안 prop 은
-     *       `4.6/12` 였다). 그래서 비행 중 `Object.assign` 은 실제로 유지된다 —
-     *       위 `FREE_LIMITS` 배선이 그것에 기댄다. 다음 사람이 옛 서술을 믿고
-     *       그 배선을 걷어내면 205px 회귀가 되살아난다.
-     */
-
-    /*
-     * 🔴 **입장 착지에 걸 제약을 여기서 못박는다.**
-     *    안 그러면 앞선 초점 비행이 남긴 **stale FOCUS(상한 6.5)** 가 그대로
-     *    걸린다 — 착지 거리가 9.36 이라 그 자리에서 잘린다. 지금은 `onEntered`
-     *    가 일으킨 리렌더가 먼저 덮어써서 우연히 안 나는데, **경합에 기대는
-     *    상태**다(느린 기기에서 한 프레임 밀리면 그대로 난다).
-     */
+    // 입장 동안의 제약은 Scene 이 entered prop 으로 바꾼다. R3F 는 값이 바뀐 prop 만 다시 적용하므로 비행 중 Object.assign 은 유지된다.
+    // 착지 제약을 여기서 못박는다 — 앞선 초점 비행의 FOCUS(상한 6.5)가 남으면 착지 거리에서 잘린다.
     limitsAfterFly.current = CAMERA_LIMITS
 
     fly.current = {
@@ -525,100 +211,60 @@ export function CameraRig({
       t0: look.clone(),
       p1: new THREE.Vector3(...CAMERA_POSITION),
       t1: new THREE.Vector3(...ROOM_CENTER),
-      // 0 = 아직 시작 안 함. 첫 프레임이 시계를 켠다(위 useFrame 주석 참고).
+      // 0 = 아직 시작 안 함. 첫 프레임이 시계를 켠다.
       start: 0,
       ms: introMs,
       intro: true,
     }
 
-    /*
-     * 문이 열렸다 닫힌다 — 들어온 티가 나게(시안 그대로).
-     *
-     * 🔴 **`setTimeout` 을 쓰지 않는다.** 벽시계로 재면 GLTF 를 파싱하는
-     *    동안(프레임이 안 그려지는 동안) 타이머만 흘러, 문이 열리는 것도
-     *    `onEntered` 도 **화면에 아무것도 안 나온 사이에 끝나 버린다.**
-     *    비행 진행도(`useFrame`)에 맞춰 부른다 — 그래야 보이는 것과 맞는다.
-     */
+    // setTimeout 을 쓰지 않는다 — GLTF 파싱 중 벽시계만 흘러 화면에 안 보인 채 끝난다. 닫힘은 비행 진행도로 부른다.
     onIntroDoor(true)
   }, [camera, controls, onEntered, onIntroDoor, onIntroStart, skipIntro])
 
-  /*
-   * 🔴 **초점을 값으로 식별한다** (#88).
-   *    `Scene` 의 `focus` 는 IIFE 가 매 렌더 새로 만든 객체라 참조가 늘 다르다.
-   *    이 문자열이 같으면 "같은 물건을 보고 있다" 는 뜻이다.
-   */
+  // focus 는 매 렌더 새 객체라 값으로 식별한다.
   const focusKey = focus ? `${focus.center.join(',')}|${focus.radius}` : ''
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: focus 는 focusKey 로 식별한다(#88)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focus 는 focusKey 로 식별한다
   useEffect(() => {
     const ctl = controls.current
-    // 🔴 **입장이 끝나기 전에는 아무것도 하지 않는다.** 입장 중 리렌더가
-    //    이 effect 를 돌리는데(문이 열리며 상태가 바뀐다), 여기서 카메라를
-    //    건드리면 연출이 그 자리에서 지워진다.
+    // 입장이 끝나기 전에는 건드리지 않는다 — 입장 중 리렌더에 연출이 지워진다.
     if (!ctl || !landed.current) return
 
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
     let position: THREE.Vector3
     if (focus) {
-      /*
-       * 거리 역산 — drei Bounds 와 같은 수식.
-       * ⚠️ 시안 주석이 함정을 적어놨다: `max(fitH, fitW) * 3.2` 로 쓰면
-       *    와이드 화면에서 fitW = fitH/aspect 라 항상 fitH 가 이겨
-       *    3.2 배가 그대로 먹혀 **너무 멀어진다.**
-       */
+      // drei Bounds 와 같은 수식. max(fitH, fitW) * 3.2 로 쓰면 와이드에서 fitH 가 늘 이겨 너무 멀어진다.
       const persp = camera as THREE.PerspectiveCamera
       const fitH = focus.radius / Math.sin((persp.fov * Math.PI) / 180 / 2)
       readFrame()
       const fw = frame.w || size.width
       const fh = frame.h || size.height
       const fitW = fitH / ((fw - panelCover(mode, true)) / fh)
-      // 🔴 초점 상태의 거리 제약 안으로 접는다. 안 그러면 물건에 코를 박는다.
       const raw = Math.max(fitH, fitW) / FILL / 2
-      // 🔴 하한을 넉넉히 잡는다. 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로
-      //    읽혀 3D 를 유지한 뜻이 사라진다 — 방이 보이는 선을 지킨다.
-      //    처음 구도가 9.5 이므로 그 절반 언저리가 "다가갔지만 방은 보이는" 거리다.
-      // 🔴 페이지는 배경이라 더 멀리 선다 — 물건이 보이되 방이 남아야 한다.
+      // 하한을 넉넉히 잡는다 — 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로 읽힌다. 페이지는 더 멀리 선다.
       const floor = mode === 'page' ? PAGE_MIN_DISTANCE : 4.8
       const dist = Math.min(CAMERA_LIMITS_FOCUS.maxDistance, Math.max(floor, raw))
-      // 지금 보는 방향을 유지한 채 거리만 바꾼다 — 갑자기 반대편으로 돌지 않게.
+      // 보는 방향을 유지한 채 거리만 바꾼다.
       const dir = camera.position.clone().sub(ctl.target).normalize()
       position = target.clone().add(dir.multiplyScalar(dist))
     } else {
       position = new THREE.Vector3(...CAMERA_POSITION)
     }
 
-    /*
-     * 🔴 **같은 목표로 다시 불렸으면 비행을 재시작하지 않는다** (이슈 #88).
-     *
-     *    라우트 전환 중 캔버스가 한 번에 안 바뀐다 — 상세는 본문 옆 좁은
-     *    배경이고 홈은 전체 화면이라, **25프레임에 걸쳐** 커진다(실측
-     *    2026-09-17: 605x900 → 1440x733). deps 에 `size` 가 있으므로 그동안
-     *    이 effect 가 매 프레임 돌았고, 그때마다 `start: performance.now()` 로
-     *    **비행이 처음부터 다시 시작**됐다. 카메라가 목표로 가다 말다를
-     *    반복하는 것이 사용자가 본 "덜덜 떨리면서 제자리로 간다" 다.
-     *
-     *    총 소요는 예산(1500ms) 안이라 **옛 프로브는 초록이었다** —
-     *    `verify-return` 이 정착 시간만 봤기 때문이다. 지금은 방향 반전도 센다.
-     *
-     * ⚠️ 목표가 **정말로** 바뀐 경우(다른 물건을 열었다·mode 가 바뀌었다)는
-     *    새 비행이 맞다. 그래서 `focusKey`+`mode` 로 가른다.
-     */
+    // 같은 목표면 비행을 재시작하지 않는다 — 전환 중 캔버스 크기가 매 프레임 바뀌어 비행이 떨린다.
     const targetKey = `${focusKey}@${mode}`
     const sameTarget = lastTarget.current === targetKey
     lastTarget.current = targetKey
 
     if (sameTarget) {
       if (fly.current && !fly.current.intro) {
-        // 날고 있다 — 시계(`start`)와 출발점은 그대로 두고 **도착만** 고쳐 잡는다.
+        // 시계와 출발점은 두고 도착만 고쳐 잡는다.
         fly.current.p1 = position
         fly.current.t1 = target
         return
       }
-      /*
-       * 이미 착지했는데 캔버스만 바뀐 것 — **연출이 아니라 적응**이다.
-       * 새 비행을 걸면 리사이즈하는 내내 비행이 재시작된다. 즉시 맞춘다.
-       */
+      // 착지 후 캔버스만 바뀐 것은 연출이 아니라 적응이다 — 즉시 맞춘다.
       camera.position.copy(position)
       ctl.target.copy(target)
       ctl.update()
@@ -635,144 +281,31 @@ export function CameraRig({
       intro: false,
     }
 
-    /*
-     * 🔴 **제약은 비행이 *끝난 뒤*에 건다** (`useFrame` 의 `t >= 1` 자리).
-     *
-     *    전에는 여기서 곧바로 `Object.assign(ctl, CAMERA_LIMITS_FOCUS)` 를
-     *    했다. 그런데 개요 구도의 카메라–타깃 거리가 **9.36** 이고
-     *    `CAMERA_LIMITS_FOCUS.maxDistance` 는 **6.5** 다 —
-     *    `ctl.update()` 가 **한 프레임에 30.6% 를 당긴다.**
-     *
-     *    실측 2026-09-17(마커를 열 때, 마커 중심 좌표):
-     *      t=0ms   캔버스 1440   현관문 1412,253
-     *      t=27ms  캔버스 1440   현관문 1594,167   ← 한 프레임에 +182px
-     *      t=47ms  캔버스 1436   ...              (여기부터가 캔버스 좁아짐)
-     *    🔴 **캔버스가 좁아져서가 아니다.** 점프가 캔버스 폭이 아직 1440 인
-     *       시점에 난다. 인과 확증: `maxDistance` 만 12 로 바꿔 재빌드하니
-     *       점프가 완전히 사라졌다.
-     *
-     *    비행 경로는 `CAMERA_LIMITS`(거리 4.6~12) 안에 통째로 들어간다 —
-     *    출발 9.36, 도착은 `floor`(4.8) 이상 6.5 이하. 그래서 비행 동안에는
-     *    기존 제약을 그대로 두어도 끌려가지 않는다.
-     *
-     * ⚠️ 사용자가 손대서 비행이 중단되면(`abort`) 제약을 바꾸지 않는다.
-     *    중간 지점에서 focus 제약을 걸면 그 자리에서 또 당겨진다.
-     */
-    /*
-     * 🔴 **비행 동안에는 제약을 푼다. 끝에서 정확한 것을 건다.**
-     *
-     *    한때 "끝에서만 건다" 로 고쳤는데 **절반만 맞았다.** 들어가는 비행
-     *    (개요 9.36 → 초점 6.5)은 그걸로 됐지만, **나오는 비행**
-     *    (초점 → 개요 9.36)은 비행 내내 **옛 FOCUS 제약(상한 6.5)이 살아
-     *    있어** `update()` 가 매 프레임 잘라냈다. 끝나서 상한을 12 로
-     *    돌려놔도 **카메라를 도로 밀어내 주는 것은 아무것도 없다.**
-     *
-     *    실측 2026-09-17(마커를 열었다 닫기):
-     *      +   0ms dist=5.291 max=6.5 → + 900ms dist=6.5 에서 잘림
-     *      +1401ms max=12 로 풀리지만 dist 는 **영영 6.5**(목표 9.36)
-     *      마커 화면좌표 최대 편차 **205px**, scale 0.703 → 0.959
-     *    화면에서는 테이블·의자가 잘려 나가고 마커 하나가 화면 밖으로 밀렸다.
-     *    **홈에서 마커 하나 열고 닫는 것이 가장 흔한 동선이다.**
-     *
-     * ⚠️ 시작에 걸어도 안 된다 — 그러면 들어가는 비행이 첫 프레임에
-     *    30.6% 당겨진다(그것이 202px 점프였다). **양쪽 다 필요하다.**
-     */
-    /*
-     * ⚠️ **`FREE_LIMITS` 를 쓰지 않는다.** 한때 비행 동안 통째로 풀었는데,
-     *    캔버스가 0.44초 걸쳐 좁아지는 동안 이 effect 가 **여러 번 다시 돌아**
-     *    그때마다 FREE 를 다시 걸었다. 사용자가 이미 포인터를 누르고 있으면
-     *    새 `'start'` 가 안 와서 `abort` 가 다시 걸릴 길이 없다 —
-     *    실측 2026-09-17: 되돌린 제약이 **14ms** 만에 FREE 로 돌아갔고
-     *    누른 채로 212프레임이 ROOM 밖(극각 10.8° 초과)에 있었다.
-     *
-     *    필요한 것은 "제약 없음" 이 아니라 **비행 경로를 담는 범위**다.
-     *    합집합이면 창이 아예 안 생긴다.
-     */
+    // 비행 동안은 FLIGHT_LIMITS, 착지에서 정확한 제약을 건다. 시작에 FOCUS 를 걸면 첫 프레임에 당겨지고, 옛 FOCUS 를 두면 나오는 비행이 잘린다.
+    // FREE_LIMITS 금지 — 전환 중 effect 가 재실행되며 FREE 를 다시 걸어, 누른 채인 사용자가 제약 밖으로 나간다.
     Object.assign(ctl, FLIGHT_LIMITS)
     limitsAfterFly.current = focus ? CAMERA_LIMITS_FOCUS : CAMERA_LIMITS
 
-    // 🔴 사용자가 손대면 비행을 포기한다. 카메라가 고집부리지 않게(시안과 같다).
+    // 사용자가 손대면 비행을 포기한다.
     const abort = () => {
-      /*
-       * 🔴 **비행이 있을 때만 손댄다.** 이 리스너는 `'start'`(= 모든
-       *    pointerdown)에 붙어 있다. 되돌릴 비행이 없는데도 제약을 갈아치우면,
-       *    **마커를 연 채 방을 둘러보려고 드래그하는 첫 순간에 FOCUS 제약이
-       *    ROOM 으로 바뀌어** 그 상태가 마커를 닫을 때까지 간다 —
-       *    실측 2026-09-17: 방위각 79.2° → 115.2°(36°·31% 손실),
-       *    극각 16.2° 손실. 초점 제약이 **한 번도 안 쓰인다.**
-       */
+      // 비행이 있을 때만 — start 는 모든 pointerdown 이라, 아니면 마커를 연 채 드래그할 때 FOCUS 제약이 바뀐다.
       if (!fly.current) return
       fly.current = null
       limitsAfterFly.current = null
-      /*
-       * 🔴 **여기서 제약을 바꾸지 않는다. 바꾸면 그 자리에서 튄다.**
-       *
-       *    중단 지점에는 **목적지 것도 출발 것도 안전하지 않다** — 둘 다
-       *    실제로 사고를 냈다:
-       *
-       *    · 목적지(FOCUS 상한 6.5)를 걸었더니, **들어가는** 비행을 개요
-       *      거리(9.36)에서 중단했을 때 한 프레임에 **30.6%** 당겨졌다
-       *      (마커 화면좌표 111px).
-       *    · 출발(ROOM 방위각 97.2~176.4°)을 걸었더니, FOCUS 범위까지
-       *      돌려 둔 상태에서 **나오는** 비행을 중단했을 때 한 프레임에
-       *      **97°** 꺾였다(마커 6756px). CLAUDE.md 가 사고로 적어 둔
-       *      "한 프레임에 79.3° 꺾였다 — 갑자기 화면이 휙 돈다" 와 같은
-       *      형태이고 더 크다.
-       *
-       *    안전한 것은 **그 시점 카메라를 확실히 담는 범위**이고, 그건 비행
-       *    동안 이미 걸려 있는 `FLIGHT_LIMITS`(합집합)다. 그대로 두면 된다.
-       *    합집합은 두 **합법** 범위의 합이라 벽을 뚫지 않는다(무제한인
-       *    `FREE_LIMITS` 와 다르다). 다음 비행이 착지하며 정확한 것을 건다.
-       *
-       * ⚠️ 이 자리는 **세 번 틀렸다.** 고치려는 사람은 먼저
-       *    `verify-intro-state` 의 ⑦(비행 도중 드래그)을 돌려 보라.
-       */
+      // 여기서 제약을 바꾸지 않는다 — 목적지 것도 출발 것도 중단 지점에서 카메라를 튀게 한다. FLIGHT_LIMITS 를 그대로 둔다.
+      // 고치기 전에 verify-intro-state 의 비행 중 드래그 케이스를 돌린다.
     }
     ctl.addEventListener('start', abort)
     return () => ctl.removeEventListener('start', abort)
   }, [focusKey, camera, controls, size.width, size.height, mode])
 
-  /*
-   * 🔴 **투영을 민다. 카메라를 옮기지 않는다** (시안 `setFrameShift`).
-   *
-   *    왼쪽은 카피·번호 목록이, 오른쪽은 패널이 3D 를 덮는다. 대상을 화면
-   *    한가운데 맞추면 그 가려진 영역 뒤로 들어간다 — 실측 2026-09-09:
-   *    화이트보드를 열었더니 보드가 왼쪽 카피 뒤로 숨고 화면 밖으로 잘렸다.
-   *
-   *    카메라 위치로 보정하면 각도가 틀어져 구도가 무너진다. `setViewOffset`
-   *    은 **투영만** 밀어서 각도를 유지한 채 대상을 가용 영역 중앙에 놓는다.
-   *
-   *    ⚠️ 홈에서도 보정한다. 시안 주석: "홈에서도 방이 왼쪽에 몰려 오른쪽이
-   *       빈다" — 실제로 그랬다(스크린샷으로 확인).
-   */
-  /**
-   * 지금 걸어야 할 투영 보정량(px). `useFrame` 도 읽는다.
-   *
-   * 🔴 입장 연출 동안에는 이 값을 **0 에서부터 서서히 올린다.** 문 밖에서
-   *    시작할 때 카메라가 문에서 **1.88** 밖에 안 떨어져 있어 문이 화면을 크게
-   *    차지하는데, 여기에 260px 보정이 그대로 걸리면 **문이 잘려 나간다**
-   *    (사용자 지적: "시야가 이상하게 돼서 문이 좀 짤려서 나옴").
-   *
-   *    끝에서 한 번에 켜면 화면이 툭 움직이므로 비행 진행도에 맞춰 보간한다.
-   */
+  // 가려진 UI 를 피해 카메라가 아니라 투영(setViewOffset)을 민다 — 카메라를 옮기면 각도가 틀어진다.
+  /** 투영 보정 목표(px). 입장 중에는 0 에서 올린다 — 문 앞에서 그대로 걸면 문이 잘린다. */
   const shiftRef = useRef(0)
-  /**
-   * 지금 실제로 걸려 있는 보정량. 목표(`shiftRef`)로 **매 프레임 다가간다.**
-   *
-   * 🔴 패널이 열리면 목표가 `0 → 240`(PANEL_WIDTH/2)으로 바뀌는데, 그걸
-   *    그대로 걸면 **화면이 한 프레임에 212px 튄다**(실측 2026-09-16:
-   *    마커 클릭 직후 첫 프레임 이동 212.7px, 그 다음부터는 0.5px 씩).
-   *    캔버스는 CSS 로 0.44s 걸쳐 좁아지는데 투영만 즉시 바뀌어 어긋난다.
-   *    사용자가 "뚜둑뚜둑 끊긴다" 고 한 자리다.
-   */
+  /** 실제 걸린 보정량. 목표로 매 프레임 다가간다 — 즉시 바꾸면 패널이 열릴 때 한 프레임에 튄다. */
   const shiftNow = useRef(0)
 
-  /**
-   * 지금 걸어야 할 보정 목표(px, 보이는 영역 기준). 하위 화면은 영역 폭에 따라 바뀌므로 매 프레임 다시 잰다.
-   *
-   * - 홈: 영역이 뷰포트 폭이므로 왼쪽 UI 520px 이 그대로 덮는 폭이다. 패널이 열리면 오른쪽 480px 이 덮인다.
-   * - 페이지: 본문은 영역 **밖**에 있다. 덮는 것은 왼쪽 마스크뿐이다.
-   */
+  /** 보정 목표(px, 보이는 영역 기준). 페이지는 본문이 영역 밖이라 왼쪽 마스크만 덮는다. */
   const shiftTarget = () => {
     const right = panelCover(mode, focus != null)
     const left = mode === 'page' ? frame.w * PAGE_MASK_LEFT : UI_WIDTH
@@ -790,38 +323,21 @@ export function CameraRig({
   useFrame(() => {
     const ctl = controls.current
 
-    /*
-     * 🔴 **투영 보정을 목표로 서서히 옮긴다.** 비행 중이 아니어도 돌아야 한다 —
-     *    패널을 여닫는 것만으로 목표가 바뀌기 때문이다.
-     *
-     * ⚠️ 0.12 는 캔버스 CSS 전환(0.44s)과 눈으로 맞춘 값이다. 크게 잡으면
-     *    다시 툭 튀고, 작게 잡으면 3D 만 뒤늦게 따라온다.
-     */
+    // 비행 중이 아니어도 돈다(패널 여닫이도 목표를 바꾼다). 0.12 는 캔버스 CSS 전환(0.44s)에 맞춘 값이다.
     readFrame()
     shiftRef.current = shiftTarget()
-    // 처음이면 보간할 이전 값이 없다 — 바로 맞춘다.
+    // 처음이면 보간할 이전 값이 없다.
     if (shiftNow.current === 0 && !fly.current) shiftNow.current = shiftRef.current
     if (ctl && Math.abs(shiftNow.current - shiftRef.current) > 0.3) {
       shiftNow.current += (shiftRef.current - shiftNow.current) * 0.12
     }
-    // 영역이 전환 중에 움직이므로 보정이 그대로여도 매 프레임 다시 건다.
+    // 영역이 전환 중에 움직이므로 매 프레임 다시 건다.
     applyView(camera as THREE.PerspectiveCamera, size.width, size.height, shiftNow.current)
 
     const f = fly.current
     if (!f || !ctl) return
 
-    /*
-     * 🔴 **첫 프레임에서 시계를 시작한다.**
-     *
-     *    `start` 를 effect 안에서 `performance.now()` 로 잡으면, GLTF 21개를
-     *    파싱하는 동안 프레임이 안 그려지는데 **시계만 흐른다.** 첫 프레임이
-     *    올 때는 이미 상당 시간이 지나 연출이 중간부터 시작하거나 그냥 끝난다.
-     *
-     *    실측 2026-09-09 (지속 캔버스 전환): 3.2초 연출이 **1초 만에** 끝났다
-     *    (200ms 에 이미 x=2.39, 1200ms 에 착지). 그래서 `onEntered` 가
-     *    일찍 불려도 화면에는 연출이 안 보였다. 캔버스가 페이지 안에 있을
-     *    때는 마운트와 첫 프레임이 붙어 있어 드러나지 않던 문제다.
-     */
+    // 시계는 첫 프레임에 켠다 — effect 에서 켜면 GLTF 파싱 중 시계만 흘러 연출이 중간부터 시작한다.
     if (f.start === 0) f.start = performance.now()
 
     const t = Math.min(1, (performance.now() - f.start) / f.ms)
@@ -830,20 +346,13 @@ export function CameraRig({
     ctl.target.lerpVectors(f.t0, f.t1, e)
     ctl.update()
 
-    /*
-     * 🔴 입장 중에는 투영 보정을 **0 에서부터 올린다**(위 `shiftRef` 주석).
-     *    문 앞에서는 보정이 없어야 문이 프레임 안에 들어온다.
-     *
-     * ⚠️ 뒤쪽 절반에서 올린다 — 앞에서 같이 올리면 문을 통과하는 동안 화면이
-     *    옆으로 흐르는 것처럼 보인다.
-     */
+    // 입장 중 보정은 진행 50% 부터 올린다 — 문 앞에서는 없어야 하고, 일찍 올리면 문 통과 중 화면이 옆으로 흐른다.
     if (f.intro) {
       const persp = camera as THREE.PerspectiveCamera
       const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
       shiftNow.current = shiftRef.current * ramp
       applyView(persp, size.width, size.height, shiftNow.current)
     }
-    // 입장 연출의 문 닫힘·완료를 **진행도**로 부른다(위 주석 참고).
     if (f.intro) {
       const closeAt = INTRO.doorCloseAt / INTRO.ms
       if (t >= closeAt && !doorClosed.current) {
@@ -853,18 +362,16 @@ export function CameraRig({
     }
 
     if (t >= 1) {
-      // 🔴 제약은 여기서 건다 — 시작에 걸면 한 프레임에 카메라가 당겨진다.
+      // 제약은 여기서 건다 — 시작에 걸면 한 프레임에 카메라가 당겨진다.
       if (limitsAfterFly.current) {
         Object.assign(ctl, limitsAfterFly.current)
         limitsAfterFly.current = null
       }
-      // 입장 비행이 끝나야 초점 비행이 열린다.
       if (f.intro) {
-        // 보정을 최종값으로 확정한다(보간이 끝났다).
         const persp = camera as THREE.PerspectiveCamera
         shiftNow.current = shiftRef.current
         applyView(persp, size.width, size.height, shiftNow.current)
-        // 제약 복원은 `Scene` 이 한다 — `onEntered` 로 알린다(위 주석 참고).
+        // 제약 복원은 Scene 이 한다.
         landed.current = true
         onEntered()
       }

@@ -1,13 +1,10 @@
-/**
- * 쿼터 검증 — 기획서 5절이 "일일 총량 캡이 비용 방어의 본체" 라고 못박은 부분.
- *
- * 돌리는 법:  node --test apps/api/src/diagnose/quota.spec.mjs
- */
+// 쿼터 — 일일 총량 캡과 IP·용도별 제한.
+// 돌리는 법: pnpm --filter @neighbor/api build && node --test apps/api/src/diagnose/quota.spec.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { nextMidnightKst, QuotaService } from '../../dist/diagnose/quota.service.js'
 
-/** ConfigService 흉내 — 값을 주입해 경계를 정확히 친다. */
+// ConfigService 흉내
 function svc(dailyCap, perIpHourly, contactDaily = 999, contactPerIp = 999) {
   const table = {
     AI_DAILY_TOTAL_CAP: dailyCap,
@@ -19,13 +16,12 @@ function svc(dailyCap, perIpHourly, contactDaily = 999, contactPerIp = 999) {
 }
 
 test('일일 캡에 닿으면 막힌다 — 다른 IP 여도 막힌다', () => {
-  // 캡 3, IP 시간당 넉넉히.
   const q = svc(3, 99)
   for (let i = 0; i < 3; i++) {
     assert.equal(q.check(`10.0.0.${i}`).allowed, true, `${i}번째는 통과해야 한다`)
     q.consume(`10.0.0.${i}`)
   }
-  // 🔴 IP 를 바꿔도 막혀야 한다 — 이것이 IP 제한과 총량 캡의 차이다.
+  // IP 를 바꿔도 막혀야 한다 — IP 제한과 총량 캡의 차이
   const d = q.check('10.0.0.99')
   assert.equal(d.allowed, false)
   assert.equal(d.reason, 'daily-cap')
@@ -73,7 +69,6 @@ test('자정(KST) 리셋 시각을 정확히 계산한다', () => {
 })
 
 test('용도가 서로의 예산을 깎지 않는다', () => {
-  // 🔴 이것이 용도를 나눈 이유다 — 진단을 많이 쓴 날에 문의가 막히면 안 된다.
   const q = svc(2, 99, 5, 99)
   q.consume('1.1.1.1', 'diagnose')
   q.consume('1.1.1.1', 'diagnose')
@@ -96,3 +91,54 @@ test('snapshot 이 용도별로 답한다', () => {
   assert.equal(q.snapshot('contact').dailyCap, 20)
   assert.equal(q.snapshot('contact').dailyUsed, 1)
 })
+
+test('빈 값·숫자 아닌 값은 기본값을 쓴다 — 상한이 0 이 되어 전부 막히지 않는다', () => {
+  for (const v of ['', 'abc', '0', '-1', undefined]) {
+    const q = new QuotaService({ get: () => v })
+    assert.equal(q.check('1.1.1.1', 'contact').allowed, true, JSON.stringify(v))
+    assert.equal(q.check('1.1.1.1', 'diagnose').allowed, true, JSON.stringify(v))
+    assert.ok(q.snapshot('contact').dailyCap > 0, JSON.stringify(v))
+  }
+})
+
+test('동시에 들어와도 한도만큼만 잡힌다 — 확인과 차감 사이에 틈이 없다', () => {
+  const q = svc(99, 2)
+  const results = Array.from({ length: 8 }, () => q.reserve('9.9.9.2').allowed)
+  assert.deepEqual(results.filter(Boolean).length, 2)
+})
+
+test('되돌리면 한 칸이 다시 열린다', () => {
+  const q = svc(99, 1, 1, 1)
+  const r = q.reserve('1.1.1.1', 'contact')
+  assert.equal(r.allowed, true)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false)
+  q.refund(r.ticket)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+})
+
+test('자정 전 예약을 자정 뒤에 되돌려도 새 날의 사용량은 그대로다', (t) => {
+  const q = svc(99, 99, 1, 99)
+  const before = q.reserve('1.1.1.1', 'contact')
+  assert.equal(before.allowed, true)
+  const later = before.ticket.period + 1000
+  t.mock.method(Date, 'now', () => later)
+  assert.equal(q.reserve('2.2.2.2', 'contact').allowed, true, '자정이 지나 새로 열린다')
+  q.refund(before.ticket)
+  assert.equal(q.snapshot('contact').dailyUsed, 1, '새 날의 1건이 지워지면 안 된다')
+  assert.equal(q.reserve('3.3.3.3', 'contact').allowed, false, '캡 1 이면 막혀야 한다')
+})
+
+test('되돌림은 그 예약의 기록만 지운다 — 나중에 들어온 요청 기록은 남는다', (t) => {
+  const q = svc(99, 2, 99, 2)
+  let now = 1_000_000
+  t.mock.method(Date, 'now', () => now)
+  const first = q.reserve('1.1.1.1', 'contact')
+  now += 10 * 60 * 1000
+  q.reserve('1.1.1.1', 'contact')
+  q.refund(first.ticket)
+  now += 55 * 60 * 1000
+  // 55분 전 기록 하나가 남아 한 칸만 열려 있어야 한다. 엉뚱한 기록을 지우면 두 칸이 열린다
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, true)
+  assert.equal(q.reserve('1.1.1.1', 'contact').allowed, false, '남은 기록 2개로 막혀야 한다')
+})
+

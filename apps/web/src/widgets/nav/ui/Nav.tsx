@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Logo } from './Logo'
 import styles from './Nav.module.css'
 
-/** 시안(Main·Mobile)의 상단 바. 서버 컴포넌트 — JS 없이도 읽히고 눌린다. */
+/** 서버 컴포넌트 — JS 없이도 읽히고 눌린다. */
 export function Nav() {
   return (
     <nav className={styles.nav}>

@@ -1,12 +1,6 @@
-/**
- * 자가진단 스트리밍 프록시.
- *
- * 🔴 브라우저가 api 를 직접 부르지 않게 한다(기획서 8절). 자가진단 프록시와
- *    같은 이유·같은 구조지만, 여기서는 **본문을 그대로 흘려보낸다** —
- *    `await res.json()` 으로 받으면 스트리밍이 통째로 뭉쳐 온다.
- */
+// 스트리밍 프록시 — 본문을 그대로 흘려보낸다. res.json() 으로 받으면 스트리밍이 뭉친다.
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:21201'
+import { apiFetch } from '@/shared/api'
 
 export async function POST(request: Request) {
   let body: unknown
@@ -17,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const upstream = await fetch(`${API_BASE}/diagnose/stream`, {
+    const upstream = await apiFetch('/diagnose/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,7 +29,7 @@ export async function POST(request: Request) {
       return Response.json(data, { status: upstream.status })
     }
 
-    // 🔴 본문을 그대로 넘긴다. 여기서 읽어 모으면 스트리밍이 죽는다.
+    // 여기서 읽어 모으면 스트리밍이 죽는다.
     return new Response(upstream.body, {
       status: 200,
       headers: {

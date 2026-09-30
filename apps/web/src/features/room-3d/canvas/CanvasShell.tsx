@@ -8,61 +8,16 @@ import * as THREE from 'three'
 import { useRoom } from '@/features/room-3d/model/room-state'
 import { r3f } from './tunnel'
 
-/*
- * 🔴 **씬을 여기서 렌더한다. 화면 안에 두지 않는다.**
- *
- *    이것이 지속 캔버스의 요점이다 — 캔버스만 살려 두고 씬을 페이지에 두면
- *    라우트가 바뀔 때마다 씬이 죽고 다시 산다. 실측 2026-09-16: 전환마다
- *    **91ms 짜리 멈춤**이 났다(3회 전부 재현). GLTF 21개를 다시 세팅하는
- *    비용이고, 사용자에게는 "뚜둑" 으로 보인다.
- *
- *    화면은 `RoomStage` 로 모드만 선언하고, 그리는 일은 계속 여기가 맡는다.
- */
+// 씬은 화면이 아니라 여기서 렌더한다 — 페이지에 두면 라우트 전환마다 GLTF 재세팅으로 멈춘다.
 const Scene = dynamic(() => import('../scene/Scene').then((m) => m.Scene), { ssr: false })
 
-/**
- * 지속 캔버스 — **앱 전체에서 단 하나뿐인 `<Canvas>`**.
- *
- * 🔴 이전에는 캔버스가 2개였고 둘 다 페이지 안에 있어서, 라우트가 바뀌면
- *    3D 가 통째로 죽고 새로 떴다(실측 2026-09-09: 표식을 찍어 확인했고
- *    `webglcontextlost` 가 2건 났다). 그러면 "작업실 안에 프로젝트가
- *    산다"(기획서 4절)가 화면 사이에서 끊긴다.
- *
- * 🔴 **여기는 얇게 둔다.** 카메라·조명·컨트롤·이펙트·배경색은 전부
- *    `r3f.In` 쪽(각 화면)이 낸다 — 홈과 페이지가 **하나도 안 겹치기 때문**이다:
- *
- *    | | 홈 | 페이지 |
- *    |---|---|---|
- *    | 카메라 | fov 37 · [7.2,5,-3.6] | fov 34 · [3.4,2.2,4.2] |
- *    | 조명 | Lights(램프·창) | ambient + dir 2개 |
- *    | 컨트롤 | 드래그 가능 | `enabled={false}` autoRotate |
- *    | 이펙트 | Bloom | 없음 |
- *
- *    ⚠️ 그래서 `<Canvas camera={...}>` 를 쓰지 않는다 — 그 prop 은 **마운트
- *       시 1회만** 반영되어 라우트마다 바꿀 수 없다. 각 화면이
- *       `<PerspectiveCamera makeDefault>` 를 내면 drei 가 교체·복원한다.
- *
- * ⚠️ `frameloop="demand"` 로 바꾸지 마라 — `useReaction`·`CameraRig` 의
- *    `useFrame` 루프가 멈춘다.
- */
+// 앱 전체에서 하나뿐인 <Canvas>. 카메라·조명·컨트롤·이펙트는 각 화면의 r3f.In 이 낸다.
+// <Canvas camera> 를 쓰지 않는다 — 마운트 시 1회만 반영된다. 각 화면이 <PerspectiveCamera makeDefault> 를 낸다.
+// frameloop="demand" 금지 — useFrame 루프(반응·카메라 비행)가 멈춘다.
 export function CanvasShell() {
   const ref = useRef<HTMLDivElement>(null)
 
-  /*
-   * 🔴 **캔버스는 페이드로 들어온다.**
-   *
-   *    `--cv-opacity` 가 모드별 값(홈이면 1)이라 캔버스가 붙는 순간 이미
-   *    불투명하다 — `transition` 이 있어도 시작값이 곧 끝값이라 아무 일도
-   *    안 일어난다. 실측 2026-09-16: 일반·강력 새로고침·첫 방문 **세 경우
-   *    모두** 등장 시 불투명도가 100 이었고 **100 미만인 프레임이 0개**였다.
-   *    3D 가 툭 튀어나온다.
-   *
-   *    강력 새로고침에서 특히 눈에 띈다 — 캐시가 없어 캔버스가 301ms 에야
-   *    붙는데(일반은 15ms), 글은 이미 다 읽히는 상태라 3D 만 뒤늦게 튄다.
-   *
-   * ⚠️ 한 프레임 뒤에 켠다. 같은 프레임에 붙이면 브라우저가 시작값을 못 잡아
-   *    transition 이 또 안 돈다.
-   */
+  /* 캔버스 페이드 인. 같은 프레임에 켜면 브라우저가 시작값을 못 잡아 transition 이 안 돈다 — 한 프레임 뒤에 켠다. */
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       document.documentElement.dataset.canvasReady = 'true'
@@ -73,21 +28,11 @@ export function CanvasShell() {
     }
   }, [])
 
-  /*
-   * 홈에서 캔버스는 헤더 **아래**에서 시작한다(실측 y=97).
-   *
-   * 🔴 이 값을 상수로 박지 않는다. `nav` 높이가 바뀌면 조용히 어긋난다 —
-   *    같은 이유로 `page.module.css` 가 `calc(100dvh - 152px)` 를 이미
-   *    버렸다(실측 2026-09-09: 15px 넘쳤다). 실제 `nav` 를 재서 넣는다.
-   *
-   * ⚠️ 3D 가 뜰 때만 도는 코드다(이 컴포넌트가 `ssr:false`) — 폴백 3단에 영향이 없다.
-   */
+  /* nav·footer 높이를 상수로 박지 않고 실측해 CSS 변수로 넣는다. */
   useEffect(() => {
     const root = document.documentElement
     const ro = new ResizeObserver(() => measure())
-    /** 지금 ResizeObserver 가 보고 있는 요소들. 바뀔 때만 다시 건다. */
     let watched: (Element | null)[] = []
-    /** 지금 화면의 헤더·푸터를 재서 변수에 넣는다. 없으면 0. */
     const measure = () => {
       for (const [sel, prop] of [
         ['nav', '--nav-h'],
@@ -102,29 +47,9 @@ export function CanvasShell() {
     }
 
     /*
-     * ⚠️ 라우트가 바뀌면 헤더는 남지만 **푸터는 사라진다**(홈에만 있다).
-     *    캔버스는 안 죽으므로 이 effect 가 다시 돌지 않는다 — 그래서
-     *    DOM 변화를 직접 본다. 안 그러면 `/work` 에서 홈의 푸터 높이가
-     *    남아 캔버스 아래가 70px 잘린다.
-     */
-    /*
-     * 🔴 **프레임당 한 번으로 합친다.**
-     *
-     *    전에는 콜백마다 곧바로 `measure()` 를 돌았다. `measure()` 는
-     *    `getBoundingClientRect()` 를 2회 부르는데 그것이 **강제 동기
-     *    레이아웃**이다. `childList: true, subtree: true` 로 body 전체를
-     *    보고 있으니 **DOM 삽입 1회당 리플로우 1회**가 된다.
-     *
-     *    실측 2026-09-17(프로드 빌드, 홈): 노드 400회 삽입에
-     *    `getBoundingClientRect` **962회 · 합계 132.9ms**
-     *    (삽입 1회당 2.4회 · 0.33ms).
-     *
-     *    `/diagnose` 는 응답을 스트리밍한다 — 토큰마다 노드가 붙는다.
-     *    그 화면에서 이 비용이 그대로 쌓인다.
-     *
-     * ⚠️ 마이크로태스크(`Promise.resolve`)로 합치면 안 된다 —
-     *    MutationObserver 자체가 마이크로태스크라 같은 틱에 또 돈다.
-     *    레이아웃을 읽는 일이므로 **프레임 경계**에 맞추는 것이 맞다.
+     * 라우트 전환에 푸터가 사라져도 이 effect 는 다시 안 돌므로 DOM 변화를 직접 본다.
+     * 측정은 프레임당 한 번으로 합친다 — getBoundingClientRect 가 강제 레이아웃이라 삽입마다 돌면 스트리밍 화면에서 쌓인다.
+     * 마이크로태스크로 합치면 안 된다 — MutationObserver 도 마이크로태스크라 같은 틱에 또 돈다.
      */
     let queued = 0
     const schedule = () => {
@@ -132,11 +57,7 @@ export function CanvasShell() {
       queued = requestAnimationFrame(() => {
         queued = 0
         measure()
-        /*
-         * ⚠️ 관찰 대상이 그대로면 다시 걸지 않는다. `disconnect()` 후
-         *    `observe()` 를 반복하면 ResizeObserver 가 매번 **최초 1회
-         *    콜백**을 다시 쏘아 `measure()` 가 한 번 더 돈다.
-         */
+        // 관찰 대상이 그대로면 다시 걸지 않는다 — 재 observe 마다 최초 콜백이 또 온다.
         const next = ['nav', 'footer'].map((sel) => document.querySelector(sel))
         if (next.length === watched.length && next.every((el, i) => el === watched[i])) return
         ro.disconnect()
@@ -158,32 +79,8 @@ export function CanvasShell() {
   }, [])
 
   /*
-   * 🔴 **R3F 의 래퍼 div 가 `pointer-events:auto` 를 인라인으로 박는다.**
-   *
-   *    라이브러리 소스에 그 이유가 적혀 있다
-   *    (`@react-three/fiber@9.7.0/dist/react-three-fiber.esm.js:124`):
-   *
-   *        // When the event source is not this div, we need to set
-   *        // pointer-events to none. Or else the canvas will block
-   *        // events from reaching the event source
-   *        const pointerEvents = eventSource ? 'none' : 'auto'
-   *
-   *    즉 `eventSource` 를 넘기면 R3F 가 알아서 `'none'` 을 쓴다. 그런데
-   *    **우리는 그걸 못 쓴다** — 홈에서는 캔버스가 마커 클릭을 직접 받아야
-   *    하는데(`eventSource` 를 주면 이벤트가 그 DOM 으로 넘어간다), 페이지에서는
-   *    반대로 안 받아야 한다. 한 캔버스가 두 모드를 오가므로 **모드에 따라
-   *    바뀌는 값**이 필요하고, `eventSource` 는 마운트 시 고정이다.
-   *
-   *    껍데기에 `none` 을 줘도 그 자식이 인라인으로 `auto` 를 들고 있어
-   *    **인라인이 이긴다** — CSS 규칙으로는 절대 못 이긴다(실측 2026-09-09:
-   *    `.canvas-shell *{pointer-events:inherit}` 를 넣어도 계산값이 auto 였고,
-   *    래퍼의 style 속성에 `pointer-events: auto` 가 그대로 있었다).
-   *
-   *    그 결과 **페이지에서 캔버스가 본문 클릭을 가로챘다** — `/work` 사례
-   *    카드 링크 4개, `/work/<id>` 토글 버튼 2개, `/team` 링크 1개가 안 눌렸다.
-   *    빌드도 `pnpm verify` 도 초록이었다. 실제로 눌러봐야 보인다.
-   *
-   *    → 껍데기의 계산값을 읽어 자식들의 **인라인 스타일을 직접 맞춘다.**
+   * R3F 래퍼 div 가 pointer-events:auto 를 인라인으로 박아 CSS 로는 못 이긴다. eventSource 는 마운트 시 고정이라
+   * 모드별로 못 바꾼다. 안 맞추면 페이지 모드에서 캔버스가 본문 클릭을 가로챈다 — 계산값을 자식 인라인에 직접 맞춘다.
    */
   useEffect(() => {
     const root = ref.current
@@ -222,23 +119,9 @@ export function CanvasShell() {
         <Canvas
           shadows
           dpr={[1, 2]}
-          /*
-           * 🔴 **리사이즈를 미루지 않는다.**
-           *
-           *    패널이 열리면 캔버스가 0.44s 에 걸쳐 1440 → 960 으로 좁아지는데,
-           *    R3F 는 기본적으로 크기 변화를 **debounce** 해서 드로잉 버퍼를
-           *    한 번에 바꾼다 — 실측 2026-09-16: CSS 폭은 **27단계**로 부드럽게
-           *    줄어드는 동안 버퍼는 **614ms 에 한 번** 1440 → 960 으로 튀었다.
-           *    그 순간 3D 내용이 확 어긋나 보인다(사용자 지적: "뚜둑뚜둑").
-           *
-           *    → 0 으로 두면 CSS 전환을 따라 같이 줄어든다.
-           */
+          /* 리사이즈를 debounce 하지 않는다 — 패널 전환 중 드로잉 버퍼가 한 번에 튀어 3D 가 어긋나 보인다. */
           resize={{ debounce: 0 }}
-          /*
-           * 🔴 톤매핑이 조명의 절반이다. 프로토타입과 같은 조명값을 넣어도
-           *    이 설정이 없으면 전혀 다르게 나온다 — 가구가 갈색으로 뭉개진다
-           *    (실측 2026-09-09, 프로토타입 스크린샷과 대조해 발견).
-           */
+          /* 톤매핑이 없으면 같은 조명값이어도 가구가 갈색으로 뭉개진다. */
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
@@ -254,17 +137,7 @@ export function CanvasShell() {
   )
 }
 
-/**
- * 방을 그린다 — **라우트가 바뀌어도 이 컴포넌트는 안 죽는다.**
- *
- * 🔴 상태는 `RoomProvider` 가 쥔다. 화면은 `RoomStage` 로 모드만 선언하므로,
- *    여기서는 그 값을 읽어 카메라를 어디에 둘지만 정하면 된다.
- *
- * ⚠️ `off` 일 때는 씬을 **언마운트하지 않는다.** 그러면 다시 켤 때 GLTF 를
- *    다시 세팅해 멈춤이 생긴다 — 캔버스를 `visibility:hidden` 으로 감추는
- *    것으로 충분하다(`tokens.css`). 이것이 `CanvasRoot` 의 sticky mount 와
- *    같은 이유다.
- */
+// off 일 때도 씬을 언마운트하지 않는다 — 다시 켤 때 GLTF 재세팅으로 멈춘다. visibility:hidden 으로 충분하다.
 function SceneSlot() {
   const { mode, openId, seen, open, markEntered, resetEntered, night, toggleLight } = useRoom()
   return (

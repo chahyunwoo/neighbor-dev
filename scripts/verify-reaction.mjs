@@ -1,12 +1,6 @@
 #!/usr/bin/env node
-/**
- * 가구가 벽이나 서로를 파고드는지 잰다 — 놓인 상태와 물건이 열릴 때(반응 모션) 둘 다.
- *
- * 닫힌 상태에서 이미 닿아 있던 것(책상 위 물건, 테이블 아래 의자)은 빼고,
- * 열면서 **새로 파고든 깊이**만 센다. 경로 중간도 본다 — 회전은 도중에 더 깊이 들어갈 수 있다.
- *
- * 돌리는 법:  node --experimental-strip-types scripts/verify-reaction.mjs
- */
+// 가구가 벽이나 서로를 파고드는지 잰다 — 놓인 상태와 열리는 반응 모션 둘 다, 새로 파고든 깊이만(경로 중간 포함).
+// 돌리는 법: node --experimental-strip-types scripts/verify-reaction.mjs
 
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -23,13 +17,13 @@ const { GLTFLoader } = await import(
 const { LAYOUT, DEG } = await import(join(WEB, 'src/features/room-3d/scene/layout.ts'))
 const { reactionOf, poseAt } = await import(join(WEB, 'src/features/room-3d/scene/reaction.ts'))
 
-/** 벽 안쪽 면. Shell.tsx 의 RW·RD·FX·FZ 와 두께 0.12 에서 나온다. */
+// 벽 안쪽 면 — Shell.tsx 의 RW·RD·FX·FZ 와 두께 0.12 에서 나온다
 const WALL_LEFT_X = 0.3 - 6.8 / 2 + 0.06
 const WALL_BACK_Z = 0.55 + 5.6 / 2 - 0.06
-/** 이 깊이(m)를 넘게 새로 파고들면 실패. 접촉면 부동소수 오차보다 크고 눈에 띄는 관통보다 작다. */
+// 새로 파고든 깊이(m) 허용치 — 접촉면 부동소수 오차보다 크고 눈에 띄는 관통보다 작다
 const TOLERANCE = 0.01
 const STEPS = [0.25, 0.5, 0.75, 1]
-/** 바닥에 까는 것은 다른 물건이 위에 올라서는 게 정상이다. */
+// 바닥에 까는 것은 위에 다른 물건이 올라서는 게 정상
 const FLAT = new Set(['rugRounded', 'rugRound'])
 
 const loader = new GLTFLoader()
@@ -47,7 +41,7 @@ function scaleOf(p) {
   return Array.isArray(p.scale) ? p.scale : [p.scale, p.scale, p.scale]
 }
 
-/** 모델 로컬 정점(노드 변환 포함, 배치 변환 전). */
+// 노드 변환 포함, 배치 변환 전
 function localVertices(scene) {
   scene.updateMatrixWorld(true)
   const out = []
@@ -70,7 +64,7 @@ for (const p of LAYOUT) {
   items.push({ p, local, s, center: [c.x * s[0], c.y * s[1], c.z * s[2]] })
 }
 
-/** 자세를 걸어 월드 정점과 "스케일 뺀 배치 좌표계"를 낸다. */
+// 월드 정점과 스케일 뺀 배치 좌표계를 낸다
 function place(item, pose) {
   const frame = new THREE.Matrix4().compose(
     new THREE.Vector3(...pose.position),
@@ -89,7 +83,7 @@ function restPose(item) {
   return { position: item.p.position, yaw: item.p.rotationY * DEG }
 }
 
-/** 벽 안에 끼워 넣는 것이 정상인 모델. */
+// 벽 안에 끼워 넣는 것이 정상인 모델
 const IN_WALL = new Set(['doorway', 'wallWindow'])
 
 function wallDepth(item, placed) {
@@ -99,7 +93,6 @@ function wallDepth(item, placed) {
   return d
 }
 
-/** a 의 정점이 b 의 상자 안으로 들어간 최대 깊이. */
 function overlapDepth(a, b) {
   let d = 0
   const v = new THREE.Vector3()

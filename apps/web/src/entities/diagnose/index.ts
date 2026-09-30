@@ -1,9 +1,4 @@
-/**
- * AI 자가진단 — 슬라이스 public API.
- *
- * 🔴 엔드포인트가 있는 도메인이라 `entities` 다
- *    (`apps/api` 의 `@Controller('diagnose')` · `@Post('stream')`).
- */
+// 엔드포인트가 있는 도메인이라 entities 다(api `@Controller('diagnose')`).
 export {
   buildCopyText,
   isPeriodSection,

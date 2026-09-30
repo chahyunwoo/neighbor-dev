@@ -4,36 +4,15 @@ import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { inView, rise, stagger } from '@/features/reveal/lib/motion'
 
-/**
- * 스크롤로 들어올 때 나타난다.
- *
- * 🔴 이 사이트에는 **등장 모션이 아예 없었다.** 글도 카드도 처음부터 다 떠
- *    있어서, 3D 로 공간을 만들어 놓고 정작 그 안의 내용은 정지 화면이었다.
- *
- * ⚠️ 서버 컴포넌트인 페이지에서 부를 수 있게 클라이언트 경계를 여기서 긋는다.
- *    페이지마다 `'use client'` 를 붙이면 그 페이지 전체가 클라이언트로
- *    넘어가고, 정적 생성(기획서 8절)이 깨진다.
- *
- * ⚠️ `prefers-reduced-motion` 은 Motion 이 알아서 존중한다(`MotionConfig` 를
- *    루트에 걸었다) — 여기서 다시 판단하지 않는다.
- *
- * ⚠️ `transition` 을 `undefined` 로 넘기지 않고 값이 있을 때만 편다 —
- *    `exactOptionalPropertyTypes` 가 켜져 있어 거부한다(실측 TS2375).
- */
-/*
- * ⚠️ **`delay` prop 은 없다.** 받아 두고 `transition={{ delay }}` 로 넘겼었는데
- *    **먹지 않았다** — `rise.show` 가 자기 `transition` 을 들고 있어 Motion
- *    우선순위상 variant 쪽이 이긴다. 넘기는 호출부도 0건이었다.
- *    차례로 들여보내야 하면 `RevealGroup`(`stagger(delay)` → `delayChildren`)
- *    을 쓴다. 그쪽은 실제로 동작한다.
- */
+// 서버 컴포넌트 페이지에서 부를 수 있게 클라이언트 경계를 여기서 긋는다. reduced-motion 은 MotionConfig 가 처리한다.
+// delay prop 을 두지 않는다 — rise.show 의 transition 이 이긴다. 차례가 필요하면 RevealGroup 을 쓴다.
 export function Reveal({
   children,
   className,
   as = 'div',
 }: {
   children: ReactNode
-  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  // exactOptionalPropertyTypes 때문에 `| undefined` 를 명시한다.
   className?: string | undefined
   as?: 'div' | 'section' | 'li' | 'article'
 }) {
@@ -51,12 +30,7 @@ export function Reveal({
   )
 }
 
-/**
- * 자식들이 차례로 들어온다.
- *
- * 목록·카드 묶음에 쓴다. 자식은 `RevealItem` 이어야 한다 —
- * 일반 요소를 넣으면 variants 를 못 받아 그냥 나타난다.
- */
+/** 자식들이 차례로 들어온다. 자식은 RevealItem 이어야 variants 를 받는다. */
 export function RevealGroup({
   children,
   className,
@@ -64,7 +38,7 @@ export function RevealGroup({
   as = 'div',
 }: {
   children: ReactNode
-  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  // exactOptionalPropertyTypes 때문에 `| undefined` 를 명시한다.
   className?: string | undefined
   delay?: number
   as?: 'div' | 'section' | 'ul' | 'ol'
@@ -90,7 +64,7 @@ export function RevealItem({
   as = 'div',
 }: {
   children: ReactNode
-  /** ⚠️ `| undefined` 명시 — `exactOptionalPropertyTypes` (실측 TS2375). */
+  // exactOptionalPropertyTypes 때문에 `| undefined` 를 명시한다.
   className?: string | undefined
   as?: 'div' | 'li' | 'article' | 'section'
 }) {
