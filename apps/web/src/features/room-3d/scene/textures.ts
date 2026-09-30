@@ -1,17 +1,8 @@
 import * as THREE from 'three'
 
-/**
- * 모니터·화이트보드 화면을 캔버스로 그린다.
- *
- * 🔴 **한 번만 그린다.** 프로토타입은 매 프레임 다시 그려 파이프라인을 흐르게
- *    했지만, 여기서는 정적이다 — 기획서 4절의 성능 예산(데스크톱 60fps)을
- *    지키기 위해서고, 흐르는 내용은 어차피 모니터를 열면 `/work` 에서 본다.
- *    3D 의 화면은 "여기 뭔가 있다" 는 신호까지만 한다.
- *
- * ⚠️ 축소 렌더링에서 글자가 뭉개진다(프로토타입 실측). 밉맵 + 이방성 필터를 켠다.
- */
+// 화면 텍스처는 한 번만 그린다(성능 예산). 축소 시 글자가 뭉개지므로 밉맵 + 이방성 필터를 켠다.
 
-/** 화면 색 — tokens.css 와 같은 계열이되 발광용이라 조금 더 밝다. */
+/** 발광용이라 tokens.css 계열보다 조금 더 밝다. */
 const INK = {
   bg: '#0a1220',
   bar: '#152238',
@@ -41,7 +32,6 @@ function toTexture(canvas: HTMLCanvasElement, maxAnisotropy: number): THREE.Canv
   return tex
 }
 
-/** 배포 파이프라인 — 모니터에 켜져 있는 화면. */
 export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
   const W = 1024
   const H = 620
@@ -50,7 +40,6 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
   g.fillStyle = INK.bg
   g.fillRect(0, 0, W, H)
 
-  // 상단 바 — 창 세 개
   g.fillStyle = INK.bar
   g.fillRect(0, 0, W, 64)
   g.fillStyle = INK.accent
@@ -63,7 +52,6 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
     g.fill()
   }
 
-  // 단계 — 앞의 셋은 끝났고 넷째가 진행 중이다.
   const stages = ['기획', '설계', '구현', '테스트', '배포']
   const done = 3
   const cy = 190
@@ -108,7 +96,6 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
     g.textAlign = 'left'
   })
 
-  // 아래 — 지금 단계에서 무엇을 하는지
   g.fillStyle = 'rgba(255,255,255,0.03)'
   g.fillRect(60, 320, W - 120, 230)
   g.strokeStyle = INK.line
@@ -141,15 +128,7 @@ export function makeScreenTexture(maxAnisotropy: number): THREE.CanvasTexture {
   return toTexture(canvas, maxAnisotropy)
 }
 
-/**
- * 화이트보드 — 만든 것들이 카드로 붙어 있다.
- *
- * 🔴 **캔버스에 그린 글자는 공개 검사기가 못 본다.** HTML 에 안 나오기 때문이다
- *    (verify-rendered.mjs 는 렌더된 HTML 을 본다). 그래서 여기에는
- *    **이미 검사를 통과한 데이터만** 넣는다 — `getDetailProjects()` 가 주는
- *    `label`·`period` 는 빌드 단계에서 정제·검사를 거친 값이다.
- *    정본을 직접 읽거나 새 문자열을 지어 넣지 않는다.
- */
+// 캔버스 글자는 공개 검사기가 못 본다 — getDetailProjects() 처럼 이미 검사를 거친 데이터만 넣고 새 문자열을 짓지 않는다.
 export function makeBoardTexture(
   maxAnisotropy: number,
   items: { label: string; period: string }[],
@@ -162,7 +141,6 @@ export function makeBoardTexture(
   g.fillStyle = '#1e2430'
   g.fillRect(0, 0, W, H)
 
-  // 머리말
   g.fillStyle = '#e7e9ee'
   g.font = '600 34px system-ui, sans-serif'
   g.fillText('수행 사례', 52, 66)
@@ -178,7 +156,6 @@ export function makeBoardTexture(
   g.lineTo(W - 52, 92)
   g.stroke()
 
-  // 카드 — 2열
   const cardW = (W - 52 * 2 - 26) / 2
   const cardH = 108
   items.slice(0, 6).forEach((item, i) => {
@@ -196,7 +173,7 @@ export function makeBoardTexture(
 
     g.fillStyle = '#dfe4ec'
     g.font = '500 21px system-ui, sans-serif'
-    // 카드 폭을 넘으면 자른다 — 넘치면 옆 카드를 침범한다.
+    // 넘치면 옆 카드를 침범한다.
     let label = item.label
     while (g.measureText(label).width > cardW - 40 && label.length > 4) {
       label = label.slice(0, -1)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 게이트 검증 — 공개 검사기가 *실제로* 잡는지 뮤테이션으로 확인한다.
 
@@ -47,7 +47,7 @@ def run(cmd):
     r=subprocess.run(cmd,shell=True,cwd=ROOT,capture_output=True,text=True,env=env)
     return r.returncode, r.stdout+r.stderr
 
-# (이름, 종류, 상세)  종류: 'src' = 소스 치환, 'file' = 파일 생성
+# (이름, 종류, 상세) 종류: 'src' = 소스 치환, 'file' = 파일 생성
 MUTS=[
  ('M1 개인도메인 치환 제거','src','scripts/sanitize.mjs',
   "[new RegExp(PERSONAL_DOMAIN.replace('.', '\\\\.'), 'g'), '개인 기술 사이트', '개인 도메인 비노출'],",
@@ -79,9 +79,9 @@ for m in MUTS:
     name,kind=m[0],m[1]
     restore()
     if kind=='pkg':
-        # ⚠️ 실제 apps/web/package.json 을 덮어쓰지 않는다 — 실측(2026-09-09)에서
-        #    정리 단계가 그 파일을 지워 워킹트리에 삭제로 남았다.
-        #    전용 임시 파일을 만들고 verify 에 PDF_MANIFEST_EXTRA 로 넘긴다.
+        # 실제 apps/web/package.json 을 덮어쓰지 않는다 — 에서
+        # 정리 단계가 그 파일을 지워 워킹트리에 삭제로 남았다.
+        # 전용 임시 파일을 만들고 verify 에 PDF_MANIFEST_EXTRA 로 넘긴다.
         io.open(PKG_PROBE,'w').write(
           json.dumps({"name":"probe","dependencies":{"@react-pdf/renderer":"^4.0.0"}},indent=2))
         expect=m[5]
@@ -112,21 +112,21 @@ restore()
 
 # ── G1. 사명 검사가 *지금 실제로* 잡는가 ───────────────────────────────
 #
-# 뮤테이션이 아니라 **기준선 검사**다. 위의 M1~M8 은 전부 소스를 망가뜨려 보는데,
+# 뮤테이션이 아니라 기준선 검사다. 위의 M1~M8 은 전부 소스를 망가뜨려 보는데,
 # 사명 대조만은 그 방식으로 못 본다 — 정상 데이터에는 사명이 애초에 없어서
 # 무엇을 망가뜨려도 위반이 안 나기 때문이다.
 #
-# 🔴 실측 2026-09-16: `realCompanyNames()` 를 `return []` 로 되돌려도 이 스크립트가
-#    초록을 냈다. 사명 목록이 비면 `disclosure.mjs` 의 회사표기 검사가 통째로
-#    no-op 이 되는데(`extraCompanyNames.length > 0` 조건, 기본 구현은 `() => []`),
-#    그걸 감시하는 케이스가 없었다. 검사기를 고치면서 그 검사기를 지키는 게이트는
-#    안 넣은 것이다.
+# `realCompanyNames()` 를 `return []` 로 되돌려도 이 스크립트가
+# 초록을 냈다. 사명 목록이 비면 `disclosure.mjs` 의 회사표기 검사가 통째로
+# no-op 이 되는데(`extraCompanyNames.length > 0` 조건, 기본 구현은 `() => []`),
+# 그걸 감시하는 케이스가 없었다. 검사기를 고치면서 그 검사기를 지키는 게이트는
+# 안 넣은 것이다.
 #
 # 방법: 정본의 실제 사명 1건을 생성 데이터에 심고 검사기가 잡는지 본다.
-# ⚠️ 사명 값은 **출력하지 않는다** — 찍는 순간 그게 곧 유출이다(이 저장소는 PUBLIC).
+# 사명 값은 출력하지 않는다 — 찍는 순간 그게 곧 유출이다(이 저장소는 PUBLIC).
 INJECT = os.path.join(BK, 'inject.mjs')
-# ⚠️ import 는 **이 파일의 위치** 기준으로 풀린다. 탐침은 임시 디렉터리에 두므로
-#    상대경로(`./scripts/...`)를 쓰면 `/tmp/scripts/...` 를 찾다 실패한다(실측).
+# import 는 이 파일의 위치 기준으로 풀린다. 탐침은 임시 디렉터리에 두므로
+# 상대경로(`./scripts/...`)를 쓰면 `/tmp/scripts/...` 를 찾다 실패한다(실측).
 io.open(INJECT,'w',encoding='utf-8').write("""
 import { readFileSync, writeFileSync } from 'node:fs'
 import { realCompanyNames } from '__ROOT__/scripts/source.mjs'
@@ -153,16 +153,16 @@ restore()
 
 # ── G4. 클라이언트 내부 식별자 검사가 *지금 실제로* 잡는가 (#86) ─────────
 #
-# 🔴 실측 2026-09-17: 사례 상세 1건의 `decisions` 에 클라이언트 API 엔드포인트
-#    경로와 서버 응답 스펙 키 나열이 그대로 실려 **배포까지 나갔다.**
-#    `verify-disclosure` 가 보던 축은 사명·개인도메인·저장소명·사설IP·시크릿이라
-#    **남의 시스템 구조를 보는 축이 아예 없었다.** 검사기는 내내 초록이었다.
+# 사례 상세 1건의 `decisions` 에 클라이언트 API 엔드포인트
+# 경로와 서버 응답 스펙 키 나열이 그대로 실려 배포까지 나갔다.
+# `verify-disclosure` 가 보던 축은 사명·개인도메인·저장소명·사설IP·시크릿이라
+# 남의 시스템 구조를 보는 축이 아예 없었다. 검사기는 내내 초록이었다.
 #
 # M1~M8 방식(소스를 망가뜨린다)으로는 못 본다 — 정상 데이터에는 그 구절이
-# 이제 없어서 무엇을 망가뜨려도 위반이 안 난다. G1 과 같은 **기준선 검사**다.
+# 이제 없어서 무엇을 망가뜨려도 위반이 안 난다. G1 과 같은 기준선 검사다.
 #
-# ⚠️ 탐침 값은 실제 유출 값이 아니라 **형태만 같은 가짜**를 쓴다. 이 파일도
-#    PUBLIC 저장소에 올라간다 — 진짜 값을 적으면 여기가 새 유출 지점이 된다.
+# 탐침 값은 실제 유출 값이 아니라 형태만 같은 가짜를 쓴다. 이 파일도
+# PUBLIC 저장소에 올라간다 — 진짜 값을 적으면 여기가 새 유출 지점이 된다.
 INJECT2 = os.path.join(BK, 'inject-client.mjs')
 io.open(INJECT2,'w',encoding='utf-8').write("""
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -191,25 +191,25 @@ restore()
 
 # ── G2·G3. 번들 청크 검사가 *지금 실제로* 잡는가 (#78) ──────────────────
 #
-# 🔴 실측 2026-09-17: 검사용 감사 명단이 `'use client'` 인 3D 씬을 통해 JS 청크에
-#    실려 내부 식별자 16건이 서빙되고 있었다. **HTML 에는 한 글자도 없어서**
-#    `verify-rendered.mjs` 가 초록이었다 — 그 파일이 `r.text()` 로 페이지 HTML 만
-#    봤기 때문이다. 막으려고 만든 `상세건저장소명` 검사는 이미 있었는데
-#    **보는 곳에 없었다.** 「검사기가 있다 ≠ 검사기가 잡는다」가 또 반복됐다.
+# 검사용 감사 명단이 `'use client'` 인 3D 씬을 통해 JS 청크에
+# 실려 내부 식별자 16건이 서빙되고 있었다. HTML 에는 한 글자도 없어서
+# `verify-rendered.mjs` 가 초록이었다 — 그 파일이 `r.text()` 로 페이지 HTML 만
+# 봤기 때문이다. 막으려고 만든 `상세건저장소명` 검사는 이미 있었는데
+# 보는 곳에 없었다. 「검사기가 있다 ≠ 검사기가 잡는다」가 또 반복됐다.
 #
 # M1~M8 과 달리 `verify-disclosure` 가 아니라 `verify-rendered` 를 돌린다.
 # 빌드가 필요하다(실측 2.1초, 캐시 있을 때).
 
 def run_rendered():
-    # 🔴 `--bundles-only` — 디스크만 읽는다. 서버를 타면 서버가 없을 때
-    #    `fetch failed` 로 죽어 **번들 검사에 도달조차 못 하고**, 그 실패가
-    #    "게이트가 못 잡음" 으로 보고된다(원인은 서버인데 결론은 게이트 고장).
+    # `--bundles-only` — 디스크만 읽는다. 서버를 타면 서버가 없을 때
+    # `fetch failed` 로 죽어 번들 검사에 도달조차 못 하고, 그 실패가
+    # "게이트가 못 잡음" 으로 보고된다(원인은 서버인데 결론은 게이트 고장).
     return run('node scripts/verify-rendered.mjs --bundles-only')
 
-# 🔴 **양성 대조 — 뮤테이션 전에 초록인지 먼저 본다.**
-#    이게 없으면 "이미 새고 있음" 과 "게이트가 잡음" 이 같은 출력이 된다.
-#    번들이 이미 유출 중이면(= #78 상태 그 자체) 탐침이 아무 일도 안 해도
-#    `✅ 잡힘` 이 나온다. 전역 규칙: 초기값을 갱신값 중 하나로 두지 않는다.
+# 양성 대조 — 뮤테이션 전에 초록인지 먼저 본다.
+# 이게 없으면 "이미 새고 있음" 과 "게이트가 잡음" 이 같은 출력이 된다.
+# 번들이 이미 유출 중이면(= #78 상태 그 자체) 탐침이 아무 일도 안 해도
+# `✅ 잡힘` 이 나온다. 전역 규칙: 초기값을 갱신값 중 하나로 두지 않는다.
 _rc0, _out0 = run_rendered()
 if _rc0 != 0:
     res.append(('G0 뮤테이션 전 번들이 깨끗한가', '❌ 이미 위반 상태',
@@ -218,8 +218,8 @@ else:
     res.append(('G0 뮤테이션 전 번들이 깨끗한가', '✅ 잡힘', '초록 확인 — G2·G3 의 빨강이 탐침 때문임이 성립한다'))
 
 # G2 — 검사기가 번들 안의 내부 식별자를 잡는가. 청크에 탐침을 직접 심는다.
-#      ⚠️ 빌드 산출물을 건드리므로 **반드시 되돌린다.** 다음 빌드가 덮어쓰지만
-#         그 사이에 다른 검사가 돌면 오탐이 난다.
+# 빌드 산출물을 건드리므로 반드시 되돌린다. 다음 빌드가 덮어쓰지만
+# 그 사이에 다른 검사가 돌면 오탐이 난다.
 import glob as _glob
 _chunks = sorted(_glob.glob(os.path.join(ROOT,'apps/web/.next/static','**','*.js'), recursive=True))
 if not _chunks:
@@ -228,7 +228,7 @@ else:
     _target=_chunks[0]
     _bk=os.path.join(BK,'chunk.bak'); shutil.copy(_target,_bk)
     try:
-        # 심는 값은 정본 id 가 아니라 **게재되지 않은 id** 여야 한다.
+        # 심는 값은 정본 id 가 아니라 게재되지 않은 id 여야 한다.
         # 게재 id 는 공개 URL 슬러그라 위반이 아니다(정상 노출).
         _audit=json.load(io.open(os.path.join(ROOT,'data','audit.json'),encoding='utf-8'))
         _pub={p['id'] for p in json.load(
@@ -283,9 +283,9 @@ else:
     finally:
         restore()
         run('node scripts/build-data.mjs')
-        # 🔴 잔재가 청크에 남지 않게 다시 빌드한다. **rc 를 본다** —
-        #    실패하면 뮤테이션으로 만든 청크(audit 이 실린 번들)가 그대로 남고,
-        #    다음 검사의 빨강이 **진짜 유출처럼 보인다.**
+        # 잔재가 청크에 남지 않게 다시 빌드한다. rc 를 본다 —
+        # 실패하면 뮤테이션으로 만든 청크(audit 이 실린 번들)가 그대로 남고,
+        # 다음 검사의 빨강이 진짜 유출처럼 보인다.
         _rcc, _outc = run('pnpm --filter @neighbor/web build')
         if _rcc != 0:
             res.append(('G3 잔재 정리(재빌드)', '❌ 못 잡음',

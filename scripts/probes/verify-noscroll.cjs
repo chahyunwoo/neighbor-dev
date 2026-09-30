@@ -1,10 +1,5 @@
-/**
- * 이슈 #24 — 홈이 첫 페인트부터 한 화면에 담기는가.
- *
- * 🔴 **매 프레임 본다.** 200ms 샘플링으로는 못 잡는다 — 넘침이 220~680ms
- *    구간에만 나타났다 사라진다.
- * 🔴 headed 로 돈다(headless 는 3D 가 안 그려져 조건 자체가 달라진다).
- */
+// 홈이 첫 페인트부터 한 화면에 담기는가 — 넘침이 220~680ms 에만 나타나므로 매 프레임 본다.
+// headed 로 돈다 — headless 는 3D 가 안 그려져 조건이 달라진다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 const RUNS = Number(process.env.RUNS || 3)
 ;(async () => {
@@ -14,13 +9,7 @@ const RUNS = Number(process.env.RUNS || 3)
     const pg = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
     await pg.addInitScript(() => {
       window.__o = []
-      /*
-       * 🔴 `scrollHeight > innerHeight` 로 재지 않는다. `overflow-y: clip` 은
-       *    스크롤을 막지만 **`scrollHeight` 값은 그대로**라, 이미 막았는데도
-       *    빨갛게 나온다(실측: 28프레임 중 23프레임이 그 경우였다).
-       *    **스크롤바가 실제로 보이는가**로 판정한다 — 세로 스크롤바가 생기면
-       *    `documentElement.clientWidth` 가 `innerWidth` 보다 작아진다.
-       */
+      // scrollHeight 로 재지 않는다 — overflow-y: clip 이어도 값은 그대로다. 스크롤바가 보이면 clientWidth < innerWidth
       const t = () => {
         const d = document.documentElement
         if (window.innerWidth !== d.clientWidth)

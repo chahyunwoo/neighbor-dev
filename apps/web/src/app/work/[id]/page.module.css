@@ -126,7 +126,7 @@
   color: var(--fg-faint);
   white-space: pre-wrap;
   word-break: break-word;
-  /* 긴 명령이 화면 밖으로 뻗지 않게. 실측으로 걸렸던 형태다. */
+  /* 긴 명령이 화면 밖으로 뻗지 않게. */
   overflow-x: auto;
 }
 

@@ -2,20 +2,7 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react'
 
-/**
- * 방의 상태 — **화면이 아니라 앱이 쥔다.**
- *
- * 🔴 **이것이 3D 지속 캔버스의 표준 배치다.** 캔버스도 씬도 루트에 하나씩
- *    두고, 각 화면은 "지금 무엇을 보고 있는가" 만 선언한다. 씬을 화면 안에
- *    두면 라우트가 바뀔 때마다 죽고 다시 산다.
- *
- *    실측 2026-09-16: 씬이 페이지 안에 있을 때 전환마다 **91ms 짜리 멈춤**이
- *    났다(3회 전부 재현). GLTF 21개를 다시 세팅하는 비용이다. 캔버스는 이미
- *    `layout` 에 있어 살아남는데 **씬만 라우트에 묶여 있었다.**
- *
- * 🔴 상태를 여기 두면 화면은 서버 컴포넌트로 남을 수 있다. 각 화면은
- *    `RoomStage` 한 줄만 두고, 그것이 이 상태를 바꾼다.
- */
+// 방 상태는 화면이 아니라 앱이 쥔다 — 씬을 라우트에 묶지 않고, 화면은 서버 컴포넌트로 남아 RoomStage 한 줄로 모드만 선언한다.
 
 export type RoomMode =
   /** 홈 — 돌아다니고 누를 수 있다. 입장 연출이 있다. */
@@ -27,45 +14,27 @@ export type RoomMode =
 
 interface RoomState {
   mode: RoomMode
-  /** 지금 열려 있는(또는 페이지가 가리키는) 물건. */
   openId: string | null
-  /** 이미 열어본 것 — 마커가 흐려져 "남은 것" 이 눈에 띈다. */
+  /** 이미 열어본 것 — 마커가 흐려진다. */
   seen: ReadonlySet<string>
-  /** 입장 연출이 끝났는가. 홈의 카피가 이 뒤에 올라온다. */
   entered: boolean
-  /** 방 조명이 밤(기본)인가. */
   night: boolean
 }
 
 interface RoomApi extends RoomState {
-  /** 화면이 자기 모드를 선언한다. `RoomStage` 가 부른다. */
   declare: (mode: RoomMode, openId: string | null) => void
-  /** 마커·목록에서 물건을 연다(홈 전용). */
+  /** 홈 전용. */
   open: (id: string) => void
   close: () => void
   markEntered: () => void
-  /**
-   * 입장 연출이 **다시 시작됐다** — `entered` 를 되돌린다.
-   *
-   * 🔴 짝이 없으면 이 값이 한 번 켜진 뒤 안 꺼진다. `RoomStage` 가 이것으로
-   *    `data-room-entered` 를 쓰고, **브라우저 프로브가 "이제 마커를 눌러도
-   *    된다" 를 아는 유일한 신호**가 그것이다. 깊은 링크로 들어왔다 홈으로
-   *    오면 4.2초짜리 입장 비행이 도는 동안에도 `true` 라, 검사기가 조용히
-   *    비행 중에 클릭하게 된다(실측 2026-09-17: 홈 도착 +100ms 에 이미 true).
-   */
+  /** entered 를 되돌린다 — 없으면 재입장 비행 중에도 data-room-entered 가 true 라 프로브가 비행 중에 클릭한다. */
   resetEntered: () => void
-  /** 불을 켜고 끈다(낮/밤). */
   toggleLight: () => void
 }
 
 const Ctx = createContext<RoomApi | null>(null)
 
-/**
- * 방 상태를 읽는다.
- *
- * ⚠️ Provider 밖에서 부르면 **조용히 기본값을 주지 않고 던진다.** 3D 가 안
- *    뜨는 것은 화면상 티가 잘 안 나서, 배선이 끊긴 채로 오래 갈 수 있다.
- */
+// Provider 밖이면 기본값 대신 던진다 — 3D 가 안 뜨는 것은 티가 안 나 배선 끊김이 오래 간다.
 export function useRoom(): RoomApi {
   const v = useContext(Ctx)
   if (!v) throw new Error('useRoom 은 <RoomProvider> 안에서만 쓴다')

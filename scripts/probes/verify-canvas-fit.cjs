@@ -1,27 +1,14 @@
-/**
- * 라우트가 바뀌어도 캔버스가 **헤더·푸터에 맞춰 다시 앉는가.**
- *
- * 🔴 캔버스는 라우트를 넘어 살아 있다(지속 캔버스). 그래서 화면이 바뀌어도
- *    이 컴포넌트의 effect 가 다시 돌지 않는다 — 대신 `CanvasShell` 이
- *    body 의 DOM 변화를 보고 `--nav-h`·`--foot-h` 를 다시 잰다.
- *
- * 🔴 **`/work` 로 나가는 방향은 이 검사 없이도 우연히 맞는다.** 푸터가
- *    사라질 때는 ResizeObserver 가 0x0 으로 한 번 쏘아 주기 때문이다.
- *    문제는 **돌아오는 방향**이다 — 없던 푸터가 다시 생기면 그것을 보고
- *    있는 것이 아무것도 없다.
- *
- *    실측 2026-09-17(관찰을 꺼서 확인): 홈 복귀 시 `--foot-h` 가 `0px` 로
- *    남고 캔버스가 733 → **803** 이 되어 **3D 가 푸터를 70px 덮었다.**
- */
+// 라우트가 바뀌어도 캔버스가 헤더·푸터에 맞춰 다시 앉는가(지속 캔버스라 CanvasShell 이 DOM 변화를 보고 다시 잰다).
+// 요점은 홈으로 돌아오는 방향 — 푸터가 다시 생기는 것은 ResizeObserver 가 알려 주지 않는다
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const READ = () => {
   const cs = getComputedStyle(document.documentElement)
   const foot = document.querySelector('footer')
   const nav = document.querySelector('nav')
-  // 캔버스는 뷰포트 전체다. 3D 가 보이는 영역은 `.canvas-frame` 이다.
+  // 3D 가 보이는 영역은 캔버스(뷰포트 전체)가 아니라 .canvas-frame 이다
   const c = document.querySelector('.canvas-frame')?.getBoundingClientRect()
-  // 실제로 3D 를 잘라 보이는 것은 껍데기의 clip-path 다. `.canvas-frame` 과 어긋나면 3D 가 본문·푸터 뒤로 샌다.
+  // 3D 를 실제로 자르는 것은 껍데기의 clip-path — .canvas-frame 과 어긋나면 3D 가 본문·푸터 뒤로 샌다
   const shell = document.querySelector('.canvas-shell')
   let clipGap = null
   if (c && shell) {
@@ -76,7 +63,6 @@ const READ = () => {
   await pg.waitForURL('**/work')
   await pg.waitForTimeout(2500)
   await step('→ /work')
-  // 🔴 돌아오는 방향이 요점이다.
   await pg.$eval('a[href="/"]', (e) => e.click())
   await pg.waitForURL((u) => new URL(u).pathname === '/')
   await pg.waitForTimeout(2500)

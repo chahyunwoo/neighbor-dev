@@ -1,21 +1,7 @@
 #!/usr/bin/env node
-/**
- * 쓰는 애니메이션이 **실제로 정의돼 있는가.**
- *
- * 🔴 실측 2026-09-16: `RoomPanel` 이 `animate-[panelIn_.44s_...]` 를 쓰는데
- *    `panelIn` **키프레임이 어디에도 없었다.** 브라우저는 모르는 이름을 조용히
- *    무시하므로 패널이 한 프레임에 0 → 100 으로 튀어나왔다 —
- *    `getAnimations()` 가 빈 배열이었고 `keyframesExist: false` 였다.
- *
- *    빌드도 타입체크도 lint 도 브라우저 프로브도 전부 통과했다. 이름을 잘못
- *    쓴 애니메이션은 **아무도 안 잡는다.** 사용자가 "확 나타난다" 고 지적하고
- *    나서야 찾았다.
- *
- * 무엇을 보는가:
- *   ① `animate-[NAME_...]`(Tailwind 임의값)의 NAME 이 정의돼 있는가
- *   ② `animation: NAME ...`(CSS)의 NAME 이 정의돼 있는가
- *   ③ 정의됐는데 아무도 안 쓰는 키프레임 — 지웠거나 오타다
- */
+// 쓰는 애니메이션 이름이 실제로 정의돼 있는가 — 브라우저는 모르는 이름을 조용히 무시하고 빌드·lint 도 안 잡는다.
+// 보는 것: ① animate-[NAME_...] ② animation: NAME ... ③ 정의됐는데 아무도 안 쓰는 키프레임.
+// 돌리는 법: node scripts/verify-animations.mjs
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -24,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = join(ROOT, 'apps', 'web', 'src')
 
-/** 브라우저·Tailwind 가 기본으로 아는 이름. 정의가 없어도 된다. */
+// 브라우저·Tailwind 기본 이름 — 정의가 없어도 된다
 const BUILTIN = new Set(['none', 'spin', 'ping', 'pulse', 'bounce'])
 
 function walk(dir) {
@@ -39,9 +25,8 @@ function walk(dir) {
 
 const files = walk(SRC)
 
-/** 정의된 키프레임 이름. */
 const defined = new Set()
-/** 쓰는 이름 → 어디서 쓰는가. */
+// 쓰는 이름 → 어디서 쓰는가
 const used = new Map()
 
 const note = (name, where) => {
@@ -59,11 +44,7 @@ for (const file of files) {
   // Tailwind 임의값: animate-[panelIn_.44s_...]
   for (const m of src.matchAll(/animate-\[([A-Za-z_][\w-]*)[_\]]/g)) note(m[1], rel)
 
-  /*
-   * CSS 단축 속성: `animation: 300ms ease both vt-out;`
-   * 이름이 앞에 올 수도 뒤에 올 수도 있어 토큰을 훑는다. 시간·곡선·키워드를
-   * 걸러낸 나머지가 이름이다.
-   */
+  // CSS 단축 속성은 이름이 앞뒤 어디에나 올 수 있어 시간·곡선·키워드를 걸러낸 나머지를 이름으로 본다
   for (const m of src.matchAll(/animation:\s*([^;{}]+);/g)) {
     const value = m[1]
     if (value.includes('var(')) continue // 변수로 넘기는 경우는 못 본다
@@ -80,7 +61,6 @@ for (const file of files) {
     }
   }
 
-  // `animation-name: x`
   for (const m of src.matchAll(/animation-name:\s*([\w-]+)/g)) note(m[1], rel)
 }
 

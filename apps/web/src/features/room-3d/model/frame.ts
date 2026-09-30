@@ -1,14 +1,8 @@
-/**
- * 3D 가 보이는 영역(뷰포트 px). 캔버스는 뷰포트 전체로 고정하고, 이 영역만 `clip-path` 로 드러낸다.
- *
- * 캔버스 자체를 옮기거나 줄이면 전환 0.44초 동안 매 프레임 드로잉 버퍼·렌더 타깃을 다시 만든다.
- * 영역은 `.canvas-frame`(보이지 않는 요소)이 CSS 전환으로 움직이고, 여기서 매 프레임 읽는다.
- */
+// 3D 가 보이는 영역(뷰포트 px). 캔버스는 뷰포트 전체로 고정하고 이 영역만 clip-path 로 드러낸다 — 캔버스를 줄이면 전환 중 매 프레임 버퍼를 다시 만든다.
 export const frame = { x: 0, y: 0, w: 0, h: 0 }
 
 let last = ''
 
-/** `.canvas-frame` 을 재서 `frame` 을 갱신하고, 바뀌었으면 캔버스 껍데기의 잘라내기 변수를 고친다. */
 export function readFrame(): typeof frame {
   const el = document.querySelector('.canvas-frame')
   if (!el) return frame

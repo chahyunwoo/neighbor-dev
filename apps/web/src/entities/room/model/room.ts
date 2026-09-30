@@ -1,18 +1,8 @@
-/**
- * 방의 물건 6개 — 시안(Main.dc.html)의 배지 1~6 과 같은 순서·같은 뜻이다.
- *
- * 🔴 물건을 열면 반드시 **일**이 나와야 한다 (기획서 4절).
- *    서재 감상으로 끝나는 오브젝트는 넣지 않는다 — 주어가 "나"에 머물면
- *    개발자 방 구경이 되고, 발주자가 볼 것이 없어진다.
- *
- * 이 목록이 3D(데스크톱)·목록(모바일)·서버 렌더 HTML(크롤러) **세 경로의
- * 같은 데이터 소스**다. 3D 는 표현 계층일 뿐이다.
- */
+// 3D·모바일 목록·서버 HTML 세 경로의 같은 데이터 소스다. 물건을 열면 반드시 일이 나와야 한다.
 
 export type Accent = 'amber' | 'blue'
 
 export interface RoomObject {
-  /** 시안의 배지 번호. */
   no: number
   id: string
   /** 물건 이름 — 공간의 말. */
@@ -22,17 +12,11 @@ export interface RoomObject {
   href: string
   /** 앰버는 주 동선(모니터·현관문), 블루는 나머지. */
   accent: Accent
-  /**
-   * 패널 한 줄 설명 — 마커를 눌렀을 때 방을 떠나지 않고 먼저 보이는 것.
-   * 시안(HOT[].sub)에서 왔다.
-   */
+  /** 패널 한 줄 설명 — 방을 떠나지 않고 먼저 보이는 것. */
   sub: string
-  /** 패널 안 요약 행. `[왼쪽, 오른쪽]`. 시안(HOT[].rows). */
+  /** 패널 안 요약 행. `[왼쪽, 오른쪽]`. */
   rows: readonly (readonly [string, string])[]
-  /**
-   * 한 줄 소신. 시안(HOT[].note).
-   * 🔴 여기서 "말" 이 따뜻해진다 — 화면은 차갑게 두고 이 문장이 온기를 진다(기획서 4-A).
-   */
+  /** 한 줄 소신 — 화면은 차갑게 두고 이 문장이 온기를 진다. */
   note: string
 }
 
@@ -145,19 +129,7 @@ export const ROOM_OBJECTS: readonly RoomObject[] = [
   },
 ] as const
 
-/**
- * 물건 → 그 화면 배경에 세울 3D 모델.
- *
- * 🔴 방에서 물건을 누르면 그 물건이 **화면으로 이어진다**(기획서 4절).
- *    이전에는 페이지로 오는 순간 3D 가 사라져 평범한 문서가 됐다.
- *
- * ⚠️ 모니터·화이트보드는 Kenney 팩에 없어 직접 만든 것이라(`Fixtures.tsx`)
- *    배경으로 세울 glb 가 없다. 대신 **책상**을 세운다 — 그 둘이 놓인 자리다.
- *    억지로 비슷한 모델을 끌어오지 않는다.
- *
- * `rotationY`·`scale` 은 배경에서 잘 보이는 각도·크기다. 방의 배치값과
- * 다른 것이 맞다 — 방에서는 벽에 붙어 있고 여기서는 혼자 서 있다.
- */
+// 물건 → 화면 배경 3D 모델. 모니터·화이트보드는 glb 가 없어 책상을 세운다. 회전·크기는 방 배치값과 다른 것이 맞다.
 export const OBJECT_MODEL: Record<string, { model: string; rotationY: number; scale: number }> = {
   monitor: { model: 'desk', rotationY: -28, scale: 1.15 },
   whiteboard: { model: 'desk', rotationY: -28, scale: 1.15 },

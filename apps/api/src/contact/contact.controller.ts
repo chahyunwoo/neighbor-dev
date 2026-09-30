@@ -10,7 +10,6 @@ export class ContactController {
     private readonly quota: QuotaService,
   ) {}
 
-  /** 화면이 "지금 받을 수 있는가" 를 먼저 묻는다. */
   @Get('status')
   status() {
     const q = this.quota.snapshot('contact')
@@ -23,7 +22,10 @@ export class ContactController {
   @Post()
   @HttpCode(HttpStatus.OK)
   async submit(@Body() dto: ContactDto, @Ip() ip: string) {
-    const decision = this.quota.check(ip, 'contact')
+    if (!this.service.available) {
+      throw new HttpException('문의 접수는 아직 준비 중입니다.', HttpStatus.SERVICE_UNAVAILABLE)
+    }
+    const decision = this.quota.reserve(ip, 'contact')
     if (!decision.allowed) {
       throw new HttpException(
         {
@@ -38,9 +40,13 @@ export class ContactController {
       )
     }
 
-    await this.service.send(dto)
-    // 실제로 보낸 뒤에 소비한다 — 실패한 발송으로 캡이 깎이지 않게.
-    this.quota.consume(ip, 'contact')
+    try {
+      await this.service.send(dto)
+    } catch (err) {
+      // 발송 실패는 비용이 없다 — 방문자가 다시 보낼 수 있게 되돌린다
+      this.quota.refund(decision.ticket)
+      throw err
+    }
     return { ok: true }
   }
 }

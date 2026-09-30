@@ -11,7 +11,7 @@ export interface Reaction {
   pivot: 'origin' | 'center'
 }
 
-/** 벽·이웃 가구를 파고들지 않는 범위다. 값을 바꾸면 `scripts/verify-reaction.mjs` 로 잰다. */
+/** 벽·이웃 가구를 파고들지 않는 범위다. 값을 바꾸면 scripts/verify-reaction.mjs 로 잰다. */
 export function reactionOf(hotspot: string): Reaction {
   switch (hotspot) {
     // 서랍은 통짜 모델이라 크게 빼면 가구가 통째로 튀어나온다.
@@ -31,16 +31,11 @@ export function reactionOf(hotspot: string): Reaction {
   }
 }
 
-/** three 의 Y축 회전을 (x, z) 에 건다. */
 function yaw(x: number, z: number, a: number): [number, number] {
   return [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)]
 }
 
-/**
- * 진행도 t(0~1)에서의 위치·각도.
- *
- * @param center 스케일을 건 모델 로컬 bbox 중심. pivot 'center' 일 때만 쓴다.
- */
+/** 진행도 t(0~1)에서의 위치·각도. center 는 스케일을 건 모델 로컬 bbox 중심(pivot center 전용). */
 export function poseAt(
   base: { position: Vec3; yaw: number },
   r: Reaction,

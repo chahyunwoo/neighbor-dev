@@ -1,8 +1,5 @@
-/**
- * 내부 토큰 판정 — 막혀야 하는 것과 통과해야 하는 것을 둘 다 본다.
- *
- * 돌리는 법:  node --test apps/api/src/internal-token.spec.mjs  (먼저 pnpm --filter @neighbor/api build)
- */
+// 내부 토큰 판정 — 막혀야 하는 것과 통과해야 하는 것을 둘 다 본다.
+// 돌리는 법: pnpm --filter @neighbor/api build && node --test apps/api/src/internal-token.spec.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { internalTokenAllows } from '../dist/internal-token.js'

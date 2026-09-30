@@ -18,25 +18,9 @@ export { buildCopyText, type Section, splitSections } from '@/entities/diagnose/
 import { RichText } from '@/shared/ui'
 import styles from './DiagnoseResult.module.css'
 
-/**
- * 자가진단 결과를 섹션 카드로 쪼갠다.
- *
- * 🔴 **스트리밍 중에도 쪼갠다.** 마지막 카드는 아직 쓰이는 중이라 커서가 붙는다 —
- *    "지금 이걸 쓰고 있다" 가 보여야 15초가 기다림이 아니라 과정이 된다.
- *
- * ⚠️ 마크다운 파서를 들이지 않는다. 프롬프트가 형식을 고정하므로
- *    그 몇 가지만 쪼개면 된다 — 파서를 넣으면 링크·이미지까지 렌더되어
- *    정본에 섞인 것이 클릭 가능한 형태로 나갈 수 있다(RichText 와 같은 판단).
- *
- * ⚠️ 형식이 어긋난 줄은 **버리지 않고 문단으로 떨어진다**(`../lib/diagnose-parse`).
- *    스트리밍 도중에는 줄이 반쯤 온 상태가 매번 정상이라, 엄격하게 만들면
- *    화면이 계속 깜빡인다.
- */
+// 스트리밍 중에도 섹션 카드로 쪼갠다. 형식이 어긋난 줄은 버리지 않고 문단으로 떨어진다.
 
-/**
- * 본문을 문단으로 나눈다. 빈 줄이 문단 경계다.
- * 목록(`-` 로 시작)은 줄마다 따로 둔다 — 한 덩어리로 묶으면 안 읽힌다.
- */
+/** 빈 줄이 문단 경계다. 목록 줄은 따로 둔다. */
 function toParagraphs(body: string): string[] {
   const out: string[] = []
   let buf: string[] = []
@@ -74,13 +58,7 @@ function Paragraphs({ body }: { body: string }) {
   )
 }
 
-/**
- * 범위 절 — 항목을 눌러 1차에서 뺄 수 있다.
- *
- * 🔴 **끈 항목은 저장하지 않는다.** 기획서 5절의 "아무것도 저장하지 않는다" 가
- *    그대로 유효하다 — 선택은 이 화면의 상태로만 살고, 방문자가 복사할 때
- *    복사본에 반영된다(`buildCopyText`). 서버로 보내지 않는다.
- */
+// 끈 항목은 저장하지 않는다 — 화면 상태로만 살고 복사본에 반영된다.
 function ScopePanel({
   body,
   dropped,
@@ -132,10 +110,9 @@ function ScopePanel({
   )
 }
 
-/** 등급별 순서. 높은 것이 위로 온다 — 읽는 순서가 곧 우선순위다. */
+/** 높은 등급이 위로 — 읽는 순서가 곧 우선순위다. */
 const RISK_ORDER: Record<RiskLevel, number> = { 높음: 0, 중간: 1, 낮음: 2 }
 
-/** 위험 절 — 등급 배지를 붙인다. */
 function RiskPanel({ body }: { body: string }) {
   const lines = body.split('\n')
   const parsed = lines.map((l) => parseRiskLine(l))
@@ -169,11 +146,7 @@ function RiskPanel({ body }: { body: string }) {
   )
 }
 
-/**
- * 기간 절 — 단일 값이 아니라 범위로 보여준다.
- *
- * 🔴 범위를 못 읽으면 **문단 그대로 둔다.** 폭을 지어내지 않는다.
- */
+// 범위를 못 읽으면 문단 그대로 둔다 — 폭을 지어내지 않는다.
 function PeriodPanel({ body }: { body: string }) {
   const p = parsePeriod(body)
   if (!p) return <Paragraphs body={body} />
@@ -221,9 +194,7 @@ export function DiagnoseResult({
       {intro ? <p className={styles.intro}>{intro}</p> : null}
       {sections.map((section, i) => {
         const isLast = i === sections.length - 1
-        // 🔴 마지막 카드는 아직 쓰이는 중이라 형식이 반만 왔을 수 있다.
-        //    그 상태에서 목록으로 붙였다 뗐다 하면 화면이 흔들리므로,
-        //    다 쓰이고 나서 인터랙션을 켠다.
+        // 마지막 카드는 형식이 반만 왔을 수 있어 다 쓰인 뒤에 인터랙션을 켠다.
         const settled = !(streaming && isLast)
         return (
           <section key={section.title} className={styles.card} data-streaming={streaming && isLast}>

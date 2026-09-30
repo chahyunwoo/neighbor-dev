@@ -1,17 +1,9 @@
-/**
- * 출력 게이트 검증.
- *
- * 🔴 "게이트가 있다" 와 "게이트가 잡는다" 는 다르다. 통과해야 하는 것과
- *    막혀야 하는 것을 **둘 다** 검사한다 — 한쪽만 보면 전부 막는 게이트도
- *    통과한다(위양성이 안 보인다).
- *
- * 돌리는 법:  node --test apps/api/src/diagnose/diagnose.guard.spec.mjs
- */
+// 출력 게이트 — 막혀야 하는 것과 통과해야 하는 것을 둘 다 본다(한쪽만 보면 전부 막는 게이트도 통과한다).
+// 돌리는 법: pnpm --filter @neighbor/api build && node --test apps/api/src/diagnose/diagnose.guard.spec.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { checkOutput } from '../../dist/diagnose/diagnose.guard.js'
 
-/** 막혀야 하는 것 — 금액. */
 const MUST_BLOCK_MONEY = [
   '개발 비용은 대략 500만원 정도로 예상됩니다.',
   '총 1,200,000원 수준입니다.',
@@ -23,7 +15,6 @@ const MUST_BLOCK_MONEY = [
   '비용은 약 2000만원입니다.',
 ]
 
-/** 막혀야 하는 것 — 실적 날조. */
 const MUST_BLOCK_FABRICATION = [
   '저희가 비슷한 쇼핑몰을 만든 적 있습니다.',
   '우리는 물류 시스템을 구축한 적이 있어 익숙합니다.',
@@ -31,7 +22,6 @@ const MUST_BLOCK_FABRICATION = [
   '비슷한 사례를 진행했습니다.',
 ]
 
-/** 통과해야 하는 것 — 프롬프트가 시키는 정상 출력. */
 const MUST_PASS = [
   '전체 개발은 약 8주 정도로 예상됩니다.',
   '화면은 5개, API 는 12개 정도가 필요합니다.',

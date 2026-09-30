@@ -8,16 +8,7 @@ import { buildCopyText, DiagnoseResult } from './DiagnoseResult'
 const MIN = 20
 const MAX = 4000
 
-/**
- * 자가진단 입력 폼 (기획서 5절).
- *
- * 🔴 아무것도 저장하지 않는다 — 결과는 화면에만 남고, 방문자가 스스로
- *    문의에 붙여넣을 수 있게 복사 버튼만 둔다. 이메일도 PDF 도 없다.
- *
- * ⚠️ 이 컴포넌트는 클라이언트 전용이라 JS 가 꺼져 있으면 동작하지 않는다.
- *    그래서 부모(page.tsx)가 서버 렌더로 "무엇을 하는 기능인지" 를 먼저 설명한다 —
- *    JS 없이도 페이지의 뜻은 읽힌다.
- */
+/** 자가진단 입력 폼. 아무것도 저장하지 않는다 — 결과는 화면과 복사본에만 남는다. */
 export function DiagnoseForm() {
   const router = useRouter()
   const [text, setText] = useState('')
@@ -26,33 +17,11 @@ export function DiagnoseForm() {
   const [pending, setPending] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [copied, setCopied] = useState(false)
-  /**
-   * 방문자가 1차에서 뺀 범위 항목.
-   *
-   * 🔴 화면 상태로만 산다. 서버로 보내지 않고 저장하지도 않는다 —
-   *    기획서 5절의 "아무것도 저장하지 않는다" 가 그대로 유효하다.
-   *    복사할 때만 복사본에 반영된다.
-   */
+  // 화면 상태로만 산다 — 서버로 보내거나 저장하지 않는다.
   const [dropped, setDropped] = useState<ReadonlySet<string>>(() => new Set())
-  /**
-   * 스크린리더에게 읽어 줄 현재 상태.
-   *
-   * 🔴 **이 영역은 처음부터 끝까지 DOM 에 있다.** 조건부로 렌더하면 (a) 삽입과
-   *    동시에 내용이 들어가 첫 문구를 놓치고 (b) 결과가 오면 사라져 **결과를
-   *    알릴 자리가 없어진다.** 텍스트만 갈아끼운다.
-   */
+  // 라이브 영역은 처음부터 DOM 에 둔다 — 조건부로 렌더하면 첫 문구와 결과 알림을 놓친다.
   const [live, setLive] = useState('')
-  /**
-   * 입력 칸을 **적은 만큼 늘린다.**
-   *
-   * 🔴 전에는 `resize: vertical` 로 사용자가 끌어 늘이게 했는데, 늘이면 그
-   *    아래가 통째로 밀리고 되돌릴 방법도 없었다(사용자 지적).
-   *    끌게 하는 대신 내용에 맞춘다 — 상한은 CSS 의 `max-height`(420px)이고,
-   *    넘으면 그때부터 칸 안에서 스크롤된다.
-   *
-   * ⚠️ `scrollHeight` 를 읽기 전에 **높이를 먼저 비워야** 한다. 안 그러면
-   *    지금 높이가 바닥이 되어 **줄어들지 않는다**(글을 지워도 칸이 그대로).
-   */
+  // 적은 만큼 늘린다. scrollHeight 를 읽기 전에 높이를 비워야 줄어든다.
   const box = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
     const el = box.current
@@ -81,10 +50,7 @@ export function DiagnoseForm() {
     setError(null)
     setResult('')
     setLive('진단을 시작합니다')
-    /*
-     * 🔴 **실패 여부는 지역 변수로 들고 간다.**
-     *    `error` 상태는 이 함수가 닫고 있어(클로저) `finally` 에서 못 읽는다.
-     */
+    // error 상태는 클로저라 finally 에서 못 읽는다 — 지역 변수로 들고 간다.
     let failed = false
     // 앞 진단에서 뺀 항목이 새 결과에 남으면 엉뚱한 것이 꺼진 채로 보인다.
     setDropped(new Set())
@@ -128,7 +94,7 @@ export function DiagnoseForm() {
             acc += payload.text
             setResult(acc)
           } else if (payload.ok === false) {
-            // 🔴 게이트에 걸렸다. 이미 보여준 것을 지운다.
+            // 게이트에 걸렸다. 이미 보여준 것을 지운다.
             failed = true
             setResult(null)
             setError(payload.message ?? '결과를 만들지 못했습니다.')
@@ -145,35 +111,12 @@ export function DiagnoseForm() {
     } finally {
       setPending(false)
       setStreaming(false)
-      /*
-       * 🔴 **끝났다는 것을 알리되, 실패했는데 "결과" 를 말하지 않는다.**
-       *
-       *    처음에는 "진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다." 를
-       *    **무조건** 넣었다. 실패 세 경로 전부에서 `role="alert"` 가 에러를
-       *    읽은 **직후** 이 문구가 따라 나왔고, 결과 영역은 없었다 —
-       *    스크린리더 사용자가 아래로 내려가 **없는 결과를 찾게 된다.**
-       *    무음보다 나쁘다. 무음은 답답하고 이건 거짓이다.
-       *
-       *    그때 `prev` 를 보는 가드를 달아 두었는데 **항상 참이라 죽어
-       *    있었다** — `live` 에 값을 쓰는 곳이 시작 문구와 `STEPS` 뿐이라
-       *    `: prev` 분기에 도달할 수 없었다(CLAUDE.md 의 `max(base, 설정)`
-       *    죽은 설정과 같은 형태).
-       *
-       * 🔴 **실패면 polite 영역을 비운다.** 에러는 `role="alert"`(assertive)
-       *    가 이미 읽는다. 여기서 또 읽으면 같은 말이 두 번 나온다.
-       */
+      // 실패면 비운다 — 에러는 role="alert" 가 읽고, 여기서 "결과" 를 말하면 거짓이 된다.
       setLive(failed ? '' : '진단이 끝났습니다. 결과를 아래에서 볼 수 있습니다.')
     }
   }
 
-  /**
-   * 결과를 들고 문의로 간다.
-   *
-   * 🔴 결과를 **자동으로 실어 보내지 않는다**(2026-09-09 사용자 확정).
-   *    메일은 문의 정보만 담는다. 대신 클립보드에 담아 주고, 방문자가
-   *    필요하다고 판단하면 본문에 직접 붙여넣는다 — 무엇이 전달될지
-   *    방문자가 알고 고르게 한다.
-   */
+  // 결과를 자동으로 실어 보내지 않는다 — 클립보드에 담고 방문자가 직접 붙여넣는다.
   async function goToContact() {
     if (result) {
       try {
@@ -188,7 +131,7 @@ export function DiagnoseForm() {
   async function copy() {
     if (!result) return
     try {
-      // 🔴 방문자가 뺀 항목이 복사본에 반영된다 — 그 선택 자체가 상담 입력이다.
+      // 방문자가 뺀 항목이 복사본에 반영된다.
       await navigator.clipboard.writeText(buildCopyText(result, dropped))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -232,22 +175,17 @@ export function DiagnoseForm() {
         </div>
       </form>
 
-      {/*
-       * 🔴 **상시 라이브 영역.** 빈 문자열로 시작해 텍스트만 바뀐다.
-       *    `role="status"` 는 암묵적으로 `aria-live="polite"` 다.
-       */}
+      {/* 상시 라이브 영역 — 텍스트만 바뀐다. */}
       <p className={styles.srOnly} role="status">
         {live}
       </p>
 
-      {/* ⚠️ 실패는 즉시 알린다 — `role="alert"` 는 assertive 다. */}
       {error ? (
         <p className={styles.error} role="alert">
           {error}
         </p>
       ) : null}
 
-      {/* 🔴 첫 글자가 오기 전 — 멈춘 것처럼 보이지 않게 한다. */}
       {pending && !result ? <Analyzing onStep={setLive} /> : null}
       {result ? (
         <div>
@@ -278,39 +216,16 @@ export function DiagnoseForm() {
   )
 }
 
-/**
- * 첫 응답이 오기 전의 대기 — **"돌고 있다" 를 보여준다.**
- *
- * 🔴 전에는 버튼 라벨만 "정리하는 중…" 으로 바뀌고 화면은 그대로였다.
- *    모델이 첫 글자를 뱉기까지 몇 초가 걸리는데 그 동안 아무 일도 안 일어나
- *    **멈춘 것처럼 보인다**(사용자 지적: "분석중입니다 같은 그런 인터랙션한
- *    뭔가 나와야 될 거 아니야").
- *
- * ⚠️ 문구는 **하는 일을 순서대로** 적는다. 지어낸 단계가 아니라 프롬프트가
- *    실제로 시키는 순서다(기획서 5절: 범위 → 기술 → 기간 → 위험).
- */
+// 프롬프트가 실제로 시키는 순서다. 지어낸 단계를 넣지 않는다.
 const STEPS = ['입력 내용 분석', '개발 범위 분할', '기술 스택·기간 산정', '리스크 검토']
 
-/**
- * 지금 읽어 줄 문구. **폼 바깥의 상시 라이브 영역**이 이 값을 읽는다.
- *
- * 🔴 `Analyzing` 자신에게 `aria-live` 를 걸면 안 된다 — 그 요소는 **내용과
- *    동시에 DOM 에 삽입**되고(실측: `t=75ms "라이브영역 통째로 삽입"`),
- *    대부분의 스크린리더는 영역이 **미리 있어야** 읽는다. 게다가 결과가
- *    오면 이 요소가 통째로 사라져 **결과를 알릴 자리가 없어진다**
- *    (실측: 결과 도착 후 `[aria-live],[role=status],[role=alert]` 0개).
- */
+// Analyzing 자신에 aria-live 를 걸지 않는다 — 내용과 동시에 삽입되고 결과가 오면 사라진다.
 function Analyzing({ onStep }: { onStep: (s: string) => void }) {
   const [i, setI] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    /*
-     * 🔴 **마지막 단계에서 멈춘다. 처음으로 돌아가지 않는다.**
-     *    `% STEPS.length` 로 순환시켰더니 응답이 늦을 때 같은 4문구를
-     *    **무한히** 다시 읽었다 — polite 라도 1.8초마다 읽던 자리를 끊는다
-     *    (실측: 7776ms 에 첫 문구로 되돌아갔다).
-     */
+    // 마지막 단계에서 멈춘다 — 순환하면 응답이 늦을 때 같은 문구를 계속 읽는다.
     const t = setInterval(() => setI((n) => Math.min(n + 1, STEPS.length - 1)), 1800)
     return () => clearInterval(t)
   }, [])
@@ -320,20 +235,9 @@ function Analyzing({ onStep }: { onStep: (s: string) => void }) {
     onStep(STEPS[i] ?? '')
   }, [i, onStep])
 
-  /*
-   * 🔴 **결과가 생기는 자리로 따라간다.** 폼이 길어서 제출 버튼을 누르면
-   *    대기 카드가 **화면 밖 아래**에 생긴다 — 아무 일도 안 일어난 것처럼
-   *    보인다(스크린샷으로 확인).
-   *
-   * ⚠️ `block: 'center'` — 카드를 화면 가운데에 둔다. `start` 로 하면
-   *    nav 아래에 딱 붙어 답답하다.
-   */
+  // 폼이 길어 대기 카드가 화면 밖에 생기므로 그 자리로 굴린다.
   useEffect(() => {
-    /*
-     * ⚠️ **움직임을 끈 사람에게는 굴리지 않는다.** `behavior: 'smooth'` 는
-     *    `prefers-reduced-motion` 을 스스로 보지 않는다 — 실측: reduce
-     *    에뮬레이션에서도 `scrollY 0 → 97` 로 부드럽게 굴렀다.
-     */
+    // smooth 는 prefers-reduced-motion 을 스스로 보지 않는다.
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     ref.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
   }, [])
