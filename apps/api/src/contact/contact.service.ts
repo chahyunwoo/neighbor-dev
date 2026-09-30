@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { createTransport, type Transporter } from 'nodemailer'
+import { QuotaService } from '../diagnose/quota.service'
 import type { ContactDto } from './contact.dto'
 
 // 저장하지 않고 메일로만 넘긴다. 로그에 이름·이메일·본문을 남기지 않는다
@@ -12,12 +13,13 @@ export class ContactService {
   private readonly to: string | undefined
   private readonly from: string | undefined
 
-  constructor(config: ConfigService) {
+  constructor(config: ConfigService, quota: QuotaService) {
     const host = config.get<string>('SMTP_HOST')
     const user = config.get<string>('SMTP_USER')
     const pass = config.get<string>('SMTP_PASS')
     this.to = config.get<string>('CONTACT_TO')
     this.from = config.get<string>('CONTACT_FROM') ?? user
+    quota.onCapReached((scope, cap) => void this.alertCap(scope, cap))
 
     // 로컬 검증용 — 발송하지 않는다. 운영에서 켜지면 문의가 조용히 사라지므로 크게 경고한다
     if (config.get('CONTACT_DRY_RUN') === 'true' && this.to) {
@@ -60,7 +62,7 @@ export class ContactService {
       })
     } catch (err) {
       // 원인은 로그에만. 방문자에게 SMTP 사정을 알리지 않는다
-      this.log.error(`메일 발송 실패: ${err instanceof Error ? err.name : typeof err}`)
+      this.log.error(`메일 발송 실패: ${failureCode(err)}`)
       throw new ServiceUnavailableException(
         '지금 접수가 되지 않습니다. 잠시 후 다시 시도해 주세요.',
       )
@@ -68,6 +70,28 @@ export class ContactService {
 
     this.log.log('문의 1건 전달')
   }
+
+  // 봇이 하루 몫을 먼저 소진했을 수 있다 — 조용히 막히면 운영자가 모른다
+  private async alertCap(scope: string, cap: number): Promise<void> {
+    if (!this.transporter || !this.to) return
+    const label = scope === 'contact' ? '문의' : '자가진단'
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: this.to,
+        subject: `[알림] ${label} 일일 한도 ${cap}건 도달`,
+        text: `${label} 요청이 오늘 한도(${cap}건)에 닿아 자정(KST)까지 안내 문구로 응답합니다.\n평소보다 이르면 자동 요청을 의심해 api 로그를 확인하세요.`,
+      })
+    } catch (err) {
+      this.log.error(`한도 알림 발송 실패: ${failureCode(err)}`)
+    }
+  }
+}
+
+// 원인 코드만 남긴다(EAUTH·EDNS 등). 메시지에는 주소·계정이 섞일 수 있다
+function failureCode(err: unknown): string {
+  if (err && typeof err === 'object' && 'code' in err) return String((err as { code: unknown }).code)
+  return err instanceof Error ? err.name : typeof err
 }
 
 function buildBody(dto: ContactDto): string {

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Ip, Post } from '@nestjs/common'
 import { QuotaService } from '../diagnose/quota.service'
+import { TurnstileService } from '../turnstile.service'
 import { ContactDto } from './contact.dto'
 import { ContactService } from './contact.service'
 
@@ -8,6 +9,7 @@ export class ContactController {
   constructor(
     private readonly service: ContactService,
     private readonly quota: QuotaService,
+    private readonly turnstile: TurnstileService,
   ) {}
 
   @Get('status')
@@ -24,6 +26,9 @@ export class ContactController {
   async submit(@Body() dto: ContactDto, @Ip() ip: string) {
     if (!this.service.available) {
       throw new HttpException('문의 접수는 아직 준비 중입니다.', HttpStatus.SERVICE_UNAVAILABLE)
+    }
+    if (!(await this.turnstile.verify(dto.turnstileToken, ip))) {
+      throw new HttpException('사람 확인에 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.', HttpStatus.FORBIDDEN)
     }
     const decision = this.quota.reserve(ip, 'contact')
     if (!decision.allowed) {

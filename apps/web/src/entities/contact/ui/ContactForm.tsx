@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { Turnstile, turnstileEnabled } from '@/shared/ui'
 import styles from './ContactForm.module.css'
 
 const MIN_MESSAGE = 20
@@ -14,15 +15,18 @@ export function ContactForm() {
   const [message, setMessage] = useState('')
   const [agreed, setAgreed] = useState(false)
   const [pending, setPending] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [resetKey, setResetKey] = useState(0)
   const [result, setResult] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
 
   const tooShort = message.trim().length < MIN_MESSAGE
   const tooLong = message.length > MAX_MESSAGE
   const invalid = name.trim().length < 2 || !email.includes('@') || tooShort || tooLong || !agreed
+  const unverified = turnstileEnabled && !token
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (pending || invalid) return
+    if (pending || invalid || unverified) return
     setPending(true)
     setResult(null)
     try {
@@ -33,6 +37,7 @@ export function ContactForm() {
           name: name.trim(),
           email: email.trim(),
           message: message.trim(),
+          turnstileToken: token ?? undefined,
         }),
       })
       const data = await res.json()
@@ -53,6 +58,7 @@ export function ContactForm() {
       setResult({ kind: 'error', text: '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' })
     } finally {
       setPending(false)
+      setResetKey((k) => k + 1)
     }
   }
 
@@ -133,12 +139,14 @@ export function ContactForm() {
         </p>
       ) : null}
 
+      <Turnstile onToken={setToken} resetKey={resetKey} />
+
       <div className={styles.foot}>
         <span className={styles.note}>
           문의 내용은 서버에 저장하지 않고 메일로만 전달됩니다.
           {tooLong ? ` · ${MAX_MESSAGE.toLocaleString()}자 안쪽으로 적어주세요` : ''}
         </span>
-        <button className={styles.submit} type="submit" disabled={pending || invalid}>
+        <button className={styles.submit} type="submit" disabled={pending || invalid || unverified}>
           {pending ? '보내는 중…' : '문의 보내기'}
         </button>
       </div>

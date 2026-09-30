@@ -37,6 +37,7 @@ export class QuotaService {
   private readonly perIpHourly: number
   private readonly contactDailyCap: number
   private readonly contactPerIpHourly: number
+  private capListener: ((scope: QuotaScope, cap: number) => void) | null = null
 
   constructor(config: ConfigService) {
     // 월 $20 상한 ≈ 하루 약 33건. 환경변수가 없으면 상한을 넘지 않는 보수적 기본값
@@ -46,6 +47,11 @@ export class QuotaService {
     this.contactDailyCap = positiveOr(config.get('CONTACT_DAILY_CAP'), 50)
     this.contactPerIpHourly = positiveOr(config.get('CONTACT_RATE_LIMIT_PER_IP_HOUR'), 2)
     this.dailyResetAt = nextMidnightKst()
+  }
+
+  // 캡 도달을 사람에게 알리는 곳(메일)이 여기 없으므로 밖에서 건다. 하루에 용도별로 한 번 불린다
+  onCapReached(listener: (scope: QuotaScope, cap: number) => void): void {
+    this.capListener = listener
   }
 
   // 확인과 차감을 한 동기 호출에서 한다 — 나눠서 사이에 await 이 끼면 동시 요청이 전부 통과한다
@@ -111,6 +117,7 @@ export class QuotaService {
     if (used === limits.daily) {
       // 캡 도달을 남긴다 — 조용히 막히면 원인을 알 수 없다
       this.log.warn(`${scope} 일일 캡 ${limits.daily}건에 도달했다. 자정까지 안내 문구로 전환된다.`)
+      this.capListener?.(scope, limits.daily)
     }
     return now
   }

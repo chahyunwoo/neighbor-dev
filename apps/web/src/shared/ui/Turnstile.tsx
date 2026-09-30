@@ -1,0 +1,90 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+
+type TurnstileApi = {
+  render(el: HTMLElement, options: Record<string, unknown>): string
+  reset(id: string): void
+  remove(id: string): void
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi
+  }
+}
+
+/** 사이트 키가 없으면(로컬) 위젯 없이 제출을 막지 않는다. api 도 시크릿이 없으면 검증하지 않는다. */
+export const turnstileEnabled = Boolean(SITE_KEY)
+
+let loading: Promise<TurnstileApi> | null = null
+function load(): Promise<TurnstileApi> {
+  if (window.turnstile) return Promise.resolve(window.turnstile)
+  loading ??= new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = SCRIPT
+    s.async = true
+    s.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error('turnstile')))
+    s.onerror = () => {
+      loading = null
+      reject(new Error('turnstile'))
+    }
+    document.head.appendChild(s)
+  })
+  return loading
+}
+
+/** 사람 확인. 토큰은 한 번 쓰면 끝이라 제출할 때마다 resetKey 를 올려 새로 받는다. */
+export function Turnstile({
+  onToken,
+  resetKey,
+  className,
+}: {
+  onToken: (token: string | null) => void
+  resetKey: number
+  className?: string | undefined
+}) {
+  const el = useRef<HTMLDivElement>(null)
+  const id = useRef<string | null>(null)
+  const report = useRef(onToken)
+
+  useEffect(() => {
+    report.current = onToken
+  }, [onToken])
+
+  useEffect(() => {
+    if (!SITE_KEY || !el.current) return
+    let cancelled = false
+    load()
+      .then((ts) => {
+        if (cancelled || !el.current) return
+        id.current = ts.render(el.current, {
+          sitekey: SITE_KEY,
+          theme: 'dark',
+          // 대부분은 보이지 않게 통과한다. 의심스러울 때만 체크 상자가 뜬다
+          appearance: 'interaction-only',
+          callback: (token: string) => report.current(token),
+          'expired-callback': () => report.current(null),
+          'error-callback': () => report.current(null),
+        })
+      })
+      .catch(() => report.current(null))
+    return () => {
+      cancelled = true
+      if (id.current) window.turnstile?.remove(id.current)
+      id.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (resetKey === 0 || !id.current) return
+    report.current(null)
+    window.turnstile?.reset(id.current)
+  }, [resetKey])
+
+  if (!SITE_KEY) return null
+  return <div ref={el} className={className} />
+}
