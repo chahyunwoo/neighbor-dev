@@ -16,3 +16,27 @@
   border-color: var(--amber);
   color: var(--amber);
 }
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg-faint);
+}
+
+.status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+}
+
+.status[data-verified="true"] {
+  color: var(--amber-dim);
+}
+
+.status[data-verified="true"]::before {
+  background: var(--amber);
+}
