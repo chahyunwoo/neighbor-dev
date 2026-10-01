@@ -272,6 +272,11 @@ function useEdgeClamp() {
       if (!w || !h) return
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
+      /** 보정은 래퍼 안쪽에서 적용되므로 화면 px 를 drei 가 건 scale 로 나눠 넣어야 한다. */
+      const scaleOf = (el: HTMLElement) => {
+        const m = /scale\(([-\d.]+)/.exec(el.style.transform)
+        return m && Number(m[1]) > 0 ? Number(m[1]) : 1
+      }
       /** 최종 화면 위치는 계산이 아니라 측정한다 — drei 변환 위에 --edge-dx 보정이 버튼에 걸려 있다. */
       const onScreen = (el: HTMLElement) => {
         const btn = el.querySelector('button')
@@ -285,10 +290,8 @@ function useEdgeClamp() {
         if (!m) continue
         const x = Number(m[1])
         const y = Number(m[2])
-        // 보정은 래퍼(drei 가 scale 을 건다) 안쪽에서 적용되므로 px 가 그 배로 늘어난다.
         // 나눠서 넣지 않으면 가장자리 마커가 반대쪽으로 수백 px 미끄러진다(#88).
-        const sm = /scale\(([-\d.]+)/.exec(el.style.transform)
-        const scale = sm && Number(sm[1]) > 0 ? Number(sm[1]) : 1
+        const scale = scaleOf(el)
 
         // 캔버스가 아니라 왼쪽 UI 를 뺀 가용 영역으로 접는다 — UI 뒤로 들어가면 안 눌린다.
         const left = fx + Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
@@ -337,7 +340,8 @@ function useEdgeClamp() {
             break
           }
         }
-        if (shift) el.style.setProperty('--edge-dy', `${dy + shift}px`)
+        // shift 는 화면 px 다 — --edge-dy 와 단위가 다르므로 같이 나눠서 더한다.
+        if (shift) el.style.setProperty('--edge-dy', `${dy + shift / scaleOf(el)}px`)
         taken.push({ x: at.x, y: at.y + shift })
       }
     }
