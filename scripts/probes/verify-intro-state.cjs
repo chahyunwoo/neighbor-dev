@@ -230,53 +230,68 @@ async function shotNow(pg) {
     )
     ok(opened === 1, '   (대조) 둘러보기 전 마커가 열려 있다', `열린 마커 ${opened}개`)
 
-    // 닫히지 않은 마커들의 중심 평균 — 가로만 보면 극각 제약 손실을 못 잡아 세로도 본다
-    const center = () =>
+    // 카메라가 멈춘 각도를 직접 읽는다. 마커 위치로 추정하지 않는다 — 가장자리 클램프가 제대로
+    // 동작하면 마커가 화면 끝에 고정돼 이동 폭이 제약과 무관해진다(#88 에서 이 추정이 깨졌다).
+    // 값은 제약 경계와 같다: ROOM 0.540π~0.980π · FOCUS 0.440π~1.080π
+    const angles = () =>
       pg.evaluate(() => {
-        const m = [...document.querySelectorAll('button[class*="marker"]')].filter(
-          (e) => e.getAttribute('aria-expanded') !== 'true',
-        )
-        if (!m.length) return null
-        let x = 0
-        let y = 0
-        for (const e of m) {
-          const r = e.getBoundingClientRect()
-          x += r.x + r.width / 2
-          y += r.y + r.height / 2
-        }
-        return { x: x / m.length, y: y / m.length }
+        const d = document.documentElement.dataset
+        if (d.camAzimuth === undefined || d.camPolar === undefined) return null
+        const az = Number(d.camAzimuth)
+        // getAzimuthalAngle 은 [-π, π] 로 감긴다 — FOCUS 상한 1.08π 가 -0.92π 로 읽힌다
+        return { az: az < 0 ? az + Math.PI * 2 : az, po: Number(d.camPolar) }
       })
 
+    // 묵은 값을 읽고 통과하지 않도록 드래그마다 지운다 — 한 번만 지우면 둘째부터는 직전 값이 읽혀
+    // 안 먹은 드래그도 non-null 로 통과한다.
+    let offCanvas = 0
     const drag = async (dx, dy = 0) => {
+      await pg.evaluate(() => {
+        document.documentElement.removeAttribute('data-cam-azimuth')
+        document.documentElement.removeAttribute('data-cam-polar')
+      })
+      // 누른 지점이 캔버스여야 한다 — 마커 버튼이 pointerdown 을 먹으면 카메라가 안 돈다(⑦ 과 같은 대조)
+      const onCanvas = await pg.evaluate(
+        ([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS',
+        [480, 460],
+      )
+      if (!onCanvas) offCanvas++
       await pg.mouse.move(480, 460)
       await pg.mouse.down()
       for (let i = 1; i <= 30; i++) await pg.mouse.move(480 + (dx * i) / 30, 460 + (dy * i) / 30)
       await pg.mouse.up()
-      await pg.waitForTimeout(500)
+      await pg.waitForTimeout(600)
     }
     await drag(-900)
-    const left = await center()
+    const left = await angles()
     await drag(1800)
-    const right = await center()
+    const right = await angles()
     // 세로도 끝까지 — 극각 범위를 본다
     await drag(0, -700)
-    const up = await center()
+    const up = await angles()
     await drag(0, 1400)
-    const down = await center()
+    const down = await angles()
     await ctx.close()
-    const span = left && right ? Math.round(Math.abs(right.x - left.x)) : 0
-    const vspan = up && down ? Math.round(Math.abs(down.y - up.y)) : 0
-    // 1440x900 기준 FOCUS 913px vs ROOM 409px — 기준은 그 사이
+
+    // 양성 대조 — 각도를 못 읽었으면 실패다. onEnd 가 빠지면 폭이 0 으로 읽혀 조용히 빨개질 뿐 이유가 안 보인다
+    const read = [left, right, up, down].filter(Boolean).length
+    ok(read === 4, '   (대조) 드래그마다 카메라 각도를 읽었다', `읽은 횟수 ${read}/4`)
+    ok(offCanvas === 0, '   (대조) 네 번 다 캔버스를 눌렀다', `다른 요소가 먹은 횟수 ${offCanvas}`)
+
+    const P = (v) => `${(v / Math.PI).toFixed(3)}π`
+    const span = left && right ? Math.abs(right.az - left.az) : 0
+    const vspan = up && down ? Math.abs(down.po - up.po) : 0
+    // FOCUS 0.640π vs ROOM 0.440π — 결정적 값이라 기준을 그 사이에 둔다
     ok(
-      span >= 700,
+      span >= Math.PI * 0.54,
       '마커를 연 채 좌우로 둘러볼 때 초점 제약이 쓰인다',
-      `이동 폭 ${span}px (기준 700px 이상 · 제약이 ROOM 이면 ~409px)`,
+      `방위각 폭 ${P(span)} (기준 0.540π 이상 · 제약이 ROOM 이면 0.440π)`,
     )
-    // 게이트다(양성 대조 아님) — >= 1 이면 극각 제약이 죽어도 통과한다. 값은 결정적(913 / 74)이라 기준을 그 사이에 둔다
+    // FOCUS 0.380π vs ROOM 0.290π
     ok(
-      vspan >= 65,
+      vspan >= Math.PI * 0.335,
       '마커를 연 채 위아래로 둘러볼 때 초점 극각이 쓰인다',
-      `세로 이동 폭 ${vspan}px (기준 65px 이상 · 극각이 ROOM 이면 ~53px)`,
+      `극각 폭 ${P(vspan)} (기준 0.335π 이상 · 극각이 ROOM 이면 0.290π)`,
     )
   }
 
