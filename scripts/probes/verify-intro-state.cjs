@@ -242,18 +242,26 @@ async function shotNow(pg) {
         return { az: az < 0 ? az + Math.PI * 2 : az, po: Number(d.camPolar) }
       })
 
+    // 묵은 값을 읽고 통과하지 않도록 드래그마다 지운다 — 한 번만 지우면 둘째부터는 직전 값이 읽혀
+    // 안 먹은 드래그도 non-null 로 통과한다.
+    let offCanvas = 0
     const drag = async (dx, dy = 0) => {
+      await pg.evaluate(() => {
+        document.documentElement.removeAttribute('data-cam-azimuth')
+        document.documentElement.removeAttribute('data-cam-polar')
+      })
+      // 누른 지점이 캔버스여야 한다 — 마커 버튼이 pointerdown 을 먹으면 카메라가 안 돈다(⑦ 과 같은 대조)
+      const onCanvas = await pg.evaluate(
+        ([x, y]) => document.elementFromPoint(x, y)?.tagName === 'CANVAS',
+        [480, 460],
+      )
+      if (!onCanvas) offCanvas++
       await pg.mouse.move(480, 460)
       await pg.mouse.down()
       for (let i = 1; i <= 30; i++) await pg.mouse.move(480 + (dx * i) / 30, 460 + (dy * i) / 30)
       await pg.mouse.up()
       await pg.waitForTimeout(600)
     }
-    // 묵은 값을 읽고 통과하지 않도록 지우고 시작한다 — 이 드래그가 쓴 것만 본다
-    await pg.evaluate(() => {
-      document.documentElement.removeAttribute('data-cam-azimuth')
-      document.documentElement.removeAttribute('data-cam-polar')
-    })
     await drag(-900)
     const left = await angles()
     await drag(1800)
@@ -268,6 +276,7 @@ async function shotNow(pg) {
     // 양성 대조 — 각도를 못 읽었으면 실패다. onEnd 가 빠지면 폭이 0 으로 읽혀 조용히 빨개질 뿐 이유가 안 보인다
     const read = [left, right, up, down].filter(Boolean).length
     ok(read === 4, '   (대조) 드래그마다 카메라 각도를 읽었다', `읽은 횟수 ${read}/4`)
+    ok(offCanvas === 0, '   (대조) 네 번 다 캔버스를 눌렀다', `다른 요소가 먹은 횟수 ${offCanvas}`)
 
     const P = (v) => `${(v / Math.PI).toFixed(3)}π`
     const span = left && right ? Math.abs(right.az - left.az) : 0
