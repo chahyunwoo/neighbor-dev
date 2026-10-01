@@ -229,6 +229,14 @@ export function Scene({
         enableZoom={false}
         enableDamping
         dampingFactor={0.08}
+        // 둘러보기가 끝난 자세를 남긴다 — 마커 위치로 제약을 추정하면 가장자리 클램프에 가려 안 보인다.
+        onEnd={() => {
+          const c = controls.current
+          if (!c) return
+          const d = document.documentElement.dataset
+          d.camAzimuth = c.getAzimuthalAngle().toFixed(4)
+          d.camPolar = c.getPolarAngle().toFixed(4)
+        }}
         {...(entered ? CAMERA_LIMITS : FREE_LIMITS)}
       />
 
