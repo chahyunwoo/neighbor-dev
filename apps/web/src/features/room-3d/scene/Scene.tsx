@@ -229,6 +229,14 @@ export function Scene({
         enableZoom={false}
         enableDamping
         dampingFactor={0.08}
+        // 둘러보기가 끝난 자세를 남긴다 — 마커 위치로 제약을 추정하면 가장자리 클램프에 가려 안 보인다.
+        onEnd={() => {
+          const c = controls.current
+          if (!c) return
+          const d = document.documentElement.dataset
+          d.camAzimuth = c.getAzimuthalAngle().toFixed(4)
+          d.camPolar = c.getPolarAngle().toFixed(4)
+        }}
         {...(entered ? CAMERA_LIMITS : FREE_LIMITS)}
       />
 
@@ -264,6 +272,11 @@ function useEdgeClamp() {
       if (!w || !h) return
 
       const wraps = [...root.querySelectorAll<HTMLElement>(`.${MARKER_WRAP}`)]
+      /** 보정은 래퍼 안쪽에서 적용되므로 화면 px 를 drei 가 건 scale 로 나눠 넣어야 한다. */
+      const scaleOf = (el: HTMLElement) => {
+        const m = /scale\(([-\d.]+)/.exec(el.style.transform)
+        return m && Number(m[1]) > 0 ? Number(m[1]) : 1
+      }
       /** 최종 화면 위치는 계산이 아니라 측정한다 — drei 변환 위에 --edge-dx 보정이 버튼에 걸려 있다. */
       const onScreen = (el: HTMLElement) => {
         const btn = el.querySelector('button')
@@ -277,6 +290,8 @@ function useEdgeClamp() {
         if (!m) continue
         const x = Number(m[1])
         const y = Number(m[2])
+        // 나눠서 넣지 않으면 가장자리 마커가 반대쪽으로 수백 px 미끄러진다(#88).
+        const scale = scaleOf(el)
 
         // 캔버스가 아니라 왼쪽 UI 를 뺀 가용 영역으로 접는다 — UI 뒤로 들어가면 안 눌린다.
         const left = fx + Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
@@ -288,8 +303,8 @@ function useEdgeClamp() {
 
         // 접은 값을 transform 에 쓰지 않는다 — 다음 프레임에 원본으로 읽혀 판정이 꺼지고, 덧대면 누적된다.
         // 보정량만 변수로 넘기고 적용은 자식 요소가 한다.
-        el.style.setProperty('--edge-dx', `${cx - x}px`)
-        el.style.setProperty('--edge-dy', `${cy - y}px`)
+        el.style.setProperty('--edge-dx', `${(cx - x) / scale}px`)
+        el.style.setProperty('--edge-dy', `${(cy - y) / scale}px`)
         if ((el.dataset.edge === 'true') !== clamped) {
           el.dataset.edge = clamped ? 'true' : 'false'
         }
@@ -325,7 +340,8 @@ function useEdgeClamp() {
             break
           }
         }
-        if (shift) el.style.setProperty('--edge-dy', `${dy + shift}px`)
+        // shift 는 화면 px 다 — --edge-dy 와 단위가 다르므로 같이 나눠서 더한다.
+        if (shift) el.style.setProperty('--edge-dy', `${dy + shift / scaleOf(el)}px`)
         taken.push({ x: at.x, y: at.y + shift })
       }
     }
