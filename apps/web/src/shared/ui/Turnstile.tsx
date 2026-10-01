@@ -56,6 +56,9 @@ export function Turnstile({
   // 스크립트를 못 받으면 빈 상자만 남고 버튼이 잠긴 채로 끝난다 — 이유와 다시 시도를 보여준다
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // Cloudflare 는 방문자를 사람으로 확신하면 아무 UI 도 그리지 않고 통과시킨다(iutzip.dev 실측).
+  // 그동안 제출 버튼은 잠겨 있으므로 확인 상태만큼은 우리가 직접 보여준다.
+  const [verified, setVerified] = useState(false)
 
   useEffect(() => {
     report.current = onToken
@@ -66,6 +69,7 @@ export function Turnstile({
     if (!SITE_KEY || !el.current) return
     let cancelled = false
     setFailed(false)
+    setVerified(false)
     load()
       .then((ts) => {
         if (cancelled || !el.current) return
@@ -74,9 +78,18 @@ export function Turnstile({
           theme: 'dark',
           // 늘 보인다 — 통과 전에는 제출 버튼이 잠기므로, 안 보이면 방문자가 이유를 알 수 없다
           appearance: 'always',
-          callback: (token: string) => report.current(token),
-          'expired-callback': () => report.current(null),
-          'error-callback': () => report.current(null),
+          callback: (token: string) => {
+            setVerified(true)
+            report.current(token)
+          },
+          'expired-callback': () => {
+            setVerified(false)
+            report.current(null)
+          },
+          'error-callback': () => {
+            setVerified(false)
+            report.current(null)
+          },
         })
       })
       .catch(() => {
@@ -93,6 +106,7 @@ export function Turnstile({
 
   useEffect(() => {
     if (resetKey === 0 || !id.current) return
+    setVerified(false)
     report.current(null)
     window.turnstile?.reset(id.current)
   }, [resetKey])
@@ -100,6 +114,7 @@ export function Turnstile({
   if (!SITE_KEY) return null
   return (
     <div className={className}>
+      {/* 도전이 필요한 방문자에게는 Cloudflare 가 이 안에 위젯을 그린다 */}
       <div ref={el} hidden={failed} />
       {failed ? (
         <p className={styles.failed} role="alert">
@@ -108,7 +123,11 @@ export function Turnstile({
             다시 시도
           </button>
         </p>
-      ) : null}
+      ) : (
+        <p className={styles.status} data-verified={verified} role="status">
+          {verified ? '사람 확인됨' : '사람 확인 중…'}
+        </p>
+      )}
     </div>
   )
 }
