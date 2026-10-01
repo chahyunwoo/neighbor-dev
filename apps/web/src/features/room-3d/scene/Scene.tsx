@@ -277,6 +277,10 @@ function useEdgeClamp() {
         if (!m) continue
         const x = Number(m[1])
         const y = Number(m[2])
+        // 보정은 래퍼(drei 가 scale 을 건다) 안쪽에서 적용되므로 px 가 그 배로 늘어난다.
+        // 나눠서 넣지 않으면 가장자리 마커가 반대쪽으로 수백 px 미끄러진다(#88).
+        const sm = /scale\(([-\d.]+)/.exec(el.style.transform)
+        const scale = sm && Number(sm[1]) > 0 ? Number(sm[1]) : 1
 
         // 캔버스가 아니라 왼쪽 UI 를 뺀 가용 영역으로 접는다 — UI 뒤로 들어가면 안 눌린다.
         const left = fx + Math.min(UI_LEFT, w * 0.5) + EDGE_PAD
@@ -288,8 +292,8 @@ function useEdgeClamp() {
 
         // 접은 값을 transform 에 쓰지 않는다 — 다음 프레임에 원본으로 읽혀 판정이 꺼지고, 덧대면 누적된다.
         // 보정량만 변수로 넘기고 적용은 자식 요소가 한다.
-        el.style.setProperty('--edge-dx', `${cx - x}px`)
-        el.style.setProperty('--edge-dy', `${cy - y}px`)
+        el.style.setProperty('--edge-dx', `${(cx - x) / scale}px`)
+        el.style.setProperty('--edge-dy', `${(cy - y) / scale}px`)
         if ((el.dataset.edge === 'true') !== clamped) {
           el.dataset.edge = clamped ? 'true' : 'false'
         }
