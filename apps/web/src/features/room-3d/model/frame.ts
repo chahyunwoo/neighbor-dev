@@ -30,7 +30,8 @@ export function readFrame(): typeof frame {
   if (el) {
     const r = el.getBoundingClientRect()
     const next = { x: r.x, y: r.y, w: r.width, h: r.height }
-    const resized = viewport.w !== root.clientWidth || viewport.h !== root.clientHeight
+    // clientWidth 는 라우트마다 스크롤바가 생기고 사라지며 바뀐다 — 그걸 리사이즈로 읽으면 전환이 스냅된다.
+    const resized = viewport.w !== window.innerWidth || viewport.h !== window.innerHeight
     if (!measured || resized || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       Object.assign(frame, next)
       Object.assign(targetFrame, next)
@@ -47,7 +48,7 @@ export function readFrame(): typeof frame {
       Object.assign(targetFrame, next)
     }
     measured = true
-    viewport = { w: root.clientWidth, h: root.clientHeight }
+    viewport = { w: window.innerWidth, h: window.innerHeight }
   }
 
   const key = `${frame.x}|${frame.y}|${frame.w}|${frame.h}|${root.clientWidth}|${root.clientHeight}`

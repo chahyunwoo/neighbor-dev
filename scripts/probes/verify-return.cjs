@@ -112,23 +112,25 @@ const clickNav = async (pg, sel) => {
     `  - 첫 진입 비행 ${first ? first.settle : '?'}ms · 되돌아온 비율 ${first ? (first.backtrack * 100).toFixed(1) : '?'}% (연출 기준선)`,
   )
 
-  // 2) 목록 → 홈, 로고 클릭
-  await clickNav(pg, 'nav a[href="/work"]')
-  await pg.waitForTimeout(2500)
-  await track(pg)
-  await clickNav(pg, 'nav a[href="/"]')
-  await pg.waitForTimeout(5000)
-  await check('목록 → 로고 → 홈', RETURN_BUDGET)
+  // 2) 목록 → 홈 3) 상세 → 홈, 로고 클릭
+  const returns = async (page, tag) => {
+    await clickNav(page, 'nav a[href="/work"]')
+    await page.waitForTimeout(2500)
+    await track(page)
+    await clickNav(page, 'nav a[href="/"]')
+    await page.waitForTimeout(5000)
+    await check(`목록 → 로고 → 홈${tag}`, RETURN_BUDGET, page)
 
-  // 3) 상세 → 홈, 로고 클릭
-  await clickNav(pg, 'nav a[href="/work"]')
-  await pg.waitForTimeout(2000)
-  await clickNav(pg, 'a[href^="/work/"]')
-  await pg.waitForTimeout(3000)
-  await track(pg)
-  await clickNav(pg, 'nav a[href="/"]')
-  await pg.waitForTimeout(5000)
-  await check('상세 → 로고 → 홈', RETURN_BUDGET)
+    await clickNav(page, 'nav a[href="/work"]')
+    await page.waitForTimeout(2000)
+    await clickNav(page, 'a[href^="/work/"]')
+    await page.waitForTimeout(3000)
+    await track(page)
+    await clickNav(page, 'nav a[href="/"]')
+    await page.waitForTimeout(5000)
+    await check(`상세 → 로고 → 홈${tag}`, RETURN_BUDGET, page)
+  }
+  await returns(pg, '')
 
   // 4) 상세로 직접 진입한 뒤 복귀 — 같은 탭이면 sessionStorage 의 intro-seen 이 남아 조건이 달라져 새 컨텍스트에서 연다
   const ctx2 = await b.newContext({ viewport: { width: 1440, height: 900 } })
@@ -139,6 +141,21 @@ const clickNav = async (pg, sel) => {
   await clickNav(pg2, 'nav a[href="/"]')
   await pg2.waitForTimeout(6000)
   await check('상세 직접진입 → 로고 → 홈', 2000, pg2, false)
+
+  // 5) 스크롤바가 자리를 차지하는 환경 — headless 는 기본으로 숨겨 하위 화면에서만 생기는 15px 폭 변화를 못 본다
+  const b2 = await chromium.launch({ ...LAUNCH, ignoreDefaultArgs: ['--hide-scrollbars'] })
+  const pg3 = await (await b2.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
+  await pg3.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('style')
+      s.textContent = '::-webkit-scrollbar{width:15px;height:15px}'
+      document.head.append(s)
+    })
+  })
+  await pg3.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+  await pg3.waitForTimeout(5000)
+  await returns(pg3, ' (스크롤바)')
+  await b2.close()
 
   await b.close()
   console.log(fail ? `\n${fail}건 실패` : '\n전부 통과')
