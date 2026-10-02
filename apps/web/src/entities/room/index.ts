@@ -1,10 +1,12 @@
 // 엔드포인트는 없지만 entities 다 — 3D·목록·서버 HTML 세 경로가 쓰는 도메인 데이터다.
 export {
+  CAMERA_POSITION,
   DEG,
   DESK_TOP,
   LAYOUT,
   MONITOR_POSITION,
   type Placement,
+  ROOM_CENTER,
   ROOM_SHELL,
   S,
   WHITEBOARD_POSITION,

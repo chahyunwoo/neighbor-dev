@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   LAYOUT,
   MONITOR_POSITION,
+  ROOM_CENTER,
   ROOM_OBJECTS,
   WHITEBOARD_POSITION,
   WHITEBOARD_ROTATION_Y,
@@ -24,7 +25,7 @@ import { setDaylightTarget } from './daylight'
 import { Monitor, Pendant, Whiteboard } from './Fixtures'
 import { Furniture } from './Furniture'
 import { Lights } from './Lights'
-import { CAMERA_FOV, CAMERA_LIMITS, FOCUS_PULL, ROOM_CENTER } from './layout'
+import { CAMERA_FOV, CAMERA_LIMITS, FOCUS_PULL } from './layout'
 import styles from './Scene.module.css'
 import { ROOM_BG, Shell } from './Shell'
 

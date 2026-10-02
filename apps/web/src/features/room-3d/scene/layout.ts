@@ -64,11 +64,7 @@ export const CAMERA_LIMITS_FOCUS = {
   maxAzimuthAngle: Math.PI * 1.08,
 } as const
 
-// 프로토타입 실측값. z 는 음수다 — 반대편에서 보면 책장이 카메라를 막는다.
-export const CAMERA_POSITION: [number, number, number] = [7.2, 5.0, -3.6]
 export const CAMERA_FOV = 37
-
-export const ROOM_CENTER: [number, number, number] = [0.25, 0.85, 1.1]
 
 // 벽에 붙은 물건은 초점을 방 중심 쪽으로 당긴다 — 그대로 두면 카메라가 벽을 향해 물건이 화면을 덮는다. 값은 후보 렌더 비교로 정한다.
 export const FOCUS_PULL: Record<string, number> = {

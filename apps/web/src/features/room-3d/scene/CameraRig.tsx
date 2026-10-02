@@ -4,9 +4,10 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { CAMERA_POSITION, ROOM_CENTER } from '@/entities/room'
 import { frame, frameMotion, readFrame, targetFrame } from '@/features/room-3d/model/frame'
 import { ease, stepShift, type Tween } from '@/features/room-3d/model/tween'
-import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
+import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS } from './layout'
 
 // three-stdlib 는 직접 설치돼 있지 않다 — drei ref 타입을 뽑아 써야 <OrbitControls ref> 에 넘길 수 있다.
 export type OrbitControlsLike = NonNullable<React.ComponentRef<typeof DreiOrbitControls>>

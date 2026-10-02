@@ -82,3 +82,7 @@ export const ROOM_SHELL = {
 export const MONITOR_POSITION: [number, number, number] = [-1.79, DESK_TOP, 2.62]
 export const WHITEBOARD_POSITION: [number, number, number] = [-1.78, 1.9, 3.26]
 export const WHITEBOARD_ROTATION_Y = 0
+
+// 방을 보는 기본 시점 — 3D 카메라와 2D 평면도가 같은 쪽에서 본다. 프로토타입 실측값. z 는 음수다 — 반대편에서 보면 책장이 카메라를 막는다.
+export const CAMERA_POSITION: [number, number, number] = [7.2, 5.0, -3.6]
+export const ROOM_CENTER: [number, number, number] = [0.25, 0.85, 1.1]
