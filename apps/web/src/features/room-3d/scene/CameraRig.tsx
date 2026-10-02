@@ -41,6 +41,8 @@ const FLIGHT_LIMITS = {
 
 /** 물건 사이 비행 시간(ms). */
 const FOCUS_MS = 900
+/** 이보다 오래된 프레임 시계는 라우트가 아니라 앞선 프레임 변경의 것이다 — 받으면 비행이 중간부터 시작해 튄다. */
+const FRESH_CLOCK_MS = 50
 
 export interface FocusTarget {
   center: [number, number, number]
@@ -230,7 +232,12 @@ export function CameraRig({
     if (!ctl || !landed.current) return
 
     readFrame()
-    const motion = frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
+    const motion =
+      frameMotion &&
+      frameMotion !== flightFrame.current &&
+      performance.now() - frameMotion.start < FRESH_CLOCK_MS
+        ? frameMotion
+        : null
     flightFrame.current = frameMotion
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
