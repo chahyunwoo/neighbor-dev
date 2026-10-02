@@ -2,13 +2,17 @@
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
 
 const FLAT = [
+  [320, 568],
+  [375, 548],
   [390, 844],
   [430, 932],
   [768, 1024],
   [880, 900],
+  [844, 390],
+  [667, 375],
 ]
 const WIDE = [1440, 900]
-/** 탭 타깃이 겹치지 않는 최소 중심 간격(px). */
+/** 탭 타깃 최소 중심 간격(px). 렌더된 핀 지름이 더 크면 그 값을 쓴다 — 원이 겹치면 안 된다. */
 const MIN_GAP = 24
 
 // 조상까지 올라가며 감춤(clip-path·1px·display·visibility·opacity)을 찾는다 — 요소만 보면 접힌 것을 보인다고 센다
@@ -55,6 +59,7 @@ function inspect() {
   return {
     svg: Boolean(svg),
     svgHidden: svg ? hidden(svg) : true,
+    pinW: pins[0] ? pins[0].getBoundingClientRect().width : 0,
     w: box ? Math.round(box.width) : 0,
     h: box ? Math.round(box.height) : 0,
     pinNos: centers.map((c) => c.no).sort(),
@@ -97,7 +102,11 @@ function inspect() {
       r.outside.length === 0 && r.overX.length === 0,
       `${tag} 핀 중심이 평면 방·화면 안 (밖: ${[...r.outside, ...r.overX].join(',') || '없음'})`,
     )
-    check(r.minGap >= MIN_GAP, `${tag} 핀 최소 간격 ${r.minGap.toFixed(1)}px (기준 ${MIN_GAP})`)
+    const need = Math.max(MIN_GAP, r.pinW)
+    check(
+      r.minGap >= need,
+      `${tag} 핀 최소 간격 ${r.minGap.toFixed(1)}px (기준 ${need.toFixed(0)} = max(${MIN_GAP}, 핀 지름))`,
+    )
     await ctx.close()
   }
 

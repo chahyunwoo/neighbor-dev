@@ -21,10 +21,10 @@ const SOURCE = {
   shell: ROOM_SHELL,
 }
 
-/** 가장 좁게 잡은 폰 폭에서 평면 방이 차지하는 px. */
-const NARROW_PX = 320
-/** RoomPlan.module.css 의 .pin 지름. 핀끼리 이보다 가까우면 탭 타깃이 겹친다. */
-const PIN_PX = 30
+/** 320px 폰에서 좌우 여백(--pad-x 22px)을 뺀 평면 방 폭. */
+const NARROW_PX = 276
+/** RoomPlan.module.css 의 360px 미만 .pin 지름. 핀끼리 이보다 가까우면 탭 타깃이 겹친다. */
+const PIN_PX = 26
 
 test('핀 7개가 목록과 같은 번호·링크를 가진다', () => {
   const pins = planPins(SOURCE)
