@@ -1,12 +1,9 @@
+import { type Clock, ease, FRAME_MS } from './tween'
+
 // 캔버스는 뷰포트 전체이고, 현재 frame 만 clip-path 로 드러낸다.
 export const frame = { x: 0, y: 0, w: 0, h: 0 }
 export const targetFrame = { ...frame }
-export const FRAME_MS = 440
-export let frameMotion: { start: number; ms: number } | null = null
-
-export function ease(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
-}
+export let frameMotion: Clock | null = null
 
 let from = { ...frame }
 let viewport = { w: 0, h: 0 }

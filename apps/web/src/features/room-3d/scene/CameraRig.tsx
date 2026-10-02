@@ -4,14 +4,8 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import {
-  ease,
-  FRAME_MS,
-  frame,
-  frameMotion,
-  readFrame,
-  targetFrame,
-} from '@/features/room-3d/model/frame'
+import { frame, frameMotion, readFrame, targetFrame } from '@/features/room-3d/model/frame'
+import { ease, stepShift, type Tween } from '@/features/room-3d/model/tween'
 import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
 
 // three-stdlib 는 직접 설치돼 있지 않다 — drei ref 타입을 뽑아 써야 <OrbitControls ref> 에 넘길 수 있다.
@@ -311,7 +305,7 @@ export function CameraRig({
   const shiftRef = useRef(0)
   /** 실제 걸린 보정량. */
   const shiftNow = useRef(0)
-  const shiftMotion = useRef<{ from: number; to: number; start: number; ms: number } | null>(null)
+  const shiftMotion = useRef<Tween | null>(null)
   const shiftFrame = useRef<typeof frameMotion>(null)
   const shiftStarted = useRef(false)
 
@@ -342,31 +336,16 @@ export function CameraRig({
       shiftNow.current = shiftRef.current
       shiftStarted.current = true
     } else {
-      const s = shiftMotion.current
-      if (s) {
-        const t = Math.min(1, (now - s.start) / s.ms)
-        shiftNow.current = s.from + (s.to - s.from) * ease(t)
-        if (t >= 1) shiftMotion.current = null
-      }
-      if (shiftRef.current !== (shiftMotion.current?.to ?? shiftNow.current)) {
-        // 패널 여닫이는 둘 다 null 이라 같은 시계로 보면 안 된다 — 되돌릴 때 출발점이 남아 튄다.
-        if (shiftMotion.current && frameMotion && shiftFrame.current === frameMotion) {
-          shiftMotion.current.to = shiftRef.current
-        } else {
-          shiftMotion.current = {
-            from: shiftNow.current,
-            to: shiftRef.current,
-            start: frameMotion?.start ?? now,
-            ms: frameMotion?.ms ?? FRAME_MS,
-          }
-        }
-      }
-      const next = shiftMotion.current
-      if (next) {
-        const t = Math.min(1, (now - next.start) / next.ms)
-        shiftNow.current = next.from + (next.to - next.from) * ease(t)
-        if (t >= 1) shiftMotion.current = null
-      }
+      const next = stepShift(
+        now,
+        shiftNow.current,
+        shiftMotion.current,
+        shiftRef.current,
+        frameMotion,
+        frameMotion !== shiftFrame.current,
+      )
+      shiftNow.current = next.value
+      shiftMotion.current = next.tween
     }
     shiftFrame.current = frameMotion
     // 영역이 전환 중에 움직이므로 매 프레임 다시 건다.
