@@ -368,6 +368,8 @@ export function CameraRig({
       const persp = camera as THREE.PerspectiveCamera
       const ramp = Math.max(0, (e - 0.5) * 2) // 진행 50% 부터 0→1
       shiftNow.current = shiftRef.current * ramp
+      // 입장 중 다른 화면으로 나가면 트윈이 이 값에서 출발해야 한다 — 처음 스냅이 덮으면 한 프레임에 튄다.
+      shiftStarted.current = true
       applyView(persp, size.width, size.height, shiftNow.current)
     }
     if (f.intro) {
