@@ -349,7 +349,8 @@ export function CameraRig({
         if (t >= 1) shiftMotion.current = null
       }
       if (shiftRef.current !== (shiftMotion.current?.to ?? shiftNow.current)) {
-        if (shiftMotion.current && shiftFrame.current === frameMotion) {
+        // 패널 여닫이는 둘 다 null 이라 같은 시계로 보면 안 된다 — 되돌릴 때 출발점이 남아 튄다.
+        if (shiftMotion.current && frameMotion && shiftFrame.current === frameMotion) {
           shiftMotion.current.to = shiftRef.current
         } else {
           shiftMotion.current = {

@@ -41,10 +41,9 @@ export function readFrame(): typeof frame {
         (k) => next[k as keyof typeof next] !== targetFrame[k as keyof typeof next],
       )
     ) {
-      if (!frameMotion) {
-        from = { ...frame }
-        frameMotion = { start: now, ms: FRAME_MS }
-      }
+      // 트윈 중 목표가 바뀌면 보이는 값에서 다시 출발한다 — 목표만 바꾸면 되돌아가는 전환이 한 프레임에 튄다.
+      from = { ...frame }
+      frameMotion = { start: now, ms: FRAME_MS }
       Object.assign(targetFrame, next)
     }
     measured = true
