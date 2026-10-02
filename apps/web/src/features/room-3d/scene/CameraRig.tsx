@@ -41,8 +41,6 @@ const FLIGHT_LIMITS = {
 
 /** 물건 사이 비행 시간(ms). */
 const FOCUS_MS = 900
-/** 이보다 오래된 프레임 시계는 라우트가 아니라 앞선 프레임 변경의 것이다 — 받으면 비행이 중간부터 시작해 튄다. */
-const FRESH_CLOCK_MS = 50
 
 export interface FocusTarget {
   center: [number, number, number]
@@ -149,6 +147,7 @@ export function CameraRig({
   /** 비행을 시작시킨 목표를 값으로 든다 — focus 는 매 렌더 새 객체라 참조로 보면 비행이 계속 재시작된다. */
   const lastTarget = useRef<string | null>(null)
   const flightFrame = useRef<typeof frameMotion>(null)
+  const flightPath = useRef(window.location.pathname)
 
   useEffect(() => {
     const ctl = controls.current
@@ -232,12 +231,10 @@ export function CameraRig({
     if (!ctl || !landed.current) return
 
     readFrame()
-    const motion =
-      frameMotion &&
-      frameMotion !== flightFrame.current &&
-      performance.now() - frameMotion.start < FRESH_CLOCK_MS
-        ? frameMotion
-        : null
+    // 라우트가 바뀐 비행만 프레임 시계를 받는다 — 라우트 없이 바뀐 프레임의 시계를 받으면 비행이 중간부터 시작해 튄다.
+    const routed = flightPath.current !== window.location.pathname
+    flightPath.current = window.location.pathname
+    const motion = routed && frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
     flightFrame.current = frameMotion
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
