@@ -3,7 +3,13 @@
 import { Html, OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ROOM_OBJECTS } from '@/entities/room'
+import {
+  LAYOUT,
+  MONITOR_POSITION,
+  ROOM_OBJECTS,
+  WHITEBOARD_POSITION,
+  WHITEBOARD_ROTATION_Y,
+} from '@/entities/room'
 import { readFrame } from '@/features/room-3d/model/frame'
 import { anchorFromBox } from './anchors'
 import {
@@ -15,17 +21,10 @@ import {
 } from './CameraRig'
 import { BLOOM_NIGHT, DaylightSync } from './DaylightSync'
 import { setDaylightTarget } from './daylight'
-import {
-  MONITOR_POSITION,
-  Monitor,
-  Pendant,
-  WHITEBOARD_POSITION,
-  WHITEBOARD_ROTATION_Y,
-  Whiteboard,
-} from './Fixtures'
+import { Monitor, Pendant, Whiteboard } from './Fixtures'
 import { Furniture } from './Furniture'
 import { Lights } from './Lights'
-import { CAMERA_FOV, CAMERA_LIMITS, FOCUS_PULL, LAYOUT, ROOM_CENTER } from './layout'
+import { CAMERA_FOV, CAMERA_LIMITS, FOCUS_PULL, ROOM_CENTER } from './layout'
 import styles from './Scene.module.css'
 import { ROOM_BG, Shell } from './Shell'
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { DEG, type Placement } from './layout'
+import { DEG, type Placement } from '@/entities/room'
 
 // 마커는 bbox 중심 위, 실제 꼭대기 + LIFT 에 단다 — 배치 원점에 고정값을 더하면 물건 높이마다 어긋난다. 보정은 LIFT 만 만진다.
 
