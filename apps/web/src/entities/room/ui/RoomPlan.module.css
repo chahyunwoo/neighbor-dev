@@ -1,0 +1,67 @@
+/* 높이 상한 — 아래 목록이 첫 화면에서 밀려나지 않게 뷰포트 기준으로 자른다.
+   하한 320px — 그보다 좁아지면 가로 폰·짧은 폰에서 핀이 겹친다. */
+.plan {
+  position: relative;
+  width: min(100%, max(320px, calc(38svh * var(--plan-ratio))));
+  margin: 0 auto 22px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.floor {
+  fill: var(--bg-panel);
+  stroke: var(--fg-ghost);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+.wall {
+  fill: var(--line-soft);
+  stroke: var(--line);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+/* 문 자리는 벽을 뚫어 배경을 비춘다. */
+.door {
+  fill: var(--bg);
+  stroke: var(--amber-line);
+  stroke-width: 0.03;
+}
+
+/* 탭 타깃 — 겹치지 않게 간격은 verify-room-plan 이 잰다. */
+.pin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--blue-line);
+  color: var(--blue);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 320px 폰은 여백을 빼면 평면이 276px 라 핀 간격이 약 27px 로 준다 — 지름을 그 아래로. */
+@media (max-width: 359px) {
+  .pin {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+}
+
+.pin[data-accent="amber"] {
+  border-color: var(--amber-line);
+  color: var(--amber);
+}

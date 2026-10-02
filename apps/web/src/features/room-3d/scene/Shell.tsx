@@ -3,22 +3,12 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
+import { ROOM_SHELL } from '@/entities/room'
 import { daylight } from './daylight'
 
 // 벽은 장식이 아니라 조명의 일부다 — 없으면 빛이 날아가 방이 절반 밝기가 된다.
-// 왼쪽 벽은 문 자리를 비운 세 조각이다. 치수는 프로토타입 실측값이라 눈대중으로 고치지 않는다.
-
-/** RW=폭, RD=깊이, WH=벽 높이, (FX,FZ)=바닥 중심. */
-const RW = 6.8
-const RD = 5.6
-const WH = 3.0
-const FX = 0.3
-const FZ = 0.55
-
-// 문 모델 경계와 같다. 크면 문 둘레 틈으로 배경이 보인다.
-const DOOR_Z0 = -2.096
-const DOOR_Z1 = -1.1
-const DOOR_H = 2.07
+// 왼쪽 벽은 문 자리를 비운 세 조각이다.
+const { RW, RD, WH, FX, FZ, DOOR_Z0, DOOR_Z1, DOOR_H } = ROOM_SHELL
 
 /** 밤 기준 색. 낮에는 낮 색으로 비율만큼 섞는다. */
 const FLOOR_COLOR = 0x1e1811

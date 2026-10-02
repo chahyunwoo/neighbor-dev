@@ -3,8 +3,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import type * as THREE from 'three'
+import { DESK_TOP } from '@/entities/room'
 import { DAY_MUL, daylight, mixDay } from './daylight'
-import { DESK_TOP } from './layout'
 
 // 프로토타입의 11개 등 그대로다. 눈대중으로 줄이지 않는다 — 줄이면 가구가 갈색으로 뭉개지고 회의 구역이 안 보인다.
 // 톤매핑(CanvasShell 의 ACESFilmic + exposure)이 없으면 같은 값이 전혀 다르게 나온다.

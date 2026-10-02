@@ -19,7 +19,7 @@ function extract(file, pattern) {
 const roomIds = extract('entities/room/model/room.ts', /^\s+id:\s*'([\w-]+)',/gm)
 
 // 3D 가 그리는 핫스팟: LAYOUT 의 hotspot + Scene 이 직접 더하는 고정물
-const layoutHotspots = extract('features/room-3d/scene/layout.ts', /hotspot:\s*'([\w-]+)'/g)
+const layoutHotspots = extract('entities/room/model/layout.ts', /hotspot:\s*'([\w-]+)'/g)
 const sceneAnchors = extract('features/room-3d/scene/Scene.tsx', /\{\s*id:\s*'([\w-]+)',\s*at:/g)
 const drawn = [...layoutHotspots, ...sceneAnchors]
 

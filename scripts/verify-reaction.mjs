@@ -14,10 +14,10 @@ const THREE = await import(pathToFileURL(req.resolve('three')).href)
 const { GLTFLoader } = await import(
   pathToFileURL(join(dirname(req.resolve('three')), '../examples/jsm/loaders/GLTFLoader.js')).href
 )
-const { LAYOUT, DEG } = await import(join(WEB, 'src/features/room-3d/scene/layout.ts'))
+const { LAYOUT, DEG } = await import(join(WEB, 'src/entities/room/model/layout.ts'))
 const { reactionOf, poseAt } = await import(join(WEB, 'src/features/room-3d/scene/reaction.ts'))
 
-// 벽 안쪽 면 — Shell.tsx 의 RW·RD·FX·FZ 와 두께 0.12 에서 나온다
+// 벽 안쪽 면 — ROOM_SHELL 의 RW·RD·FX·FZ 와 두께 0.12 에서 나온다
 const WALL_LEFT_X = 0.3 - 6.8 / 2 + 0.06
 const WALL_BACK_Z = 0.55 + 5.6 / 2 - 0.06
 // 새로 파고든 깊이(m) 허용치 — 접촉면 부동소수 오차보다 크고 눈에 띄는 관통보다 작다
