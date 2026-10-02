@@ -138,7 +138,7 @@ html[data-canvas-mode="off"] {
   --cv-pe: none;
 }
 
-/* 3D 가 보이는 영역. 캔버스 크기는 바꾸지 않는다 — 전환 동안 매 프레임 드로잉 버퍼를 다시 만든다. */
+/* 3D 가 보이는 영역의 목표. 현재값은 frame.ts 가 트윈해 --cf-* 로 쓴다. */
 .canvas-frame {
   position: fixed;
   top: var(--cv-top, 0px);
@@ -147,11 +147,6 @@ html[data-canvas-mode="off"] {
   left: var(--cv-left, 0px);
   visibility: hidden;
   pointer-events: none;
-  transition:
-    right 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
-    left 0.44s cubic-bezier(0.4, 0.05, 0.2, 1),
-    top 0.3s ease-out,
-    bottom 0.3s ease-out;
 }
 
 /* 캔버스는 전역 CSS 에 둔다 — `ssr:false` 모듈의 CSS 는 lazy 청크라 라우트에 안 실려 클릭을 가로챘다. */
@@ -195,8 +190,7 @@ html[data-canvas-mode="off"] .canvas-shell {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .canvas-shell,
-  .canvas-frame {
+  .canvas-shell {
     transition: none;
   }
 }
