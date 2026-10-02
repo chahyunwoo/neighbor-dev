@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import type * as THREE from 'three'
-import { DEG } from './layout'
+import { DEG } from '@/entities/room'
 import { poseAt, type Reaction, type Vec3 } from './reaction'
 
 // 물건별 값과 자세 계산은 reaction.ts, 벽·가구 관통 검사는 scripts/verify-reaction.mjs.

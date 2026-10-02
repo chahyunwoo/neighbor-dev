@@ -3,8 +3,9 @@
 import { useGLTF } from '@react-three/drei'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import { DEG, type Placement } from '@/entities/room'
 import { anchorOf } from './anchors'
-import { DEFAULTS, DEG, METALNESS, PALETTE, type Placement, ROUGHNESS } from './layout'
+import { DEFAULTS, METALNESS, PALETTE, ROUGHNESS } from './layout'
 import { reactionOf } from './reaction'
 import { useReaction } from './useReaction'
 

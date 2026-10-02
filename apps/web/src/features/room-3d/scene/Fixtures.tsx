@@ -4,7 +4,7 @@ import { type ThreeEvent, useThree } from '@react-three/fiber'
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { getDetailProjects } from '@/entities/project'
-import { DESK_TOP } from './layout'
+import { ROOM_SHELL } from '@/entities/room'
 import { makeBoardTexture, makeScreenTexture } from './textures'
 
 // 모니터는 팩 모델이 화면 메시를 따로 못 빛내서, 화이트보드는 팩에 없어서 직접 만든다.
@@ -83,15 +83,9 @@ export function Whiteboard({
   )
 }
 
-// 프로토타입 실측값이다. 눈대중으로 바꾸지 않는다 — 화이트보드는 왼쪽 벽이 아니라 뒷벽에 건다.
-export const MONITOR_POSITION: [number, number, number] = [-1.79, DESK_TOP, 2.62]
-export const WHITEBOARD_POSITION: [number, number, number] = [-1.78, 1.9, 3.26]
-export const WHITEBOARD_ROTATION_Y = 0
-
 /** DaylightSync 가 이 이름으로 전구를 찾는다. */
 export const PENDANT_BULB = 'pendantBulb'
-/** Shell 의 WH 와 같아야 한다. */
-const CEILING_Y = 3.0
+const CEILING_Y = ROOM_SHELL.WH
 
 /** 회의 테이블 위 천장 펜던트 — 누르면 불을 켜고 끈다. Lights 의 회의등과 같은 자리에 매단다. */
 export function Pendant({
