@@ -232,9 +232,10 @@ export function CameraRig({
 
     readFrame()
     // 라우트가 바뀐 비행만 프레임 시계를 받는다 — 라우트 없이 바뀐 프레임의 시계를 받으면 비행이 중간부터 시작해 튄다.
+    // 경로는 시계를 받았을 때만 갱신한다 — 새 화면 마운트 중 off 를 거치는 첫 run 이 경로를 소비하면 진짜 run 이 못 받는다.
     const routed = flightPath.current !== window.location.pathname
-    flightPath.current = window.location.pathname
     const motion = routed && frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
+    if (motion) flightPath.current = window.location.pathname
     flightFrame.current = frameMotion
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 

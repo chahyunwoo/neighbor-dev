@@ -43,6 +43,7 @@ const run = async (b) => {
   const ci = c.findIndex((s) => s.click)
   const d = (i) => Math.hypot(c[i].x - c[i - 1].x, c[i].y - c[i - 1].y)
   let step = 0
+  // 클릭 프레임의 첫 차분은 뺀다 — 진행 중인 프레임 트윈 감속과 패널 시작이 섞여 정상도 9~14px 흔들린다.
   for (let i = ci + 2; ci > 0 && i <= Math.min(c.length - 1, ci + 8); i++)
     step = Math.max(step, d(i) - d(i - 1))
   const travel = ci > 0 ? Math.hypot(c.at(-1).x - c[ci].x, c.at(-1).y - c[ci].y) : 0
