@@ -1,0 +1,57 @@
+/* 높이 상한 — 아래 목록이 첫 화면에서 밀려나지 않게 뷰포트 기준으로 자른다. */
+.plan {
+  position: relative;
+  width: min(100%, calc(38svh * var(--plan-ratio)));
+  margin: 0 auto 22px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.floor {
+  fill: var(--bg-panel);
+  stroke: var(--fg-ghost);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+.wall {
+  fill: var(--line-soft);
+  stroke: var(--line);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+/* 문 자리는 벽을 뚫어 배경을 비춘다. */
+.door {
+  fill: var(--bg);
+  stroke: var(--amber-line);
+  stroke-width: 0.03;
+}
+
+/* 탭 타깃 — 겹치지 않게 간격은 verify-room-plan 이 잰다. */
+.pin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--blue-line);
+  color: var(--blue);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pin[data-accent="amber"] {
+  border-color: var(--amber-line);
+  color: var(--amber);
+}

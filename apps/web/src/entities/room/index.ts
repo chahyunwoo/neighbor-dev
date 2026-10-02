@@ -14,4 +14,5 @@ export {
 } from './model/layout'
 export { type Accent, OBJECT_MODEL, ROOM_OBJECTS, type RoomObject } from './model/room'
 export { RoomList } from './ui/RoomList'
+export { RoomPlan } from './ui/RoomPlan'
 export { RoomSteps } from './ui/RoomSteps'

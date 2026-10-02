@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RoomList, RoomSteps } from '@/entities/room'
+import { RoomList, RoomPlan, RoomSteps } from '@/entities/room'
 import { TransitionBody } from '@/features/page-transition'
 import { RoomPanel, RoomStage, useRoom } from '@/features/room-3d'
 import { useCanRender3D } from '@/shared/lib'
@@ -10,7 +10,7 @@ import styles from './Hero.module.css'
 // 하이드레이션 뒤부터 도는 타이머라 실제로는 이보다 늦게 뜬다. 짧게 잡고 CSS 트랜지션이 잇는다.
 const COPY_DEADLINE_MS = 250
 
-// 목록은 항상 DOM 에 둔다 — 3D 가 뜨면 clip-path 로 시각적으로만 감춘다(보조기술·크롤러용).
+// 평면 방·목록은 항상 DOM 에 둔다 — 3D 가 뜨면 clip-path 로 시각적으로만 감춘다(보조기술·크롤러용).
 export function Hero({ children }: { children: React.ReactNode }) {
   // null(SSR·첫 페인트)이면 false — 서버 HTML 은 항상 목록을 내보낸다.
   const can3D = useCanRender3D()
@@ -63,6 +63,7 @@ export function Hero({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <div className={styles.room} data-mode={can3D === null ? 'pending' : is3D ? '3d' : 'list'}>
+        <RoomPlan />
         <RoomList />
       </div>
 
