@@ -4,7 +4,14 @@ import type { OrbitControls as DreiOrbitControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { frame, readFrame } from '@/features/room-3d/model/frame'
+import {
+  ease,
+  FRAME_MS,
+  frame,
+  frameMotion,
+  readFrame,
+  targetFrame,
+} from '@/features/room-3d/model/frame'
 import { CAMERA_LIMITS, CAMERA_LIMITS_FOCUS, CAMERA_POSITION, ROOM_CENTER } from './layout'
 
 // three-stdlib 는 직접 설치돼 있지 않다 — drei ref 타입을 뽑아 써야 <OrbitControls ref> 에 넘길 수 있다.
@@ -39,7 +46,7 @@ const FLIGHT_LIMITS = {
 } as const
 
 /** 물건 사이 비행 시간(ms). */
-const DUR = 900
+const FOCUS_MS = 900
 
 export interface FocusTarget {
   center: [number, number, number]
@@ -75,10 +82,6 @@ function markIntroSeen(): void {
   } catch {
     // 저장이 막히면 다음에도 연출을 본다.
   }
-}
-
-function ease(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 }
 
 /** 왼쪽 UI(카피·번호 목록)가 덮는 폭. */
@@ -149,6 +152,7 @@ export function CameraRig({
   const limitsAfterFly = useRef<Record<string, number> | null>(null)
   /** 비행을 시작시킨 목표를 값으로 든다 — focus 는 매 렌더 새 객체라 참조로 보면 비행이 계속 재시작된다. */
   const lastTarget = useRef<string | null>(null)
+  const flightFrame = useRef<typeof frameMotion>(null)
 
   useEffect(() => {
     const ctl = controls.current
@@ -156,6 +160,7 @@ export function CameraRig({
 
     // started 가드보다 먼저 본다 — 입장 중 다른 화면으로 나가면 입장 비행이 끝날 때까지 그 화면 구도가 안 잡힌다.
     if (skipIntro) {
+      markIntroSeen()
       // 돌던 입장 비행을 접고 문도 닫는다 — 끊긴 비행은 doorCloseAt 에 영영 못 닿는다.
       if (fly.current?.intro) {
         fly.current = null
@@ -230,6 +235,9 @@ export function CameraRig({
     // 입장이 끝나기 전에는 건드리지 않는다 — 입장 중 리렌더에 연출이 지워진다.
     if (!ctl || !landed.current) return
 
+    readFrame()
+    const motion = frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
+    flightFrame.current = frameMotion
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
     let position: THREE.Vector3
@@ -237,9 +245,8 @@ export function CameraRig({
       // drei Bounds 와 같은 수식. max(fitH, fitW) * 3.2 로 쓰면 와이드에서 fitH 가 늘 이겨 너무 멀어진다.
       const persp = camera as THREE.PerspectiveCamera
       const fitH = focus.radius / Math.sin((persp.fov * Math.PI) / 180 / 2)
-      readFrame()
-      const fw = frame.w || size.width
-      const fh = frame.h || size.height
+      const fw = targetFrame.w || size.width
+      const fh = targetFrame.h || size.height
       const fitW = fitH / ((fw - panelCover(mode, true)) / fh)
       const raw = Math.max(fitH, fitW) / FILL / 2
       // 하한을 넉넉히 잡는다 — 대상만 크게 보이면 "다른 화면으로 넘어갔다" 로 읽힌다. 페이지는 더 멀리 선다.
@@ -276,8 +283,8 @@ export function CameraRig({
       t0: ctl.target.clone(),
       p1: position,
       t1: target,
-      start: performance.now(),
-      ms: DUR,
+      start: motion?.start ?? performance.now(),
+      ms: motion?.ms ?? FOCUS_MS,
       intro: false,
     }
 
@@ -302,13 +309,16 @@ export function CameraRig({
   // 가려진 UI 를 피해 카메라가 아니라 투영(setViewOffset)을 민다 — 카메라를 옮기면 각도가 틀어진다.
   /** 투영 보정 목표(px). 입장 중에는 0 에서 올린다 — 문 앞에서 그대로 걸면 문이 잘린다. */
   const shiftRef = useRef(0)
-  /** 실제 걸린 보정량. 목표로 매 프레임 다가간다 — 즉시 바꾸면 패널이 열릴 때 한 프레임에 튄다. */
+  /** 실제 걸린 보정량. */
   const shiftNow = useRef(0)
+  const shiftMotion = useRef<{ from: number; to: number; start: number; ms: number } | null>(null)
+  const shiftFrame = useRef<typeof frameMotion>(null)
+  const shiftStarted = useRef(false)
 
   /** 보정 목표(px, 보이는 영역 기준). 페이지는 본문이 영역 밖이라 왼쪽 마스크만 덮는다. */
   const shiftTarget = () => {
     const right = panelCover(mode, focus != null)
-    const left = mode === 'page' ? frame.w * PAGE_MASK_LEFT : UI_WIDTH
+    const left = mode === 'page' ? targetFrame.w * PAGE_MASK_LEFT : UI_WIDTH
     return (left - right) / 2 - right / 2
   }
 
@@ -323,14 +333,41 @@ export function CameraRig({
   useFrame(() => {
     const ctl = controls.current
 
-    // 비행 중이 아니어도 돈다(패널 여닫이도 목표를 바꾼다). 0.12 는 캔버스 CSS 전환(0.44s)에 맞춘 값이다.
     readFrame()
+    const now = performance.now()
     shiftRef.current = shiftTarget()
-    // 처음이면 보간할 이전 값이 없다.
-    if (shiftNow.current === 0 && !fly.current) shiftNow.current = shiftRef.current
-    if (ctl && Math.abs(shiftNow.current - shiftRef.current) > 0.3) {
-      shiftNow.current += (shiftRef.current - shiftNow.current) * 0.12
+    if (fly.current?.intro) {
+      shiftMotion.current = null
+    } else if (!shiftStarted.current) {
+      shiftNow.current = shiftRef.current
+      shiftStarted.current = true
+    } else {
+      const s = shiftMotion.current
+      if (s) {
+        const t = Math.min(1, (now - s.start) / s.ms)
+        shiftNow.current = s.from + (s.to - s.from) * ease(t)
+        if (t >= 1) shiftMotion.current = null
+      }
+      if (shiftRef.current !== (shiftMotion.current?.to ?? shiftNow.current)) {
+        if (shiftMotion.current && shiftFrame.current === frameMotion) {
+          shiftMotion.current.to = shiftRef.current
+        } else {
+          shiftMotion.current = {
+            from: shiftNow.current,
+            to: shiftRef.current,
+            start: frameMotion?.start ?? now,
+            ms: frameMotion?.ms ?? FRAME_MS,
+          }
+        }
+      }
+      const next = shiftMotion.current
+      if (next) {
+        const t = Math.min(1, (now - next.start) / next.ms)
+        shiftNow.current = next.from + (next.to - next.from) * ease(t)
+        if (t >= 1) shiftMotion.current = null
+      }
     }
+    shiftFrame.current = frameMotion
     // 영역이 전환 중에 움직이므로 매 프레임 다시 건다.
     applyView(camera as THREE.PerspectiveCamera, size.width, size.height, shiftNow.current)
 
@@ -338,9 +375,9 @@ export function CameraRig({
     if (!f || !ctl) return
 
     // 시계는 첫 프레임에 켠다 — effect 에서 켜면 GLTF 파싱 중 시계만 흘러 연출이 중간부터 시작한다.
-    if (f.start === 0) f.start = performance.now()
+    if (f.start === 0) f.start = now
 
-    const t = Math.min(1, (performance.now() - f.start) / f.ms)
+    const t = Math.min(1, (now - f.start) / f.ms)
     const e = ease(t)
     camera.position.lerpVectors(f.p0, f.p1, e)
     ctl.target.lerpVectors(f.t0, f.t1, e)
