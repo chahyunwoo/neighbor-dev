@@ -147,6 +147,7 @@ export function CameraRig({
   /** 비행을 시작시킨 목표를 값으로 든다 — focus 는 매 렌더 새 객체라 참조로 보면 비행이 계속 재시작된다. */
   const lastTarget = useRef<string | null>(null)
   const flightFrame = useRef<typeof frameMotion>(null)
+  const flightPath = useRef(window.location.pathname)
 
   useEffect(() => {
     const ctl = controls.current
@@ -230,7 +231,11 @@ export function CameraRig({
     if (!ctl || !landed.current) return
 
     readFrame()
-    const motion = frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
+    // 라우트가 바뀐 비행만 프레임 시계를 받는다 — 라우트 없이 바뀐 프레임의 시계를 받으면 비행이 중간부터 시작해 튄다.
+    // 경로는 시계를 받았을 때만 갱신한다 — 새 화면 마운트 중 off 를 거치는 첫 run 이 경로를 소비하면 진짜 run 이 못 받는다.
+    const routed = flightPath.current !== window.location.pathname
+    const motion = routed && frameMotion && frameMotion !== flightFrame.current ? frameMotion : null
+    if (motion) flightPath.current = window.location.pathname
     flightFrame.current = frameMotion
     const target = focus ? new THREE.Vector3(...focus.center) : new THREE.Vector3(...ROOM_CENTER)
 
