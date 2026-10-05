@@ -1,5 +1,18 @@
 // 3D 를 안 띄우는 화면에서 2D 평면 방이 보이고, 핀이 목록과 같은 7개이며 잘리거나 겹치지 않는가. 3D 화면에선 안 보여야 한다
+const { execFileSync } = require('node:child_process')
+const { join } = require('node:path')
 const { chromium, LAUNCH, BASE } = require('./_pw.cjs')
+
+// 정본 배치에서 계산한 핀 자리(평면 방 폭·높이 대비 비율). 화면 핀이 여기서 벗어나면 조립부가 정본을 안 쓰는 것이다
+const EXPECTED = JSON.parse(
+  execFileSync(
+    process.execPath,
+    ['--experimental-strip-types', '--no-warnings', join(__dirname, '_plan-expected.mjs')],
+    { encoding: 'utf8' },
+  ),
+)
+/** 비율 허용 오차 — 퍼센트 반올림(소수 3자리)과 서브픽셀 배치만 흡수한다. */
+const POS_TOL = 0.005
 
 const FLAT = [
   [320, 568],
@@ -41,6 +54,8 @@ function inspect() {
       no: p.dataset.planPin,
       x: r.left + r.width / 2,
       y: r.top + r.height / 2,
+      fx: box ? (r.left + r.width / 2 - box.left) / box.width : Number.NaN,
+      fy: box ? (r.top + r.height / 2 - box.top) / box.height : Number.NaN,
       hidden: hidden(p),
     }
   })
@@ -62,6 +77,8 @@ function inspect() {
     pinW: pins[0] ? pins[0].getBoundingClientRect().width : 0,
     w: box ? Math.round(box.width) : 0,
     h: box ? Math.round(box.height) : 0,
+    ratio: box ? box.width / box.height : 0,
+    pos: centers.map(({ no, fx, fy }) => ({ no, fx, fy })),
     pinNos: centers.map((c) => c.no).sort(),
     hiddenPins: centers.filter((c) => c.hidden).map((c) => c.no),
     listNos: listNos.sort(),
@@ -101,6 +118,15 @@ function inspect() {
     check(
       r.outside.length === 0 && r.overX.length === 0,
       `${tag} 핀 중심이 평면 방·화면 안 (밖: ${[...r.outside, ...r.overX].join(',') || '없음'})`,
+    )
+    const drift = EXPECTED.pins.map((e) => {
+      const got = r.pos.find((p) => p.no === e.no)
+      return { no: e.no, d: got ? Math.max(Math.abs(got.fx - e.fx), Math.abs(got.fy - e.fy)) : 1 }
+    })
+    const worst = drift.reduce((a, b) => (b.d > a.d ? b : a))
+    check(
+      worst.d <= POS_TOL && Math.abs(r.ratio / EXPECTED.ratio - 1) <= POS_TOL,
+      `${tag} 핀 자리가 정본 배치와 일치 (최대 어긋남 핀 ${worst.no} ${(worst.d * 100).toFixed(2)}% · 비율 ${r.ratio.toFixed(3)}/${EXPECTED.ratio.toFixed(3)})`,
     )
     const need = Math.max(MIN_GAP, r.pinW)
     check(

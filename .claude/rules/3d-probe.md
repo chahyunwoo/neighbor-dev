@@ -1,6 +1,7 @@
 ---
 paths:
   - "apps/web/src/features/room-3d/**"
+  - "apps/web/src/entities/room/**"
   - "scripts/probes/**"
   - "scripts/verify-*.mjs"
   - "scripts/verify-*.py"
@@ -283,4 +284,4 @@ JS 를 **끈** 사람은 `layout.tsx` 의 noscript 가 구해 주지만, JS 가 
 
 프로토타입(`.wip/room2.html`)의 값은 전부 실측이다. 감으로 채운 자리가
 화면에서 전부 틀렸다(카메라 z 부호, 화이트보드 벽 위치 — 2026-09-09).
-값을 바꾸기 전에 `apps/web/src/components/room/layout.ts` 의 주석을 읽는다.
+값을 바꾸기 전에 `apps/web/src/entities/room/model/layout.ts` 의 주석을 읽는다.
