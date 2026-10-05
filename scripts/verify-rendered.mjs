@@ -2,7 +2,8 @@
 // 렌더된 HTML 과 빌드된 번들(.next/static)을 공개 검사기로 통과시킨다 — 데이터 검사만으로는 화면·청크에 실리는 것을 못 본다.
 // 번들 검사는 서버 없이 디스크만 읽는다.
 //   pnpm --filter @neighbor/web build && node scripts/verify-rendered.mjs --bundles-only
-//   PORT=21200 pnpm --filter @neighbor/web start & node scripts/verify-rendered.mjs
+//   SITE_URL=https://example.invalid pnpm --filter @neighbor/web build
+//   SITE_URL=https://example.invalid PORT=21200 pnpm --filter @neighbor/web start & node scripts/verify-rendered.mjs
 
 import { existsSync, globSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -51,10 +52,33 @@ function assertProd(html) {
   process.exit(2)
 }
 
+// 로컬 빌드에 SITE_URL 이 없으면 메타태그가 폴백(localhost)을 실어 모든 화면이 내부URL 로 빨개진다 — 진짜 위반이 묻힌다
+// 원격 대상에서는 멈추지 않는다 — 배포가 폴백을 싣는 것은 실제 사고라 빨개져야 한다
+const IS_LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(BASE)
+function assertSiteUrl(html) {
+  if (!IS_LOCAL) return
+  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1] ?? ''
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(canonical)) return
+  console.error(`🔴 로컬 서버에 SITE_URL 이 없다 — canonical 이 폴백 주소(${canonical})다.`)
+  console.error('')
+  console.error(
+    '   메타태그가 전부 내부URL 로 걸려 진짜 위반이 묻힌다. 공개 주소 자리에 예약 도메인을 주고 빌드한다:',
+  )
+  console.error('')
+  console.error('   SITE_URL=https://example.invalid pnpm --filter @neighbor/web build')
+  console.error(
+    '   SITE_URL=https://example.invalid PORT=21200 pnpm --filter @neighbor/web start &',
+  )
+  console.error('   node scripts/verify-rendered.mjs')
+  process.exit(2)
+}
+
 let bad = 0
 let checkedProd = false
 for (const p of PAGES_ONLY || !BUNDLES_ONLY ? paths : []) {
   const html = await fetch(BASE + p).then((r) => r.text())
+  // 화면마다 본다 — 동적 화면(/contact·/diagnose)은 SITE_URL 을 빌드가 아니라 실행 때 읽는다
+  assertSiteUrl(html)
   if (!checkedProd) {
     assertProd(html)
     checkedProd = true
@@ -73,8 +97,7 @@ for (const p of PAGES_ONLY || !BUNDLES_ONLY ? paths : []) {
 // HTTP 가 아니라 디스크를 읽는다 — 런타임이 조립해 부르는 청크는 HTML 참조로 모으면 빠진다
 function checkBundles() {
   // 원격을 가리키면 거부한다 — 화면은 배포처를, 번들은 내 맥을 보게 된다
-  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(BASE)
-  if (!isLocal) {
+  if (!IS_LOCAL) {
     console.error(`🔴 WEB_BASE_URL 이 원격이다: ${BASE}`)
     console.error('')
     console.error('   번들 검사는 로컬 디스크(apps/web/.next/static)를 읽는다.')

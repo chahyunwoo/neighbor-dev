@@ -83,13 +83,20 @@ function restPose(item) {
   return { position: item.p.position, yaw: item.p.rotationY * DEG }
 }
 
-// 벽 안에 끼워 넣는 것이 정상인 모델
+// 벽 안에 끼워 넣는 것이 정상인 모델 — 놓인 상태만 면제한다. 여는 동안 더 파고드는 것은 잰다
 const IN_WALL = new Set(['doorway', 'wallWindow'])
 
+const vertexWallDepths = (placed) =>
+  placed.world.map((v) => Math.max(0, WALL_LEFT_X - v.x, v.z - WALL_BACK_Z))
+
 function wallDepth(item, placed) {
-  if (IN_WALL.has(item.p.model)) return 0
+  return IN_WALL.has(item.p.model) ? 0 : Math.max(0, ...vertexWallDepths(placed))
+}
+
+// 같은 정점끼리 비교해 새로 파고든 깊이만 낸다 — 이미 벽에 박힌 문틀의 최대 깊이에 여닫이 관통이 가려지지 않게
+function addedWallDepth(before, after) {
   let d = 0
-  for (const v of placed.world) d = Math.max(d, WALL_LEFT_X - v.x, v.z - WALL_BACK_Z)
+  for (const [k, a] of after.entries()) d = Math.max(d, a - before[k])
   return d
 }
 
@@ -132,9 +139,10 @@ for (const [i, it] of items.entries()) {
   const r = reactionOf(it.p.hotspot)
   let wall = 0
   const pair = new Map()
+  const restWall = vertexWallDepths(rest[i])
   for (const t of STEPS) {
     const moved = place(it, poseAt(restPose(it), r, t, it.center))
-    wall = Math.max(wall, wallDepth(it, moved) - wallDepth(it, rest[i]))
+    wall = Math.max(wall, addedWallDepth(restWall, vertexWallDepths(moved)))
     for (const [j, other] of items.entries()) {
       if (i === j || FLAT.has(other.p.model) || FLAT.has(it.p.model)) continue
       const before = Math.max(overlapDepth(rest[i], rest[j]), overlapDepth(rest[j], rest[i]))

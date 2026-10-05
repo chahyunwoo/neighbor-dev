@@ -241,8 +241,7 @@ a:hover {
 /* 가장자리로 끌려온 마커. 전역에 둔다 — 드리 `wrapperClass` 고정 문자열이라 해시가 붙으면 안 된다. */
 .room-marker-wrap[data-edge="true"] {
   opacity: 0.42;
-  /* 크기를 고정한다 — scale 로 줄이면 가까운 물건 마커가 여전히 크다. */
-  scale: none;
+  /* 화면 크기는 22px × drei 의 transform scale() 이다. CSS scale 속성은 transform 과 따로 합성돼 이를 상쇄하지 못한다 — Scene 의 --edge-dx / scale 보정이 이 전제에 기댄다. */
   width: 22px;
   height: 22px;
   display: grid;
