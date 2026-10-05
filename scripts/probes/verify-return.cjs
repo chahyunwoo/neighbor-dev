@@ -106,7 +106,14 @@ const clickNav = async (pg, sel) => {
   // 1) 첫 진입 — 연출이므로 길어도 된다. 기준선으로만 찍는다
   await pg.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
   await track(pg)
-  await pg.waitForTimeout(5000)
+  // 시간이 아니라 입장 완료로 기다린다 — 고정 5초는 모델 로딩이 조금만 늦어도 비행 도중에 재 기준선을 못 읽었다
+  await pg
+    .waitForFunction(() => document.documentElement.dataset.roomEntered === 'true', null, {
+      timeout: 30000,
+    })
+    .catch(() => {})
+  // measure 는 마지막 300ms 가 멈춰 있어야 정착으로 본다
+  await pg.waitForTimeout(600)
   const first = await measure(pg)
   console.log(
     `  - 첫 진입 비행 ${first ? first.settle : '?'}ms · 되돌아온 비율 ${first ? (first.backtrack * 100).toFixed(1) : '?'}% (연출 기준선)`,

@@ -293,6 +293,20 @@ async function shotNow(pg) {
       '마커를 연 채 위아래로 둘러볼 때 초점 극각이 쓰인다',
       `극각 폭 ${P(vspan)} (기준 0.335π 이상 · 극각이 ROOM 이면 0.290π)`,
     )
+    // 폭만 보면 제약이 통째로 풀린 상태(폭이 더 넓다)도 통과한다 — 양 끝이 FOCUS 경계에 멈추는지 본다
+    const near = (v, k) => Math.abs(v - Math.PI * k) <= Math.PI * 0.01
+    const azEnds = left && right ? [left.az, right.az].sort((a, z) => a - z) : [0, 0]
+    const poEnds = up && down ? [up.po, down.po].sort((a, z) => a - z) : [0, 0]
+    ok(
+      near(azEnds[0], 0.44) && near(azEnds[1], 1.08),
+      '좌우 끝이 초점 방위각 경계에서 멈춘다',
+      `${P(azEnds[0])} ~ ${P(azEnds[1])} (기대 0.440π ~ 1.080π, ±0.010π)`,
+    )
+    ok(
+      near(poEnds[0], 0.14) && near(poEnds[1], 0.52),
+      '위아래 끝이 초점 극각 경계에서 멈춘다',
+      `${P(poEnds[0])} ~ ${P(poEnds[1])} (기대 0.140π ~ 0.520π, ±0.010π)`,
+    )
   }
 
   // ⑦ 비행 도중 드래그로 중단해도 한 프레임에 튀지 않는가 — 중단 지점에는 목적지·출발 제약 둘 다 안전하지 않다
