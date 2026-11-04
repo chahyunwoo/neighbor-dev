@@ -5,4 +5,9 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 0
 pnpm --silent typecheck 2>&1 | tail -20 || exit 1
 pnpm --silent lint 2>&1 | tail -20 || exit 1
-node scripts/verify-fsd.mjs 2>&1 | tail -20 || exit 1
+# CI(.github/workflows/ci.yml)의 검증 단계와 같은 범위 — 좁으면 CI 에서만 빨개진다
+pnpm --silent test 2>&1 | tail -20 || exit 1
+pnpm --silent fsd:verify 2>&1 | tail -20 || exit 1
+pnpm --silent anim:verify 2>&1 | tail -20 || exit 1
+pnpm --silent room:verify 2>&1 | tail -20 || exit 1
+pnpm --silent reaction:verify 2>&1 | tail -20 || exit 1

@@ -96,6 +96,16 @@ export function Scene({
 
   useEdgeClamp()
 
+  // onEnd 가 남기는 자세 계측값 — 다른 data-* 계측처럼 떠날 때 지운다. 남으면 다음에 읽는 쪽이 묵은 값으로 통과한다.
+  useEffect(
+    () => () => {
+      const d = document.documentElement.dataset
+      delete d.camAzimuth
+      delete d.camPolar
+    },
+    [],
+  )
+
   // 이미 모델을 연 Furniture 가 앵커를 보고한다 — 여기서 다시 열면 반복문 안 훅 호출이 된다.
   const [measured, setMeasured] = useState<Record<string, [number, number, number]>>({})
   const report = useCallback((id: string, at: [number, number, number]) => {
