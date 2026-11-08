@@ -6,6 +6,8 @@ import { PageShell } from '@/widgets/page-shell'
 
 export const metadata: Metadata = {
   title: '페이지를 찾을 수 없음',
+  // 루트 canonical 이 상속되면 404 가 홈을 가리킨다.
+  alternates: { canonical: null },
   robots: { index: false, follow: false },
 }
 

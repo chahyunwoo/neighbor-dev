@@ -36,6 +36,13 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image' },
   robots: { index: true, follow: true },
+  // 소유확인 값은 서버 env 로만 받는다 — 메타 태그로만 나가니 NEXT_PUBLIC_ 이 필요 없다. 비우면 태그가 빠진다.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION?.trim() || undefined,
+    other: process.env.NAVER_SITE_VERIFICATION?.trim()
+      ? { 'naver-site-verification': process.env.NAVER_SITE_VERIFICATION.trim() }
+      : undefined,
+  },
 }
 
 export const viewport: Viewport = {
@@ -73,6 +80,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             areaServed: 'KR',
             knowsLanguage: ['ko'],
             serviceType: ['웹 개발', '앱 개발', '백엔드 개발', '시스템 구축'],
+          }}
+        />
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: '이웃집 개발자',
+            url: siteUrl(),
+            inLanguage: 'ko-KR',
           }}
         />
         <RoomProvider>
