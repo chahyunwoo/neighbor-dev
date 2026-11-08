@@ -1,7 +1,17 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**", "dist/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "SITE_URL",
+        "API_BASE_URL",
+        "INTERNAL_TOKEN",
+        "GOOGLE_SITE_VERIFICATION",
+        "NAVER_SITE_VERIFICATION"
+      ]
+    },
     "typecheck": { "dependsOn": ["^build"] },
     "dev": { "cache": false, "persistent": true }
   }
