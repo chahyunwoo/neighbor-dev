@@ -31,7 +31,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const project = getProject(id)
   // 없는 사례는 색인시키지 않는다.
   if (project?.tier !== 'detail') {
-    return { title: '사례를 찾을 수 없음', robots: { index: false, follow: false } }
+    return {
+      title: '사례를 찾을 수 없음',
+      alternates: { canonical: null },
+      robots: { index: false, follow: false },
+    }
   }
   return pageMetadata({
     title: project.label,
